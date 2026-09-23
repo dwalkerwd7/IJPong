@@ -18,6 +18,9 @@ Unreal Engine 5.8 C++ game (single runtime module `IJPong`). Working concept, "T
 ```
 The "banned MSVC 14.40–14.43" lines in the output are just UBT listing toolchains it skips (it uses 14.51). They aren't errors.
 
+## Editor access (Unreal MCP)
+The engine's experimental `ModelContextProtocol` plugin is enabled, along with the Editor, AutomationTest, LiveCoding and UMG toolsets. The server runs inside the editor at `http://127.0.0.1:8000/mcp` (`unreal-mcp` in `.mcp.json`, auto-start on). Its tools exist only while the editor is open. Ask before doing anything destructive in the user's open editor.
+
 ## Decisions so far
 - Vs AI only, no networking.
 - C++ owns rules and simulation. Data Assets and BP own tuning and content.
