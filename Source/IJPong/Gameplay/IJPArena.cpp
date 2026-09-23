@@ -6,6 +6,7 @@
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Gameplay/IJPGoalComponent.h"
+#include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPSevenSegmentComponent.h"
 #include "Materials/MaterialInterface.h"
 #include "UObject/ConstructorHelpers.h"
@@ -17,6 +18,7 @@ AIJPArena::AIJPArena()
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeMesh(TEXT("/Engine/BasicShapes/Cube.Cube"));
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> UnlitMaterial(TEXT("/Engine/EngineMaterials/EmissiveMeshMaterial.EmissiveMeshMaterial"));
 	PongMaterial = UnlitMaterial.Object;
+	PaddleClass = AIJPPaddle::StaticClass();
 
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	SetRootComponent(Root);
@@ -126,6 +128,59 @@ void AIJPArena::OnConstruction(const FTransform& Transform)
 	const float ScreenHeight = 2.f * (OuterHalfY + ScreenMargin);
 	Camera->AspectRatio = ScreenAspectRatio;
 	Camera->OrthoWidth = ScreenHeight * ScreenAspectRatio;
+}
+
+void AIJPArena::BeginPlay()
+{
+	Super::BeginPlay();
+
+	LeftPaddle = SpawnPaddle(EIJPSide::Left);
+	RightPaddle = SpawnPaddle(EIJPSide::Right);
+}
+
+void AIJPArena::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// The arena spawned the paddles, so it takes them with it.
+	for (AIJPPaddle* Paddle : { LeftPaddle.Get(), RightPaddle.Get() })
+	{
+		if (IsValid(Paddle))
+		{
+			Paddle->Destroy();
+		}
+	}
+	LeftPaddle = nullptr;
+	RightPaddle = nullptr;
+
+	Super::EndPlay(EndPlayReason);
+}
+
+AIJPPaddle* AIJPArena::SpawnPaddle(EIJPSide Side)
+{
+	if (!PaddleClass)
+	{
+		UE_LOG(LogIJPong, Error, TEXT("%s has no PaddleClass; no paddles spawned."), *GetName());
+		return nullptr;
+	}
+
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	AIJPPaddle* Paddle = GetWorld()->SpawnActor<AIJPPaddle>(PaddleClass, GetActorTransform(), Params);
+	if (Paddle)
+	{
+		Paddle->InitPaddle(this, Side, GetLaneX(Side));
+	}
+	return Paddle;
+}
+
+AIJPPaddle* AIJPArena::GetPaddle(EIJPSide Side) const
+{
+	return Side == EIJPSide::Left ? LeftPaddle : RightPaddle;
+}
+
+float AIJPArena::GetLaneX(EIJPSide Side) const
+{
+	return IJP::SideSign(Side) * (HalfExtents.X - PaddleInset);
 }
 
 void AIJPArena::SetScore(EIJPSide Side, int32 Score)

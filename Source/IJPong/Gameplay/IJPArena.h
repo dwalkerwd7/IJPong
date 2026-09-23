@@ -11,6 +11,7 @@ class UBoxComponent;
 class UCameraComponent;
 class UInstancedStaticMeshComponent;
 class UMaterialInterface;
+class AIJPPaddle;
 class UIJPGoalComponent;
 class UIJPSevenSegmentComponent;
 
@@ -28,6 +29,8 @@ public:
 	AIJPArena();
 
 	virtual void OnConstruction(const FTransform& Transform) override;
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	// --- Plane space <-> world space ---
 
@@ -49,6 +52,16 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Arena")
 	void SetScore(EIJPSide Side, int32 Score);
+
+	/** The paddle defending this side's goal. Null before BeginPlay. */
+	UFUNCTION(BlueprintPure, Category = "Arena")
+	AIJPPaddle* GetPaddle(EIJPSide Side) const;
+
+	/** Plane X of the paddle lane on this side. */
+	UFUNCTION(BlueprintPure, Category = "Arena")
+	float GetLaneX(EIJPSide Side) const;
+
+	UMaterialInterface* GetPongMaterial() const { return PongMaterial; }
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Layout")
@@ -89,6 +102,14 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Layout")
 	float ScreenAspectRatio = 4.f / 3.f;
 
+	/** Distance from each goal line in to the centre of that side's paddle. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Layout")
+	float PaddleInset = 40.f;
+
+	/** Spawned for both sides at BeginPlay. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Paddles")
+	TSubclassOf<AIJPPaddle> PaddleClass;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Look")
 	TObjectPtr<UMaterialInterface> PongMaterial;
 
@@ -121,6 +142,13 @@ protected:
 	TObjectPtr<UCameraComponent> Camera;
 
 private:
+	AIJPPaddle* SpawnPaddle(EIJPSide Side);
 	FTransform GetPlaneTransform() const;
 	void AddVisualBox(const FVector2D& Centre, const FVector2D& Size);
+
+	UPROPERTY(Transient)
+	TObjectPtr<AIJPPaddle> LeftPaddle;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AIJPPaddle> RightPaddle;
 };
