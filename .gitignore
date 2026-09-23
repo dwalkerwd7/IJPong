@@ -1,0 +1,16 @@
+# Unreal generated
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+Build/
+*.sln
+*.suo
+*.VC.db
+*.opendb
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.code-workspace
