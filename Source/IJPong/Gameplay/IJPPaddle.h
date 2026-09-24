@@ -68,7 +68,7 @@ public:
 protected:
 	/** Width (plane X) and height (plane Y) of the paddle. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Layout")
-	FVector2D Size = FVector2D(10.f, 64.f);
+	FVector2D Size = FVector2D(10.f, 76.f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Layout")
 	float VisualDepth = 10.f;
