@@ -10,7 +10,13 @@ Unreal Engine 5.8 C++ game (single runtime module `IJPong`). Working concept, "T
 - **Every step ends with a build and a commit.** Claude commits at the end of each step without asking. Commit messages end with the Co-Authored-By line.
 
 ## Testing
-**Integration tests only. No unit tests.** Tests go in `Source/IJPong/Tests/`. They create a real world with arena, ball and paddles, run the simulation, and check gameplay outcomes.
+**Integration tests only. No unit tests.** Tests go in `Source/IJPong/Tests/`. They create a real world with arena, ball and paddles, run the simulation, and check gameplay outcomes. Use the `FIJPTestWorld` fixture (`Tests/IJPTestWorld.h`). It runs the real game mode and BeginPlay path and ticks at a fixed 1/60 s.
+
+Run headless (the editor must not hold the DLL; see Build):
+```
+"C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "<repo>\IJPong.uproject" -ExecCmds="Automation RunTests IJPong.; Quit" -unattended -nullrhi -nopause -nosplash -NoSound -log=IJPTests.log
+```
+Then grep `Saved/Logs/IJPTests.log` for `Test Completed`. To test without closing the user's editor, copy `IJPong.uproject`, `Source`, `Config` and `Content` to a **short** path such as `C:\IJPT`, then build and test there, and delete it afterwards. The scratchpad path is too long for UBT.
 
 ## Build
 ```
@@ -18,8 +24,15 @@ Unreal Engine 5.8 C++ game (single runtime module `IJPong`). Working concept, "T
 ```
 The "banned MSVC 14.40–14.43" lines in the output are just UBT listing toolchains it skips (it uses 14.51). They aren't errors.
 
+**If the editor is open, the build compiles but can't link**: the editor locks `Binaries/Win64/UnrealEditor-IJPong.dll`. Reopening the editor afterwards does *not* rebuild it. The editor quietly loads the old DLL, and new classes are missing (`Failed to find object 'Class /Script/IJPong...'`). Live Coding is unsafe for steps that add UCLASSes. The user has OK'd Claude doing this routine:
+1. Close the editor gracefully: `(Get-Process UnrealEditor).CloseMainWindow()`, then `Wait-Process -Timeout 90`. It's the same as clicking X, so unsaved work raises the editor's save dialog. If it's still running afterwards, tell the user a dialog is waiting. **Never `Stop-Process` it.**
+2. Build in place, then check the DLL's timestamp and size to confirm it really relinked.
+3. Relaunch: `Start-Process "C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor.exe" -ArgumentList '"<repo>\IJPong.uproject"'`.
+
 ## Editor access (Unreal MCP)
-The engine's experimental `ModelContextProtocol` plugin is enabled, along with the Editor, AutomationTest, LiveCoding and UMG toolsets. The server runs inside the editor at `http://127.0.0.1:8000/mcp` (`unreal-mcp` in `.mcp.json`, auto-start on). Its tools exist only while the editor is open. Ask before doing anything destructive in the user's open editor.
+The engine's experimental `ModelContextProtocol` plugin is enabled, along with the Editor, AutomationTest, LiveCoding and UMG toolsets. The server runs inside the editor at `http://127.0.0.1:8000/mcp` (`unreal-mcp` in `.mcp.json`, auto-start on). Its tools exist only while the editor is open, and they disconnect during a close/rebuild/relaunch. Ask before doing anything destructive in the user's open editor.
+- `call_tool` takes the **short** tool name (e.g. `create`), not the fully-qualified name `describe_toolset` lists.
+- `DataAssetTools.create` can make `UDataAsset` subclasses such as InputAction and InputMappingContext. `ObjectTools.set_properties` edits them. Instanced sub-objects (e.g. IMC modifiers) are passed as class paths.
 
 ## Decisions so far
 - Vs AI only, no networking.
