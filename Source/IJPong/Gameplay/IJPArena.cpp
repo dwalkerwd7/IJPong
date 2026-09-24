@@ -212,6 +212,7 @@ const UIJPToneSet& AIJPArena::GetToneSet() const
 void AIJPArena::HandleBallPaddleHit(AIJPPaddle* Paddle)
 {
 	Tones->PlayTone(GetToneSet().PaddleHit);
+	Paddle->Flicker();
 }
 
 void AIJPArena::HandleBallBounce()
@@ -222,6 +223,12 @@ void AIJPArena::HandleBallBounce()
 void AIJPArena::HandleBallGoal(EIJPSide DefendingSide)
 {
 	Tones->PlayTone(GetToneSet().Goal);
+	CRT->Pulse();
+}
+
+void AIJPArena::FlashScore(EIJPSide Side)
+{
+	GetScoreDisplay(Side)->Flash();
 }
 
 AIJPPaddle* AIJPArena::GetPaddle(EIJPSide Side) const

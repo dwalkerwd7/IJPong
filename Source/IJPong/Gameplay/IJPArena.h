@@ -57,6 +57,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Arena")
 	void SetScore(EIJPSide Side, int32 Score);
 
+	/** Flash one side's score digits. */
+	UFUNCTION(BlueprintCallable, Category = "Arena")
+	void FlashScore(EIJPSide Side);
+
+	UIJPSevenSegmentComponent* GetScoreDisplay(EIJPSide Side) const { return Side == EIJPSide::Left ? LeftScore : RightScore; }
+
 	/** The paddle defending this side's goal. Null before BeginPlay. */
 	UFUNCTION(BlueprintPure, Category = "Arena")
 	AIJPPaddle* GetPaddle(EIJPSide Side) const;

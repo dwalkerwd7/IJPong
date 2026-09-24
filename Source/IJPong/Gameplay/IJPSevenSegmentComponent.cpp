@@ -60,6 +60,12 @@ void UIJPSevenSegmentComponent::SetValue(int32 NewValue)
 	}
 }
 
+void UIJPSevenSegmentComponent::Flash(int32 NumFlashes, float Period)
+{
+	// Starts hidden; each flash is an off + on, so 2 toggles per flash ends shown.
+	Blinker.Start(this, Period, FMath::Max(1, NumFlashes) * 2 - 1, false, [this](bool bShow) { SetVisibility(bShow); });
+}
+
 void UIJPSevenSegmentComponent::Rebuild()
 {
 	ClearInstances();

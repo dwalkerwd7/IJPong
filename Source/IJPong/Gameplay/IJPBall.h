@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Core/IJPTypes.h"
+#include "Presentation/IJPBlinker.h"
 #include "IJPBall.generated.h"
 
 class AIJPArena;
@@ -41,6 +42,13 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Ball")
 	void Serve(EIJPSide Toward, float AngleDeg);
+
+	/** Wait at the centre, blinking (starting hidden), until Serve() launches it. */
+	UFUNCTION(BlueprintCallable, Category = "Ball")
+	void BlinkAtCentre();
+
+	UFUNCTION(BlueprintPure, Category = "Ball")
+	bool IsBlinking() const { return ServeBlinker.IsRunning(); }
 
 	/** Take the ball out of play and hide it at the centre. */
 	UFUNCTION(BlueprintCallable, Category = "Ball")
@@ -102,6 +110,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Movement", meta = (ClampMin = "0", ClampMax = "85", Units = "deg"))
 	float MaxBounceAngleDeg = 60.f;
 
+	/** Seconds between on/off toggles while waiting to be served. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Presentation", meta = (ClampMin = "0.01", Units = "s"))
+	float ServeBlinkPeriod = 0.15f;
+
 	/** Simulation substeps per second. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Simulation", meta = (ClampMin = "30"))
 	float SimRate = 120.f;
@@ -121,6 +133,7 @@ private:
 	void UpdateDrawnTransform(float Alpha);
 
 	TWeakObjectPtr<AIJPArena> Arena;
+	FIJPBlinker ServeBlinker;
 	FVector2D Position = FVector2D::ZeroVector;
 	FVector2D PreviousPosition = FVector2D::ZeroVector;
 	FVector2D Velocity = FVector2D::ZeroVector;

@@ -3,7 +3,7 @@
 // CRT look for a post-process material (Blendable Location: After Tonemapping).
 // M_CRT's Custom node includes this file (via the "/IJPong" shader path the IJPongShaders module
 // maps to this folder) and its code is just:
-//   return IJPCRT(UV, ViewSize, Curvature, Vignette, ScanlineCount, ScanlineStrength, GlowStrength, GlowRadius, Tint);
+//   return IJPCRT(UV, ViewSize, Curvature, Vignette, ScanlineCount, ScanlineStrength, GlowStrength, GlowRadius, Tint, Flash);
 // Edit this file, then recompile M_CRT in the editor to see changes.
 
 #pragma once
@@ -27,9 +27,10 @@ float3 IJPSampleScreen(float2 ViewportUV)
  * @param GlowStrength      How much blurred light is added back around bright shapes.
  * @param GlowRadius        Halo radius in pixels (taps at 1x and 2x this).
  * @param Tint              Phosphor colour the picture is multiplied by.
+ * @param Flash             0..1 momentary brightness pulse (driven from C++ by UIJPCRTComponent::Pulse).
  */
 float3 IJPCRT(float2 UV, float2 ViewSize, float Curvature, float Vignette, float ScanlineCount, float ScanlineStrength,
-	float GlowStrength, float GlowRadius, float3 Tint)
+	float GlowStrength, float GlowRadius, float3 Tint, float Flash)
 {
 	// 1. Curvature. For each screen pixel, find the point of the flat picture it shows: the further
 	//    from the centre, the further out we look, so the picture bulges like the front of a tube.
@@ -60,6 +61,9 @@ float3 IJPCRT(float2 UV, float2 ViewSize, float Curvature, float Vignette, float
 	}
 	Glow /= 12; // 8 taps at weight 1 + 8 at weight 0.5
 	Color += Glow * GlowStrength;
+
+	// Flash: lift the whole tube (blacks included) and brighten what's lit, like a surge on the beam.
+	Color += Flash * (0.12 + 0.6 * Color);
 
 	// 3. Scanlines. A fixed number of lines across the tube, whatever the window resolution.
 	//    Line is 1 on a scanline and 0 halfway between two.

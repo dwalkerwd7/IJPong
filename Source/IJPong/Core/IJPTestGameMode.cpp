@@ -28,11 +28,8 @@ void AIJPTestGameMode::ResetScore()
 	LeftScore = RightScore = 0;
 	UpdateScoreDisplay();
 
-	if (AIJPBall* Ball = GetBall())
-	{
-		Ball->ResetBall();
-		ScheduleServe(RandomSide());
-	}
+	// Abandons any rally: the ball goes back to blinking at the centre.
+	ScheduleServe(RandomSide());
 }
 
 void AIJPTestGameMode::ServeNow()
@@ -78,6 +75,7 @@ void AIJPTestGameMode::HandleGoal(EIJPSide DefendingSide)
 {
 	++(DefendingSide == EIJPSide::Left ? RightScore : LeftScore);
 	UpdateScoreDisplay();
+	GetArena()->FlashScore(IJP::Opposite(DefendingSide));
 
 	// The side that just conceded receives the next serve.
 	ScheduleServe(DefendingSide);
@@ -86,6 +84,10 @@ void AIJPTestGameMode::HandleGoal(EIJPSide DefendingSide)
 void AIJPTestGameMode::ScheduleServe(EIJPSide Toward)
 {
 	NextServeSide = Toward;
+	if (AIJPBall* Ball = GetBall())
+	{
+		Ball->BlinkAtCentre();
+	}
 	GetWorldTimerManager().SetTimer(ServeTimer, this, &AIJPTestGameMode::ServeBall, FMath::Max(ServeDelay, UE_KINDA_SMALL_NUMBER));
 }
 

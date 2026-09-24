@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 #include "Core/IJPTypes.h"
+#include "Presentation/IJPBlinker.h"
 #include "IJPPaddle.generated.h"
 
 class AIJPArena;
@@ -29,6 +30,13 @@ public:
 
 	/** Called by the arena right after spawning. Places the paddle in its lane, centred vertically. */
 	void InitPaddle(AIJPArena* InArena, EIJPSide InSide, float InLaneX);
+
+	/** Blink off briefly: a contact cue for ball hits. */
+	UFUNCTION(BlueprintCallable, Category = "Paddle")
+	void Flicker();
+
+	UFUNCTION(BlueprintPure, Category = "Paddle")
+	bool IsVisualShown() const;
 
 	/** Accumulates move input for this frame (+1 = up the screen). Consumed on the paddle's next tick. */
 	UFUNCTION(BlueprintCallable, Category = "Paddle")
@@ -76,6 +84,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Movement", meta = (ClampMin = "0", Units = "s"))
 	float RampTime = 0.05f;
 
+	/** How long Flicker() hides the paddle. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Presentation", meta = (ClampMin = "0.01", Units = "s"))
+	float FlickerTime = 0.05f;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
 	TObjectPtr<UBoxComponent> Collision;
 
@@ -86,6 +98,7 @@ private:
 	void UpdateTransform();
 
 	TWeakObjectPtr<AIJPArena> Arena;
+	FIJPBlinker FlickerBlinker;
 	EIJPSide Side = EIJPSide::Left;
 	float LaneX = 0.f;
 	float PlaneY = 0.f;

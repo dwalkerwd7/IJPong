@@ -48,8 +48,16 @@ void AIJPBall::InitBall(AIJPArena* InArena)
 	ResetBall();
 }
 
+void AIJPBall::BlinkAtCentre()
+{
+	ResetBall();
+	ServeBlinker.Start(this, ServeBlinkPeriod, 0, false, [this](bool bShow) { SetActorHiddenInGame(!bShow); });
+}
+
 void AIJPBall::Serve(EIJPSide Toward, float AngleDeg)
 {
+	ServeBlinker.Cancel();
+
 	const float AngleRad = FMath::DegreesToRadians(FMath::Clamp(AngleDeg, -MaxBounceAngleDeg, MaxBounceAngleDeg));
 
 	Position = PreviousPosition = FVector2D::ZeroVector;
@@ -65,6 +73,8 @@ void AIJPBall::Serve(EIJPSide Toward, float AngleDeg)
 
 void AIJPBall::ResetBall()
 {
+	ServeBlinker.Cancel();
+
 	Position = PreviousPosition = FVector2D::ZeroVector;
 	Velocity = FVector2D::ZeroVector;
 	Speed = 0.f;

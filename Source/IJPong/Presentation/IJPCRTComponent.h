@@ -21,6 +21,18 @@ class IJPONG_API UIJPCRTComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:
+	UIJPCRTComponent();
+
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+	/** Brief brightness pulse of the whole screen, fading out over Duration. */
+	UFUNCTION(BlueprintCallable, Category = "CRT")
+	void Pulse(float Strength = 1.f, float Duration = 0.35f);
+
+	/** Current value of the material's Flash parameter (0 when not pulsing). */
+	UFUNCTION(BlueprintPure, Category = "CRT")
+	float GetFlash() const { return CurrentFlash; }
+
 	/** Turn the look on or off without removing the component. */
 	UFUNCTION(BlueprintCallable, Category = "CRT")
 	void SetCRTEnabled(bool bEnable);
@@ -44,9 +56,15 @@ protected:
 	bool bEnabled = true;
 
 private:
+	void SetFlash(float Value);
 	void ApplyWeight(float Weight);
 	void GetCameras(TArray<UCameraComponent*>& OutCameras) const;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> MaterialInstance;
+
+	float PulseStrength = 0.f;
+	float PulseDuration = 0.f;
+	float PulseElapsed = 0.f;
+	float CurrentFlash = 0.f;
 };

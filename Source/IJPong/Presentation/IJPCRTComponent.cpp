@@ -6,6 +6,50 @@
 #include "GameFramework/Actor.h"
 #include "Materials/MaterialInstanceDynamic.h"
 
+namespace
+{
+	const FName FlashParam(TEXT("Flash"));
+}
+
+UIJPCRTComponent::UIJPCRTComponent()
+{
+	// Ticks only while a pulse is fading.
+	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bStartWithTickEnabled = false;
+}
+
+void UIJPCRTComponent::Pulse(float Strength, float Duration)
+{
+	PulseStrength = Strength;
+	PulseDuration = FMath::Max(Duration, UE_KINDA_SMALL_NUMBER);
+	PulseElapsed = 0.f;
+	SetFlash(PulseStrength);
+	SetComponentTickEnabled(true);
+}
+
+void UIJPCRTComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	PulseElapsed += DeltaTime;
+	const float Remaining = 1.f - FMath::Clamp(PulseElapsed / PulseDuration, 0.f, 1.f);
+	// Squared falloff: a sharp flash that dies away quickly, like a tube's afterglow.
+	SetFlash(PulseStrength * Remaining * Remaining);
+	if (Remaining <= 0.f)
+	{
+		SetComponentTickEnabled(false);
+	}
+}
+
+void UIJPCRTComponent::SetFlash(float Value)
+{
+	CurrentFlash = Value;
+	if (MaterialInstance)
+	{
+		MaterialInstance->SetScalarParameterValue(FlashParam, Value);
+	}
+}
+
 void UIJPCRTComponent::BeginPlay()
 {
 	Super::BeginPlay();

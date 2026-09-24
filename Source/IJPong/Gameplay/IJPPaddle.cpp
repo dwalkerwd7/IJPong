@@ -54,6 +54,17 @@ void AIJPPaddle::InitPaddle(AIJPArena* InArena, EIJPSide InSide, float InLaneX)
 	UpdateTransform();
 }
 
+void AIJPPaddle::Flicker()
+{
+	// Hidden now, shown again after one toggle. Only the visual: the collision never flickers.
+	FlickerBlinker.Start(this, FlickerTime, 1, false, [this](bool bShow) { Visual->SetVisibility(bShow); });
+}
+
+bool AIJPPaddle::IsVisualShown() const
+{
+	return Visual->IsVisible();
+}
+
 void AIJPPaddle::AddMoveInput(float Value)
 {
 	PendingInput += Value;

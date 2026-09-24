@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/InstancedStaticMeshComponent.h"
+#include "Presentation/IJPBlinker.h"
 #include "IJPSevenSegmentComponent.generated.h"
 
 /**
@@ -23,6 +24,13 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Seven Segment")
 	int32 GetValue() const { return Value; }
+
+	/** Blink the whole number off and on NumFlashes times, ending shown. */
+	UFUNCTION(BlueprintCallable, Category = "Seven Segment")
+	void Flash(int32 NumFlashes = 3, float Period = 0.12f);
+
+	UFUNCTION(BlueprintPure, Category = "Seven Segment")
+	bool IsFlashing() const { return Blinker.IsRunning(); }
 
 	/** Width (X) and height (Z) of one digit. */
 	UPROPERTY(EditAnywhere, Category = "Seven Segment")
@@ -47,4 +55,6 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Seven Segment", meta = (ClampMin = "0"))
 	int32 Value = 0;
+
+	FIJPBlinker Blinker;
 };
