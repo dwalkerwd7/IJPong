@@ -7,7 +7,7 @@
 #include "IJPTestHUD.generated.h"
 
 /**
- * The test mode's debug overlay: plain text in the top-left corner, toggled with F1.
+ * The test mode's debug overlay: plain text in the top-left corner, toggled with the period key (F1 is the engine's wireframe view-mode shortcut).
  * It only draws; the lines come from AIJPTestGameMode::GetDebugLines, so they can be tested headless.
  * Drawn after post-processing, so the CRT look doesn't distort it.
  */

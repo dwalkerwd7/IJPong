@@ -105,7 +105,7 @@ void AIJPTestGameMode::GetDebugLines(TArray<FString>& OutLines) const
 	OutLines.Add(FString::Printf(TEXT("Opponent skill: %.2f"), ArenaPtr ? ArenaPtr->GetOpponentSkill() : 0.f));
 	OutLines.Add(FString::Printf(TEXT("Your paddle: %s"), IsPlayerSideAI() ? TEXT("AI") : TEXT("you")));
 	OutLines.Add(TEXT("R reset score   F serve now   T AI vs AI"));
-	OutLines.Add(TEXT("- / = opponent skill   F1 hide this"));
+	OutLines.Add(TEXT("- / = opponent skill   . (period) hide this"));
 }
 
 void AIJPTestGameMode::HandleGoal(EIJPSide DefendingSide)

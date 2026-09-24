@@ -151,7 +151,7 @@ bool FIJPTestModeOverlayTest::RunTest(const FString& Parameters)
 
 	UTEST_TRUE("Shows the opponent skill", Overlay().Contains(TEXT("Opponent skill: 0.50")));
 	UTEST_TRUE("Shows who drives your paddle", Overlay().Contains(TEXT("Your paddle: you")));
-	UTEST_TRUE("Lists the keys", Overlay().Contains(TEXT("F1 hide this")));
+	UTEST_TRUE("Lists the keys", Overlay().Contains(TEXT(". (period) hide this")));
 
 	// It reflects changes as they happen.
 	Mode->AdjustOpponentSkill(0.2f);
