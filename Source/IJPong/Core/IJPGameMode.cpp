@@ -5,7 +5,9 @@
 #include "Core/IJPTypes.h"
 #include "EngineUtils.h"
 #include "Gameplay/IJPArena.h"
+#include "Gameplay/IJPBall.h"
 #include "Gameplay/IJPPaddle.h"
+#include "TimerManager.h"
 
 AIJPGameMode::AIJPGameMode()
 {
@@ -38,6 +40,14 @@ void AIJPGameMode::StartPlay()
 	{
 		PossessPlayerPaddle(It->Get());
 	}
+
+	if (AIJPBall* Ball = Arena ? Arena->GetBall() : nullptr)
+	{
+		Arena->SetScore(EIJPSide::Left, LeftScore);
+		Arena->SetScore(EIJPSide::Right, RightScore);
+		Ball->OnGoal.AddDynamic(this, &AIJPGameMode::HandleGoal);
+		ScheduleServe(FMath::RandBool() ? EIJPSide::Left : EIJPSide::Right);
+	}
 }
 
 void AIJPGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
@@ -57,5 +67,30 @@ void AIJPGameMode::PossessPlayerPaddle(APlayerController* PlayerController)
 	if (Paddle && !Paddle->GetController())
 	{
 		PlayerController->Possess(Paddle);
+	}
+}
+
+void AIJPGameMode::HandleGoal(EIJPSide DefendingSide)
+{
+	int32& Score = DefendingSide == EIJPSide::Left ? RightScore : LeftScore;
+	++Score;
+	Arena->SetScore(IJP::Opposite(DefendingSide), Score);
+
+	// The side that just conceded receives the next serve.
+	ScheduleServe(DefendingSide);
+}
+
+void AIJPGameMode::ScheduleServe(EIJPSide Toward)
+{
+	NextServeSide = Toward;
+	GetWorldTimerManager().SetTimer(ServeTimer, this, &AIJPGameMode::ServeBall, FMath::Max(ServeDelay, UE_KINDA_SMALL_NUMBER));
+}
+
+void AIJPGameMode::ServeBall()
+{
+	AIJPBall* Ball = Arena ? Arena->GetBall() : nullptr;
+	if (Ball && !Ball->IsInPlay())
+	{
+		Ball->Serve(NextServeSide, FMath::FRandRange(-MaxServeAngleDeg, MaxServeAngleDeg));
 	}
 }

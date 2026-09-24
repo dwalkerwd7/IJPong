@@ -5,6 +5,7 @@
 #include "Components/BoxComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
+#include "Gameplay/IJPBall.h"
 #include "Gameplay/IJPGoalComponent.h"
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPSevenSegmentComponent.h"
@@ -19,6 +20,7 @@ AIJPArena::AIJPArena()
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> UnlitMaterial(TEXT("/Engine/EngineMaterials/EmissiveMeshMaterial.EmissiveMeshMaterial"));
 	PongMaterial = UnlitMaterial.Object;
 	PaddleClass = AIJPPaddle::StaticClass();
+	BallClass = AIJPBall::StaticClass();
 
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	SetRootComponent(Root);
@@ -136,20 +138,37 @@ void AIJPArena::BeginPlay()
 
 	LeftPaddle = SpawnPaddle(EIJPSide::Left);
 	RightPaddle = SpawnPaddle(EIJPSide::Right);
+
+	if (BallClass)
+	{
+		FActorSpawnParameters Params;
+		Params.Owner = this;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		Ball = GetWorld()->SpawnActor<AIJPBall>(BallClass, GetActorTransform(), Params);
+		if (Ball)
+		{
+			Ball->InitBall(this);
+		}
+	}
+	else
+	{
+		UE_LOG(LogIJPong, Error, TEXT("%s has no BallClass; no ball spawned."), *GetName());
+	}
 }
 
 void AIJPArena::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	// The arena spawned the paddles, so it takes them with it.
-	for (AIJPPaddle* Paddle : { LeftPaddle.Get(), RightPaddle.Get() })
+	// The arena spawned the paddles and ball, so it takes them with it.
+	for (AActor* Spawned : { static_cast<AActor*>(LeftPaddle.Get()), static_cast<AActor*>(RightPaddle.Get()), static_cast<AActor*>(Ball.Get()) })
 	{
-		if (IsValid(Paddle))
+		if (IsValid(Spawned))
 		{
-			Paddle->Destroy();
+			Spawned->Destroy();
 		}
 	}
 	LeftPaddle = nullptr;
 	RightPaddle = nullptr;
+	Ball = nullptr;
 
 	Super::EndPlay(EndPlayReason);
 }

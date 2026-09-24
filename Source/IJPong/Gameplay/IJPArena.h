@@ -11,6 +11,7 @@ class UBoxComponent;
 class UCameraComponent;
 class UInstancedStaticMeshComponent;
 class UMaterialInterface;
+class AIJPBall;
 class AIJPPaddle;
 class UIJPGoalComponent;
 class UIJPSevenSegmentComponent;
@@ -61,6 +62,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Arena")
 	float GetLaneX(EIJPSide Side) const;
 
+	/** The arena's ball. Null before BeginPlay. */
+	UFUNCTION(BlueprintPure, Category = "Arena")
+	AIJPBall* GetBall() const { return Ball; }
+
 	UMaterialInterface* GetPongMaterial() const { return PongMaterial; }
 
 protected:
@@ -107,8 +112,12 @@ protected:
 	float PaddleInset = 40.f;
 
 	/** Spawned for both sides at BeginPlay. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Paddles")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Spawning")
 	TSubclassOf<AIJPPaddle> PaddleClass;
+
+	/** Spawned at BeginPlay, waiting at the centre until served. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Spawning")
+	TSubclassOf<AIJPBall> BallClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Look")
 	TObjectPtr<UMaterialInterface> PongMaterial;
@@ -151,4 +160,7 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<AIJPPaddle> RightPaddle;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AIJPBall> Ball;
 };
