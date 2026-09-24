@@ -6,7 +6,7 @@
 
 #include "AI/IJPAIProfile.h"
 #include "AI/IJPPaddleAIController.h"
-#include "Core/IJPGameMode.h"
+#include "Core/IJPTestGameMode.h"
 #include "Core/IJPTypes.h"
 #include "Engine/World.h"
 #include "Gameplay/IJPArena.h"
@@ -113,7 +113,7 @@ bool FIJPAIMatchTest::RunTest(const FString& Parameters)
 	FIJPTestWorld Test(IJPAITests::ArenaTransform);
 	AIJPArena* Arena = Test.GetArena();
 	AIJPBall* Ball = Arena->GetBall();
-	AIJPGameMode* GameMode = Cast<AIJPGameMode>(Test.GetWorld()->GetAuthGameMode());
+	AIJPTestGameMode* GameMode = Cast<AIJPTestGameMode>(Test.GetWorld()->GetAuthGameMode());
 	UTEST_NOT_NULL("GameMode", GameMode);
 
 	// The game mode's AI plays right with the project's configured profile; give it a default-profile twin on the left.

@@ -25,4 +25,17 @@ public:
 	/** Axis1D: +1 moves the paddle up the screen, -1 down. */
 	UPROPERTY(Config, EditAnywhere, Category = "Input")
 	TSoftObjectPtr<UInputAction> MovePaddleAction;
+
+	/** Only added in the test game mode. */
+	UPROPERTY(Config, EditAnywhere, Category = "Debug")
+	TSoftObjectPtr<UInputMappingContext> DebugMappingContext;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Debug")
+	TSoftObjectPtr<UInputAction> DebugResetScoreAction;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Debug")
+	TSoftObjectPtr<UInputAction> DebugServeAction;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Debug")
+	TSoftObjectPtr<UInputAction> DebugToggleAIAction;
 };

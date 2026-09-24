@@ -5,7 +5,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "CollisionShape.h"
-#include "Core/IJPGameMode.h"
+#include "Core/IJPTestGameMode.h"
 #include "Core/IJPTypes.h"
 #include "Engine/World.h"
 #include "Gameplay/IJPArena.h"
@@ -27,8 +27,8 @@ bool FIJPPaddleSpawnTest::RunTest(const FString& Parameters)
 	AIJPArena* Arena = Test.GetArena();
 
 	UTEST_NOT_NULL("Arena", Arena);
-	UTEST_TRUE("Project default game mode is AIJPGameMode", Test.GetWorld()->GetAuthGameMode()->IsA<AIJPGameMode>());
-	UTEST_EQUAL("Game mode found the arena", Cast<AIJPGameMode>(Test.GetWorld()->GetAuthGameMode())->GetArena(), Arena);
+	UTEST_TRUE("Project default game mode is AIJPTestGameMode", Test.GetWorld()->GetAuthGameMode()->IsA<AIJPTestGameMode>());
+	UTEST_EQUAL("Game mode found the arena", Cast<AIJPTestGameMode>(Test.GetWorld()->GetAuthGameMode())->GetArena(), Arena);
 
 	for (EIJPSide Side : { EIJPSide::Left, EIJPSide::Right })
 	{

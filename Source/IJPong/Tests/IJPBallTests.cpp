@@ -4,7 +4,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
-#include "Core/IJPGameMode.h"
+#include "Core/IJPTestGameMode.h"
 #include "Core/IJPTypes.h"
 #include "Engine/World.h"
 #include "Gameplay/IJPArena.h"
@@ -125,7 +125,7 @@ bool FIJPBallGoalTest::RunTest(const FString& Parameters)
 	AIJPArena* Arena = Test.GetArena();
 	AIJPBall* Ball = Arena->GetBall();
 	AIJPPaddle* Paddle = Arena->GetPaddle(EIJPSide::Left);
-	AIJPGameMode* GameMode = Cast<AIJPGameMode>(Test.GetWorld()->GetAuthGameMode());
+	AIJPTestGameMode* GameMode = Cast<AIJPTestGameMode>(Test.GetWorld()->GetAuthGameMode());
 	UTEST_NOT_NULL("Ball", Ball);
 	UTEST_NOT_NULL("GameMode", GameMode);
 

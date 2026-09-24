@@ -42,4 +42,6 @@ The engine's experimental `ModelContextProtocol` plugin is enabled, along with t
 - The `PongBall` trace channel defaults to **Ignore**: objects must opt in to block the ball.
 - Scoring = **goal boxes** that block the ball's sweep (not a goal-line position check).
 - Paddle bounce: **60°** max edge angle, **no spin** (pure 1972).
+- Game modes subclass **`AIJPGameModeBase`** (finds the arena, player gets the left paddle, AI the right). **`AIJPTestGameMode`** is the project default for now: endless play of any level, with debug keys R (reset score), F (serve now) and T (hand the player's paddle to an AI). Real modes (match rules, chapters) come later as separate subclasses.
+- The AI is an **`AAIController`** so behaviour trees can drive abilities later.
 - Playfield is **4:3, pillarboxed**. Scores are **chunky seven-segment** digits. Walls are visible by default (`bShowWalls` toggle; the user hasn't decided this yet).
