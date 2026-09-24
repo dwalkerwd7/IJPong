@@ -4,6 +4,7 @@
 Includes are relative to the module root (`PublicIncludePaths.Add(ModuleDirectory)`), e.g. `#include "Gameplay/IJPArena.h"`.
 - `Core/`: shared types, game framework classes (GameMode, GameState, PlayerController)
 - `Gameplay/`: arena, ball, paddles, goals, maths
+- `Presentation/`: screen look. `UIJPCRTComponent` puts the CRT post-process on every camera of its owner. The HLSL is in the project's `Shaders/IJPCRT.ush` (mapped to `/IJPong` by the tiny `IJPongShaders` module).
 - `AI/`: paddle AI controller and its `UIJPAIProfile` Data Asset. The AI drives paddles through the same `AddMoveInput` as the player.
 - `Tests/`: integration tests only
 

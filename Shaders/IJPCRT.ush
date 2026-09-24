@@ -1,0 +1,75 @@
+// It's Just Pong
+//
+// CRT look for a post-process material (Blendable Location: After Tonemapping).
+// M_CRT's Custom node includes this file (via the "/IJPong" shader path the IJPongShaders module
+// maps to this folder) and its code is just:
+//   return IJPCRT(UV, ViewSize, Curvature, Vignette, ScanlineCount, ScanlineStrength, GlowStrength, GlowRadius, Tint);
+// Edit this file, then recompile M_CRT in the editor to see changes.
+
+#pragma once
+
+// EMaterialSceneTextureId::PPI_PostProcessInput0: the frame as it arrives at this post-process pass.
+#define IJP_POSTPROCESS_INPUT0 14
+
+/** The frame's colour at a point given in viewport UV (0..1 across the camera's view). */
+float3 IJPSampleScreen(float2 ViewportUV)
+{
+	return SceneTextureLookup(ViewportUVToBufferUV(ViewportUV), IJP_POSTPROCESS_INPUT0, true).rgb;
+}
+
+/**
+ * @param UV                Viewport UV of the pixel being shaded.
+ * @param ViewSize          View size in pixels (for glow radius in pixels).
+ * @param Curvature         Barrel bulge. 0 = flat; ~0.05 = gentle tube.
+ * @param Vignette          0..1 darkening toward the edges.
+ * @param ScanlineCount     Visible lines over the full tube height (NTSC showed ~240).
+ * @param ScanlineStrength  0..1 darkness between lines.
+ * @param GlowStrength      How much blurred light is added back around bright shapes.
+ * @param GlowRadius        Halo radius in pixels (taps at 1x and 2x this).
+ * @param Tint              Phosphor colour the picture is multiplied by.
+ */
+float3 IJPCRT(float2 UV, float2 ViewSize, float Curvature, float Vignette, float ScanlineCount, float ScanlineStrength,
+	float GlowStrength, float GlowRadius, float3 Tint)
+{
+	// 1. Curvature. For each screen pixel, find the point of the flat picture it shows: the further
+	//    from the centre, the further out we look, so the picture bulges like the front of a tube.
+	//    Dividing by (1 + Curvature) keeps the middle of each edge exactly on the tube's edge, so
+	//    nothing near the border (like Pong's walls) is pushed off-screen; only the corners round off.
+	float2 Centred = UV * 2 - 1;
+	Centred *= (1 + Curvature * dot(Centred, Centred)) / (1 + Curvature);
+	const float2 Src = Centred * 0.5 + 0.5;
+
+	// Beyond the tube's face: black.
+	if (any(Src < 0) || any(Src > 1))
+	{
+		return 0;
+	}
+
+	float3 Color = IJPSampleScreen(Src);
+
+	// 2. Phosphor glow. Average two rings of taps around the point and add them back as a halo,
+	//    so white shapes bleed softly into the black like a real tube.
+	const float2 Radius = GlowRadius / ViewSize;
+	float3 Glow = 0;
+	[unroll] for (int i = 0; i < 8; ++i)
+	{
+		const float Angle = i * (2 * PI / 8);
+		const float2 Dir = float2(cos(Angle), sin(Angle)) * Radius;
+		Glow += IJPSampleScreen(Src + Dir);
+		Glow += IJPSampleScreen(Src + Dir * 2) * 0.5;
+	}
+	Glow /= 12; // 8 taps at weight 1 + 8 at weight 0.5
+	Color += Glow * GlowStrength;
+
+	// 3. Scanlines. A fixed number of lines across the tube, whatever the window resolution.
+	//    Line is 1 on a scanline and 0 halfway between two.
+	const float Line = 0.5 + 0.5 * cos(2 * PI * Src.y * ScanlineCount);
+	Color *= lerp(1, Line, ScanlineStrength);
+
+	// 4. Vignette: darker toward the edges and corners, then a soft falloff at the tube's rim.
+	const float2 Edge = Src * (1 - Src); // 0 at the rim, 0.25 at the centre
+	Color *= lerp(1, pow(saturate(Edge.x * Edge.y * 16), 0.25), Vignette);
+	Color *= saturate(min(Edge.x, Edge.y) * 200);
+
+	return saturate(Color * Tint);
+}

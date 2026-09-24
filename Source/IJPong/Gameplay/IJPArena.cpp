@@ -11,6 +11,7 @@
 #include "Gameplay/IJPGoalComponent.h"
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPSevenSegmentComponent.h"
+#include "Presentation/IJPCRTComponent.h"
 #include "Materials/MaterialInterface.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -54,6 +55,8 @@ AIJPArena::AIJPArena()
 
 	RightScore = CreateDefaultSubobject<UIJPSevenSegmentComponent>(TEXT("RightScore"));
 	RightScore->SetupAttachment(Root);
+
+	CRT = CreateDefaultSubobject<UIJPCRTComponent>(TEXT("CRT"));
 
 	Tones = CreateDefaultSubobject<UIJPToneSynthComponent>(TEXT("Tones"));
 	Tones->SetupAttachment(Root);

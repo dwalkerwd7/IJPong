@@ -10,6 +10,6 @@ public class IJPongTarget : TargetRules
 		Type = TargetType.Game;
 		DefaultBuildSettings = BuildSettingsVersion.V7;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_8;
-		ExtraModuleNames.Add("IJPong");
+		ExtraModuleNames.AddRange(new string[] { "IJPong", "IJPongShaders" });
 	}
 }

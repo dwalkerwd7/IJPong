@@ -29,6 +29,8 @@ The "banned MSVC 14.40–14.43" lines in the output are just UBT listing toolcha
 2. Build in place, then check the DLL's timestamp and size to confirm it really relinked.
 3. Relaunch: `Start-Process "C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor.exe" -ArgumentList '"<repo>\IJPong.uproject"'`.
 
+**Shader edits (`Shaders/*.ush`)**: the editor caches shader source files. After editing one, restart the editor (routine above) and then recompile `M_CRT` (MCP `MaterialTools.recompile`, which raises on HLSL errors). Recompiling without a restart silently uses the old file.
+
 ## Editor access (Unreal MCP)
 The engine's experimental `ModelContextProtocol` plugin is enabled, along with the Editor, AutomationTest, LiveCoding and UMG toolsets. The server runs inside the editor at `http://127.0.0.1:8000/mcp` (`unreal-mcp` in `.mcp.json`, auto-start on). Its tools exist only while the editor is open, and they disconnect during a close/rebuild/relaunch. Ask before doing anything destructive in the user's open editor.
 - `call_tool` takes the **short** tool name (e.g. `create`), not the fully-qualified name `describe_toolset` lists.
@@ -45,4 +47,5 @@ The engine's experimental `ModelContextProtocol` plugin is enabled, along with t
 - Game modes subclass **`AIJPGameModeBase`** (finds the arena, player gets the left paddle, AI the right). **`AIJPTestGameMode`** is the project default for now: endless play of any level, with debug keys R (reset score), F (serve now) and T (hand the player's paddle to an AI). Real modes (match rules, chapters) come later as separate subclasses.
 - The AI is an **`AAIController`** so behaviour trees can drive abilities later.
 - Sound: the ball broadcasts events (`OnPaddleHit`, `OnBounce`, `OnGoal`). The **arena** maps them to beeps from a `UIJPToneSet` Data Asset, played by a C++ square-wave synth (`UIJPToneSynthComponent`). The synth suits this 1972 level, but **the user wants custom sound assets eventually**. Add those at the arena's event → sound mapping (e.g. an optional `USoundBase` per event), not in the ball.
+- Screen look: **CRT post-process** (scanlines, gentle curvature + vignette, phosphor glow) via `UIJPCRTComponent`, which works on **any camera**, not just the arena's (the user wants it on menu cameras too). Material `M_CRT` (a Custom node that `#include`s `Shaders/IJPCRT.ush`), tuned in `MI_CRT_1972`, set as the default in config.
 - Playfield is **4:3, pillarboxed**. Scores are **chunky seven-segment** digits. Walls are visible by default (`bShowWalls` toggle; the user hasn't decided this yet).

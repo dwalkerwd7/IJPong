@@ -13,6 +13,7 @@ class UInstancedStaticMeshComponent;
 class UMaterialInterface;
 class AIJPBall;
 class AIJPPaddle;
+class UIJPCRTComponent;
 class UIJPGoalComponent;
 class UIJPSevenSegmentComponent;
 class UIJPToneSet;
@@ -69,6 +70,8 @@ public:
 	AIJPBall* GetBall() const { return Ball; }
 
 	UIJPToneSynthComponent* GetTones() const { return Tones; }
+	UIJPCRTComponent* GetCRT() const { return CRT; }
+	UCameraComponent* GetCamera() const { return Camera; }
 
 	/** The tone set in use: the configured asset, or UIJPToneSet's defaults if none loaded. */
 	const UIJPToneSet& GetToneSet() const;
@@ -160,6 +163,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<UCameraComponent> Camera;
+
+	/** The CRT look on Camera. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<UIJPCRTComponent> CRT;
 
 	/** The cabinet's one speaker. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
