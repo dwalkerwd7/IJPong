@@ -8,12 +8,15 @@
 #include "IJPGameMode.generated.h"
 
 class AIJPArena;
+class AIJPPaddleAIController;
+class UIJPAIProfile;
 
 /**
- * For now: finds the level's arena, gives the player its left paddle, and runs an endless
- * serve -> goal -> score -> serve loop. This is the class that grows into the match state machine.
+ * For now: finds the level's arena, gives the player its left paddle and an AI the right one,
+ * and runs an endless serve -> goal -> score -> serve loop.
+ * This is the class that grows into the match state machine.
  */
-UCLASS()
+UCLASS(Config = Game)
 class IJPONG_API AIJPGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
@@ -39,8 +42,17 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Game|Serve", meta = (ClampMin = "0", Units = "deg"))
 	float MaxServeAngleDeg = 30.f;
 
+	/** Controller that plays the right paddle. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Game|AI")
+	TSubclassOf<AIJPPaddleAIController> AIControllerClass;
+
+	/** How the AI plays. Set in DefaultGame.ini; empty uses UIJPAIProfile's defaults. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Game|AI")
+	TSoftObjectPtr<UIJPAIProfile> AIProfile;
+
 private:
 	void PossessPlayerPaddle(APlayerController* PlayerController);
+	void SpawnAIPaddle(EIJPSide Side);
 	void ScheduleServe(EIJPSide Toward);
 	void ServeBall();
 

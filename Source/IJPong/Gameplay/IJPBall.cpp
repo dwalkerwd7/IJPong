@@ -12,8 +12,8 @@
 
 namespace
 {
-	// Extra push when resolving a start-of-sweep overlap, so the next sweep starts clear.
-	constexpr float DepenetrationSkin = 0.1f;
+	// Gap left between the ball and whatever it touched, so the next sweep starts clear of it.
+	constexpr float ContactSkin = 0.1f;
 }
 
 AIJPBall::AIJPBall()
@@ -118,12 +118,13 @@ void AIJPBall::Substep(float StepSeconds)
 		if (Hit.bStartPenetrating && !Cast<UIJPGoalComponent>(Hit.GetComponent()))
 		{
 			// Something moved onto the ball (e.g. a paddle sliding over it). Push out and retry; no time passes.
-			Position += Arena->WorldDirToPlane(Hit.Normal) * (Hit.PenetrationDepth + DepenetrationSkin);
+			Position += Arena->WorldDirToPlane(Hit.Normal) * (Hit.PenetrationDepth + ContactSkin);
 			continue;
 		}
 
-		// Hit.Location is where the box stopped, already pulled back slightly from the surface.
-		Position = Arena->WorldToPlane(Hit.Location);
+		// Hit.Location is where the box stopped. Step off the surface a little more, because a sweep that
+		// starts touching a surface can report it again even while moving away.
+		Position = Arena->WorldToPlane(Hit.Location) + Arena->WorldDirToPlane(Hit.Normal) * ContactSkin;
 		Remaining *= 1.f - Hit.Time;
 		HandleHit(Hit);
 	}
@@ -153,6 +154,13 @@ void AIJPBall::HandleHit(const FHitResult& Hit)
 	}
 
 	const FVector2D Normal = Arena->WorldDirToPlane(Hit.Normal).GetSafeNormal();
+
+	// Already leaving this surface (a touch reported right after bouncing off it): not a new contact.
+	// Reflecting here would turn the ball back into the surface and bounce it again.
+	if (FVector2D::DotProduct(Velocity, Normal) >= 0.f)
+	{
+		return;
+	}
 
 	if (AIJPPaddle* Paddle = Cast<AIJPPaddle>(Hit.GetActor()))
 	{

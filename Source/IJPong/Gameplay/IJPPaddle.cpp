@@ -25,6 +25,8 @@ AIJPPaddle::AIJPPaddle()
 
 	// The arena camera is the view; the paddle never owns one.
 	bFindCameraComponentWhenViewTarget = false;
+	// Orientation always comes from the arena, never from a controller's rotation.
+	bUseControllerRotationYaw = false;
 }
 
 void AIJPPaddle::OnConstruction(const FTransform& Transform)

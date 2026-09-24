@@ -11,7 +11,7 @@ public class IJPong : ModuleRules
 		// Allow includes relative to the module root, e.g. "Gameplay/IJPBall.h".
 		PublicIncludePaths.Add(ModuleDirectory);
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "DeveloperSettings" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "DeveloperSettings", "AIModule" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 

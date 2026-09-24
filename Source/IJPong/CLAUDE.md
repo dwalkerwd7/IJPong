@@ -4,6 +4,7 @@
 Includes are relative to the module root (`PublicIncludePaths.Add(ModuleDirectory)`), e.g. `#include "Gameplay/IJPArena.h"`.
 - `Core/`: shared types, game framework classes (GameMode, GameState, PlayerController)
 - `Gameplay/`: arena, ball, paddles, goals, maths
+- `AI/`: paddle AI controller and its `UIJPAIProfile` Data Asset. The AI drives paddles through the same `AddMoveInput` as the player.
 - `Tests/`: integration tests only
 
 Class prefix is `IJP` (`AIJPArena`, `UIJPGoalComponent`, `FIJPPongMath`). The log category is `LogIJPong`. File headers are `// It's Just Pong`.

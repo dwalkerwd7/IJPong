@@ -184,8 +184,21 @@ bool FIJPBallLongRallyTest::RunTest(const FString& Parameters)
 	constexpr int32 TargetHits = 30;
 	bool bStayedInside = true;
 	float TopSpeed = 0.f;
+	int32 Step = 0;
+	int32 LastHitStep = -1000;
+	int32 LastHits = 0;
+	float ShortestGap = TNumericLimits<float>::Max();
 	IJPBallTests::RunUntil(Test, 60.f, [&]
 	{
+		// Real hits are a court-width apart; anything quicker means one contact was counted twice.
+		if (Ball->GetRallyHits() > LastHits)
+		{
+			ShortestGap = FMath::Min(ShortestGap, (Step - LastHitStep) * FIJPTestWorld::FixedStep);
+			LastHitStep = Step;
+			LastHits = Ball->GetRallyHits();
+		}
+		++Step;
+
 		const FVector2D P = Ball->GetPlanePosition();
 		bStayedInside &= FMath::Abs(P.X) <= Limits.X && FMath::Abs(P.Y) <= Limits.Y;
 		TopSpeed = FMath::Max(TopSpeed, static_cast<float>(Ball->GetPlaneVelocity().Size()));
@@ -196,6 +209,7 @@ bool FIJPBallLongRallyTest::RunTest(const FString& Parameters)
 	UTEST_TRUE("Rally reached the target hit count", Ball->GetRallyHits() >= TargetHits);
 	UTEST_EQUAL_TOLERANCE("Reached MaxSpeed", TopSpeed, Ball->GetMaxSpeed(), 1e-2f);
 	UTEST_TRUE("Ball never left the field", bStayedInside);
+	UTEST_TRUE("Every hit is a separate contact (>= 0.3s apart)", ShortestGap >= 0.3f);
 	return true;
 }
 

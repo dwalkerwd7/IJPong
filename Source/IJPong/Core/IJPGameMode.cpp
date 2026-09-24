@@ -1,6 +1,8 @@
 // It's Just Pong
 
 #include "Core/IJPGameMode.h"
+#include "AI/IJPAIProfile.h"
+#include "AI/IJPPaddleAIController.h"
 #include "Core/IJPPlayerController.h"
 #include "Core/IJPTypes.h"
 #include "EngineUtils.h"
@@ -12,6 +14,7 @@
 AIJPGameMode::AIJPGameMode()
 {
 	PlayerControllerClass = AIJPPlayerController::StaticClass();
+	AIControllerClass = AIJPPaddleAIController::StaticClass();
 	// Paddles come from the arena, never from the default pawn spawn.
 	DefaultPawnClass = nullptr;
 }
@@ -40,6 +43,7 @@ void AIJPGameMode::StartPlay()
 	{
 		PossessPlayerPaddle(It->Get());
 	}
+	SpawnAIPaddle(EIJPSide::Right);
 
 	if (AIJPBall* Ball = Arena ? Arena->GetBall() : nullptr)
 	{
@@ -67,6 +71,23 @@ void AIJPGameMode::PossessPlayerPaddle(APlayerController* PlayerController)
 	if (Paddle && !Paddle->GetController())
 	{
 		PlayerController->Possess(Paddle);
+	}
+}
+
+void AIJPGameMode::SpawnAIPaddle(EIJPSide Side)
+{
+	AIJPPaddle* Paddle = Arena ? Arena->GetPaddle(Side) : nullptr;
+	if (!Paddle || Paddle->GetController() || !AIControllerClass)
+	{
+		return;
+	}
+
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	if (AIJPPaddleAIController* AI = GetWorld()->SpawnActor<AIJPPaddleAIController>(AIControllerClass, Params))
+	{
+		AI->SetProfile(AIProfile.LoadSynchronous());
+		AI->Possess(Paddle);
 	}
 }
 
