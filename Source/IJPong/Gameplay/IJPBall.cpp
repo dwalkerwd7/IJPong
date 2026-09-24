@@ -172,6 +172,7 @@ void AIJPBall::HandleHit(const FHitResult& Hit)
 
 	// Walls, and the top/bottom edges of paddles: a plain mirror bounce.
 	Velocity = FIJPPongMath::ClampAngle(FIJPPongMath::Reflect(Velocity, Normal), MaxBounceAngleDeg);
+	OnBounce.Broadcast();
 }
 
 bool AIJPBall::TryPaddleBounce(AIJPPaddle* Paddle, const FVector2D& Normal)

@@ -14,6 +14,7 @@ struct FHitResult;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FIJPBallGoalSignature, EIJPSide, DefendingSide);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FIJPBallPaddleHitSignature, AIJPPaddle*, Paddle);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FIJPBallBounceSignature);
 
 /**
  * The square Pong ball: a kinematic mover simulated in arena plane space.
@@ -74,6 +75,10 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Ball")
 	FIJPBallPaddleHitSignature OnPaddleHit;
+
+	/** A plain mirror bounce: walls, and the top/bottom edges of paddles. */
+	UPROPERTY(BlueprintAssignable, Category = "Ball")
+	FIJPBallBounceSignature OnBounce;
 
 protected:
 	/** Edge length of the square ball. */

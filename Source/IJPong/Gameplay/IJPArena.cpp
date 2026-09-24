@@ -1,6 +1,8 @@
 // It's Just Pong
 
 #include "Gameplay/IJPArena.h"
+#include "Audio/IJPToneSet.h"
+#include "Audio/IJPToneSynthComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
@@ -52,6 +54,9 @@ AIJPArena::AIJPArena()
 
 	RightScore = CreateDefaultSubobject<UIJPSevenSegmentComponent>(TEXT("RightScore"));
 	RightScore->SetupAttachment(Root);
+
+	Tones = CreateDefaultSubobject<UIJPToneSynthComponent>(TEXT("Tones"));
+	Tones->SetupAttachment(Root);
 
 	// Sits on plane-space "front" (+Y) looking back at the playfield: screen right = +X, screen up = +Z.
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
@@ -138,6 +143,7 @@ void AIJPArena::BeginPlay()
 
 	LeftPaddle = SpawnPaddle(EIJPSide::Left);
 	RightPaddle = SpawnPaddle(EIJPSide::Right);
+	LoadedToneSet = ToneSet.LoadSynchronous();
 
 	if (BallClass)
 	{
@@ -148,6 +154,9 @@ void AIJPArena::BeginPlay()
 		if (Ball)
 		{
 			Ball->InitBall(this);
+			Ball->OnPaddleHit.AddDynamic(this, &AIJPArena::HandleBallPaddleHit);
+			Ball->OnBounce.AddDynamic(this, &AIJPArena::HandleBallBounce);
+			Ball->OnGoal.AddDynamic(this, &AIJPArena::HandleBallGoal);
 		}
 	}
 	else
@@ -190,6 +199,26 @@ AIJPPaddle* AIJPArena::SpawnPaddle(EIJPSide Side)
 		Paddle->InitPaddle(this, Side, GetLaneX(Side));
 	}
 	return Paddle;
+}
+
+const UIJPToneSet& AIJPArena::GetToneSet() const
+{
+	return LoadedToneSet ? *LoadedToneSet : *GetDefault<UIJPToneSet>();
+}
+
+void AIJPArena::HandleBallPaddleHit(AIJPPaddle* Paddle)
+{
+	Tones->PlayTone(GetToneSet().PaddleHit);
+}
+
+void AIJPArena::HandleBallBounce()
+{
+	Tones->PlayTone(GetToneSet().Bounce);
+}
+
+void AIJPArena::HandleBallGoal(EIJPSide DefendingSide)
+{
+	Tones->PlayTone(GetToneSet().Goal);
 }
 
 AIJPPaddle* AIJPArena::GetPaddle(EIJPSide Side) const

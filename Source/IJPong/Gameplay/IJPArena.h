@@ -15,13 +15,15 @@ class AIJPBall;
 class AIJPPaddle;
 class UIJPGoalComponent;
 class UIJPSevenSegmentComponent;
+class UIJPToneSet;
+class UIJPToneSynthComponent;
 
 /**
  * The Pong playfield: walls, goals, net, score digits and the camera that frames it.
  * Owns the mapping between arena plane space (2D, see IJPTypes.h) and world space, so the
  * whole game can be placed and oriented anywhere in a level.
  */
-UCLASS()
+UCLASS(Config = Game)
 class IJPONG_API AIJPArena : public AActor
 {
 	GENERATED_BODY()
@@ -65,6 +67,11 @@ public:
 	/** The arena's ball. Null before BeginPlay. */
 	UFUNCTION(BlueprintPure, Category = "Arena")
 	AIJPBall* GetBall() const { return Ball; }
+
+	UIJPToneSynthComponent* GetTones() const { return Tones; }
+
+	/** The tone set in use: the configured asset, or UIJPToneSet's defaults if none loaded. */
+	const UIJPToneSet& GetToneSet() const;
 
 	UMaterialInterface* GetPongMaterial() const { return PongMaterial; }
 
@@ -122,6 +129,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Look")
 	TObjectPtr<UMaterialInterface> PongMaterial;
 
+	/** The beeps for ball events. Default from DefaultGame.ini; empty uses UIJPToneSet's defaults. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Arena|Audio")
+	TSoftObjectPtr<UIJPToneSet> ToneSet;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<USceneComponent> Root;
 
@@ -150,8 +161,21 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<UCameraComponent> Camera;
 
+	/** The cabinet's one speaker. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<UIJPToneSynthComponent> Tones;
+
 private:
 	AIJPPaddle* SpawnPaddle(EIJPSide Side);
+
+	UFUNCTION()
+	void HandleBallPaddleHit(AIJPPaddle* Paddle);
+
+	UFUNCTION()
+	void HandleBallBounce();
+
+	UFUNCTION()
+	void HandleBallGoal(EIJPSide DefendingSide);
 	FTransform GetPlaneTransform() const;
 	void AddVisualBox(const FVector2D& Centre, const FVector2D& Size);
 
@@ -163,4 +187,7 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<AIJPBall> Ball;
+
+	UPROPERTY(Transient)
+	TObjectPtr<const UIJPToneSet> LoadedToneSet;
 };
