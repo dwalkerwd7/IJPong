@@ -10,6 +10,7 @@
 #include "Gameplay/IJPBall.h"
 #include "Gameplay/IJPGoalComponent.h"
 #include "Gameplay/IJPPaddle.h"
+#include "Gameplay/IJPPaddleProfile.h"
 #include "Gameplay/IJPSevenSegmentComponent.h"
 #include "Presentation/IJPCRTComponent.h"
 #include "Materials/MaterialInterface.h"
@@ -199,7 +200,8 @@ AIJPPaddle* AIJPArena::SpawnPaddle(EIJPSide Side)
 	AIJPPaddle* Paddle = GetWorld()->SpawnActor<AIJPPaddle>(PaddleClass, GetActorTransform(), Params);
 	if (Paddle)
 	{
-		Paddle->InitPaddle(this, Side, GetLaneX(Side));
+		const TSoftObjectPtr<UIJPPaddleProfile>& Profile = Side == EIJPSide::Left ? LeftPaddleProfile : RightPaddleProfile;
+		Paddle->InitPaddle(this, Side, GetLaneX(Side), Profile.LoadSynchronous());
 	}
 	return Paddle;
 }
@@ -229,6 +231,11 @@ void AIJPArena::HandleBallGoal(EIJPSide DefendingSide)
 void AIJPArena::FlashScore(EIJPSide Side)
 {
 	GetScoreDisplay(Side)->Flash();
+}
+
+void AIJPArena::SetPaddleProfile(EIJPSide Side, UIJPPaddleProfile* Profile)
+{
+	(Side == EIJPSide::Left ? LeftPaddleProfile : RightPaddleProfile) = Profile;
 }
 
 AIJPPaddle* AIJPArena::GetPaddle(EIJPSide Side) const

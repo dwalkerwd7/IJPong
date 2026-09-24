@@ -10,6 +10,7 @@
 #include "Engine/World.h"
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPPaddle.h"
+#include "Gameplay/IJPPaddleProfile.h"
 #include "Tests/IJPTestWorld.h"
 
 namespace IJPPaddleTests
@@ -131,6 +132,30 @@ bool FIJPPaddleBlocksBallTest::RunTest(const FString& Parameters)
 	FHitResult Miss;
 	const bool bMissHit = Sweep(0.f, Miss);
 	UTEST_TRUE("Sweep where the paddle was doesn't hit the paddle", !bMissHit || Miss.GetActor() != Paddle);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPPaddleProfileTest, "IJPong.Paddle.EachSideUsesItsProfile", IJPPaddleTests::Flags)
+bool FIJPPaddleProfileTest::RunTest(const FString& Parameters)
+{
+	// A long, slow paddle for the left side only. (Left, because in tests it has no controller.)
+	UIJPPaddleProfile* Long = NewObject<UIJPPaddleProfile>();
+	Long->Size = FVector2D(12.f, 140.f);
+	Long->MaxSpeed = 300.f;
+
+	FIJPTestWorld Test(IJPPaddleTests::ArenaTransform, [Long](AIJPArena& Arena) { Arena.SetPaddleProfile(EIJPSide::Left, Long); });
+	AIJPArena* Arena = Test.GetArena();
+	AIJPPaddle* Left = Arena->GetPaddle(EIJPSide::Left);
+	AIJPPaddle* Right = Arena->GetPaddle(EIJPSide::Right);
+
+	UTEST_EQUAL("Left uses the long profile", Left->GetSize().Y, 140.0);
+	UTEST_TRUE("Right keeps its own profile", Right->GetSize().Y != 140.0);
+
+	// The profile drives the real movement and wall limits, not just the numbers.
+	Test.RunFor(0.3f, [Left] { Left->AddMoveInput(1.f); });
+	UTEST_EQUAL_TOLERANCE("Capped at the profile's speed", Left->GetPlaneVelocity(), 300.f, 1e-3f);
+	Test.RunFor(2.f, [Left] { Left->AddMoveInput(1.f); });
+	UTEST_EQUAL_TOLERANCE("Long paddle's edge sits on the wall", Left->GetPlanePosition().Y, double(Arena->GetHalfExtents().Y - 70.f), 1e-3);
 	return true;
 }
 

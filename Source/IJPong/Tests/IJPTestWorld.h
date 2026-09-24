@@ -20,7 +20,8 @@ class FIJPTestWorld
 public:
 	static constexpr float FixedStep = 1.f / 60.f;
 
-	explicit FIJPTestWorld(const FTransform& ArenaTransform = FTransform::Identity);
+	/** @param SetupArena  Optional: configure the arena after it's spawned but before BeginPlay (e.g. paddle profiles). */
+	explicit FIJPTestWorld(const FTransform& ArenaTransform = FTransform::Identity, TFunction<void(AIJPArena&)> SetupArena = nullptr);
 	~FIJPTestWorld();
 
 	UWorld* GetWorld() const { return World; }

@@ -10,6 +10,7 @@
 
 class AIJPArena;
 class UBoxComponent;
+class UIJPPaddleProfile;
 class UStaticMeshComponent;
 
 /**
@@ -28,8 +29,14 @@ public:
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void Tick(float DeltaSeconds) override;
 
-	/** Called by the arena right after spawning. Places the paddle in its lane, centred vertically. */
-	void InitPaddle(AIJPArena* InArena, EIJPSide InSide, float InLaneX);
+	/**
+	 * Called by the arena right after spawning. Applies the profile (null = UIJPPaddleProfile's defaults)
+	 * and places the paddle in its lane, centred vertically.
+	 */
+	void InitPaddle(AIJPArena* InArena, EIJPSide InSide, float InLaneX, const UIJPPaddleProfile* InProfile);
+
+	UFUNCTION(BlueprintPure, Category = "Paddle")
+	const UIJPPaddleProfile* GetProfile() const;
 
 	/** Blink off briefly: a contact cue for ball hits. */
 	UFUNCTION(BlueprintCallable, Category = "Paddle")
@@ -57,36 +64,21 @@ public:
 	float GetPlaneVelocity() const { return Velocity; }
 
 	UFUNCTION(BlueprintPure, Category = "Paddle")
-	FVector2D GetSize() const { return Size; }
+	FVector2D GetSize() const;
 
 	UFUNCTION(BlueprintPure, Category = "Paddle")
-	float GetMaxSpeed() const { return MaxSpeed; }
+	float GetMaxSpeed() const;
 
 	UFUNCTION(BlueprintPure, Category = "Paddle")
-	float GetRampTime() const { return RampTime; }
+	float GetRampTime() const;
 
 protected:
-	/** Width (plane X) and height (plane Y) of the paddle. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Layout")
-	FVector2D Size = FVector2D(10.f, 76.f);
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Layout")
 	float VisualDepth = 10.f;
 
 	/** Thickness of the ball-blocking box toward the camera; matches the arena's blockers. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Layout")
 	float BlockerDepth = 200.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Movement", meta = (ClampMin = "0"))
-	float MaxSpeed = 700.f;
-
-	/** Time to go from rest to MaxSpeed (and back to rest). 0 = fully instant. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Movement", meta = (ClampMin = "0", Units = "s"))
-	float RampTime = 0.05f;
-
-	/** How long Flicker() hides the paddle. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Presentation", meta = (ClampMin = "0.01", Units = "s"))
-	float FlickerTime = 0.05f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
 	TObjectPtr<UBoxComponent> Collision;
@@ -95,7 +87,11 @@ protected:
 	TObjectPtr<UStaticMeshComponent> Visual;
 
 private:
+	void ApplyLayout();
 	void UpdateTransform();
+
+	UPROPERTY(Transient)
+	TObjectPtr<const UIJPPaddleProfile> Profile;
 
 	TWeakObjectPtr<AIJPArena> Arena;
 	FIJPBlinker FlickerBlinker;

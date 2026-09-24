@@ -5,6 +5,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Gameplay/IJPArena.h"
+#include "Gameplay/IJPPaddleProfile.h"
 #include "UObject/ConstructorHelpers.h"
 
 AIJPPaddle::AIJPPaddle()
@@ -32,17 +33,14 @@ AIJPPaddle::AIJPPaddle()
 void AIJPPaddle::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
-
-	// Same local axes as the arena: X = plane X, Z = plane Y, Y = depth.
-	Collision->SetBoxExtent(FVector(Size.X * 0.5f, BlockerDepth * 0.5f, Size.Y * 0.5f));
-
-	const float CubeSize = 100.f; // /Engine/BasicShapes/Cube is 100 units, centred.
-	Visual->SetRelativeScale3D(FVector(Size.X / CubeSize, VisualDepth / CubeSize, Size.Y / CubeSize));
+	ApplyLayout();
 }
 
-void AIJPPaddle::InitPaddle(AIJPArena* InArena, EIJPSide InSide, float InLaneX)
+void AIJPPaddle::InitPaddle(AIJPArena* InArena, EIJPSide InSide, float InLaneX, const UIJPPaddleProfile* InProfile)
 {
 	check(InArena);
+	Profile = InProfile;
+	ApplyLayout();
 	Arena = InArena;
 	Side = InSide;
 	LaneX = InLaneX;
@@ -54,10 +52,40 @@ void AIJPPaddle::InitPaddle(AIJPArena* InArena, EIJPSide InSide, float InLaneX)
 	UpdateTransform();
 }
 
+const UIJPPaddleProfile* AIJPPaddle::GetProfile() const
+{
+	return Profile ? Profile.Get() : GetDefault<UIJPPaddleProfile>();
+}
+
+FVector2D AIJPPaddle::GetSize() const
+{
+	return GetProfile()->Size;
+}
+
+float AIJPPaddle::GetMaxSpeed() const
+{
+	return GetProfile()->MaxSpeed;
+}
+
+float AIJPPaddle::GetRampTime() const
+{
+	return GetProfile()->RampTime;
+}
+
+void AIJPPaddle::ApplyLayout()
+{
+	// Same local axes as the arena: X = plane X, Z = plane Y, Y = depth.
+	const FVector2D Size = GetSize();
+	Collision->SetBoxExtent(FVector(Size.X * 0.5f, BlockerDepth * 0.5f, Size.Y * 0.5f));
+
+	const float CubeSize = 100.f; // /Engine/BasicShapes/Cube is 100 units, centred.
+	Visual->SetRelativeScale3D(FVector(Size.X / CubeSize, VisualDepth / CubeSize, Size.Y / CubeSize));
+}
+
 void AIJPPaddle::Flicker()
 {
 	// Hidden now, shown again after one toggle. Only the visual: the collision never flickers.
-	FlickerBlinker.Start(this, FlickerTime, 1, false, [this](bool bShow) { Visual->SetVisibility(bShow); });
+	FlickerBlinker.Start(this, GetProfile()->FlickerTime, 1, false, [this](bool bShow) { Visual->SetVisibility(bShow); });
 }
 
 bool AIJPPaddle::IsVisualShown() const
@@ -85,6 +113,8 @@ void AIJPPaddle::Tick(float DeltaSeconds)
 	}
 
 	// Ramp toward the target speed at a constant rate, so reaching MaxSpeed from rest takes RampTime.
+	const float MaxSpeed = GetMaxSpeed();
+	const float RampTime = GetRampTime();
 	const float TargetVelocity = Input * MaxSpeed;
 	if (RampTime <= 0.f)
 	{
@@ -96,7 +126,7 @@ void AIJPPaddle::Tick(float DeltaSeconds)
 	}
 
 	// Stay between the walls. Hitting a wall kills the velocity, so the paddle doesn't "push" into it.
-	const float MaxY = FMath::Max(0.f, ArenaPtr->GetHalfExtents().Y - Size.Y * 0.5f);
+	const float MaxY = FMath::Max(0.f, ArenaPtr->GetHalfExtents().Y - GetSize().Y * 0.5f);
 	const float NewY = PlaneY + Velocity * DeltaSeconds;
 	PlaneY = FMath::Clamp(NewY, -MaxY, MaxY);
 	if (PlaneY != NewY)

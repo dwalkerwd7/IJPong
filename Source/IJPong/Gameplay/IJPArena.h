@@ -13,6 +13,7 @@ class UInstancedStaticMeshComponent;
 class UMaterialInterface;
 class AIJPBall;
 class AIJPPaddle;
+class UIJPPaddleProfile;
 class UIJPCRTComponent;
 class UIJPGoalComponent;
 class UIJPSevenSegmentComponent;
@@ -86,6 +87,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Arena")
 	void SetOpponentSkill(float Skill) { OpponentSkill = FMath::Clamp(Skill, 0.f, 1.f); }
 
+	/** Choose a side's paddle. Takes effect when the paddles spawn at BeginPlay. */
+	void SetPaddleProfile(EIJPSide Side, UIJPPaddleProfile* Profile);
+
 	/** The tone set in use: the configured asset, or UIJPToneSet's defaults if none loaded. */
 	const UIJPToneSet& GetToneSet() const;
 
@@ -133,6 +137,14 @@ protected:
 	/** Distance from each goal line in to the centre of that side's paddle. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Layout")
 	float PaddleInset = 40.f;
+
+	/** The player's (left) paddle. Default from DefaultGame.ini; empty uses UIJPPaddleProfile's defaults. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Arena|Paddles")
+	TSoftObjectPtr<UIJPPaddleProfile> LeftPaddleProfile;
+
+	/** The opponent's (right) paddle. Default from DefaultGame.ini; empty uses UIJPPaddleProfile's defaults. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Arena|Paddles")
+	TSoftObjectPtr<UIJPPaddleProfile> RightPaddleProfile;
 
 	/** Spawned for both sides at BeginPlay. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Spawning")
