@@ -233,6 +233,18 @@ void AIJPArena::FlashScore(EIJPSide Side)
 	GetScoreDisplay(Side)->Flash();
 }
 
+void AIJPArena::ShowWinner(EIJPSide Winner)
+{
+	GetScoreDisplay(IJP::Opposite(Winner))->StopFlash();
+	GetScoreDisplay(Winner)->Flash(0, WinnerBlinkPeriod);
+}
+
+void AIJPArena::ClearWinner()
+{
+	LeftScore->StopFlash();
+	RightScore->StopFlash();
+}
+
 void AIJPArena::SetPaddleProfile(EIJPSide Side, UIJPPaddleProfile* Profile)
 {
 	(Side == EIJPSide::Left ? LeftPaddleProfile : RightPaddleProfile) = Profile;

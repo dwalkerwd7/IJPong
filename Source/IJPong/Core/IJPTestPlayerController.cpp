@@ -46,7 +46,7 @@ void AIJPTestPlayerController::SetupInputComponent()
 			UE_LOG(LogIJPong, Warning, TEXT("IJPong Input settings are missing a debug action; that test key won't work."));
 		}
 	};
-	Bind(Settings->DebugResetScoreAction, &AIJPTestPlayerController::HandleResetScore);
+	Bind(Settings->DebugResetScoreAction, &AIJPTestPlayerController::HandleRestartMatch);
 	Bind(Settings->DebugServeAction, &AIJPTestPlayerController::HandleServe);
 	Bind(Settings->DebugToggleAIAction, &AIJPTestPlayerController::HandleToggleAI);
 	Bind(Settings->DebugSkillDownAction, &AIJPTestPlayerController::HandleSkillDown);
@@ -59,11 +59,11 @@ AIJPTestGameMode* AIJPTestPlayerController::GetTestGameMode() const
 	return GetWorld()->GetAuthGameMode<AIJPTestGameMode>();
 }
 
-void AIJPTestPlayerController::HandleResetScore()
+void AIJPTestPlayerController::HandleRestartMatch()
 {
 	if (AIJPTestGameMode* GameMode = GetTestGameMode())
 	{
-		GameMode->ResetScore();
+		GameMode->RestartMatch();
 	}
 }
 

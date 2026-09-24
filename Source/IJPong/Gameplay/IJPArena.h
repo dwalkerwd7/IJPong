@@ -62,6 +62,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Arena")
 	void FlashScore(EIJPSide Side);
 
+	/** The match is over: the winner's score blinks until ClearWinner(). */
+	UFUNCTION(BlueprintCallable, Category = "Arena")
+	void ShowWinner(EIJPSide Winner);
+
+	/** Stop showing a winner (a new match is starting). */
+	UFUNCTION(BlueprintCallable, Category = "Arena")
+	void ClearWinner();
+
 	UIJPSevenSegmentComponent* GetScoreDisplay(EIJPSide Side) const { return Side == EIJPSide::Left ? LeftScore : RightScore; }
 
 	/** The paddle defending this side's goal. Null before BeginPlay. */
@@ -121,6 +129,10 @@ protected:
 	/** Horizontal distance of each score from the net, and gap from the top wall. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Layout")
 	FVector2D ScoreOffset = FVector2D(120.f, 30.f);
+
+	/** Seconds between on/off toggles of the winner's score once a match is over. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Presentation", meta = (ClampMin = "0.01", Units = "s"))
+	float WinnerBlinkPeriod = 0.4f;
 
 	/** Thickness of the visual pieces toward the camera. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Layout")

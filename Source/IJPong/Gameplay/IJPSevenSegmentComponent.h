@@ -25,9 +25,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Seven Segment")
 	int32 GetValue() const { return Value; }
 
-	/** Blink the whole number off and on NumFlashes times, ending shown. */
+	/** Blink the whole number off and on NumFlashes times, ending shown. 0 = keep blinking until StopFlash(). */
 	UFUNCTION(BlueprintCallable, Category = "Seven Segment")
 	void Flash(int32 NumFlashes = 3, float Period = 0.12f);
+
+	/** Stop any flash and leave the number shown. */
+	UFUNCTION(BlueprintCallable, Category = "Seven Segment")
+	void StopFlash();
 
 	UFUNCTION(BlueprintPure, Category = "Seven Segment")
 	bool IsFlashing() const { return Blinker.IsRunning(); }

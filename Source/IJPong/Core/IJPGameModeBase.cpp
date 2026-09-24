@@ -6,6 +6,7 @@
 #include "Core/IJPPlayerController.h"
 #include "EngineUtils.h"
 #include "Gameplay/IJPArena.h"
+#include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPPaddle.h"
 
 AIJPGameModeBase::AIJPGameModeBase()
@@ -14,6 +15,8 @@ AIJPGameModeBase::AIJPGameModeBase()
 	AIControllerClass = AIJPPaddleAIController::StaticClass();
 	// Paddles come from the arena, never from the default pawn spawn.
 	DefaultPawnClass = nullptr;
+
+	Match = CreateDefaultSubobject<UIJPMatchComponent>(TEXT("Match"));
 }
 
 void AIJPGameModeBase::StartPlay()

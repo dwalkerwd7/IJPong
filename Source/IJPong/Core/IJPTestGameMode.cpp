@@ -7,9 +7,9 @@
 #include "Engine/Engine.h"
 #include "EngineUtils.h"
 #include "Gameplay/IJPArena.h"
-#include "Gameplay/IJPBall.h"
+#include "Gameplay/IJPMatchComponent.h"
+#include "Gameplay/IJPMatchRules.h"
 #include "Gameplay/IJPPaddle.h"
-#include "TimerManager.h"
 
 AIJPTestGameMode::AIJPTestGameMode()
 {
@@ -19,29 +19,23 @@ AIJPTestGameMode::AIJPTestGameMode()
 
 void AIJPTestGameMode::OnArenaReady()
 {
-	if (AIJPBall* Ball = GetBall())
-	{
-		Ball->OnGoal.AddDynamic(this, &AIJPTestGameMode::HandleGoal);
-		UpdateScoreDisplay();
-		ScheduleServe(RandomSide());
-	}
+	RestartMatch();
 }
 
-void AIJPTestGameMode::ResetScore()
+void AIJPTestGameMode::RestartMatch(const UIJPMatchRules* Rules)
 {
-	LeftScore = RightScore = 0;
-	UpdateScoreDisplay();
-
-	// Abandons any rally: the ball goes back to blinking at the centre.
-	ScheduleServe(RandomSide());
+	GetMatch()->StartMatch(GetArena(), Rules ? Rules : MatchRules.LoadSynchronous());
 }
 
 void AIJPTestGameMode::ServeNow()
 {
-	if (AIJPBall* Ball = GetBall())
+	if (GetMatch()->IsOver())
 	{
-		GetWorldTimerManager().ClearTimer(ServeTimer);
-		Ball->Serve(RandomSide(), FMath::FRandRange(-MaxServeAngleDeg, MaxServeAngleDeg));
+		RestartMatch();
+	}
+	else
+	{
+		GetMatch()->ServeNow();
 	}
 }
 
@@ -104,44 +98,21 @@ void AIJPTestGameMode::GetDebugLines(TArray<FString>& OutLines) const
 	OutLines.Add(TEXT("TEST MODE"));
 	OutLines.Add(FString::Printf(TEXT("Opponent skill: %.2f"), ArenaPtr ? ArenaPtr->GetOpponentSkill() : 0.f));
 	OutLines.Add(FString::Printf(TEXT("Your paddle: %s"), IsPlayerSideAI() ? TEXT("AI") : TEXT("you")));
-	OutLines.Add(TEXT("R reset score   F serve now   T AI vs AI"));
+
+	const UIJPMatchComponent* MatchPtr = GetMatch();
+	if (MatchPtr->IsOver())
+	{
+		OutLines.Add(FString::Printf(TEXT("Match over: %s wins"), MatchPtr->GetWinner() == EIJPSide::Left ? TEXT("left") : TEXT("right")));
+	}
+	else if (MatchPtr->GetRules().IsEndless())
+	{
+		OutLines.Add(TEXT("Match: endless"));
+	}
+	else
+	{
+		OutLines.Add(FString::Printf(TEXT("Match: first to %d"), MatchPtr->GetRules().WinTarget));
+	}
+
+	OutLines.Add(TEXT("R new match   F serve now   T AI vs AI"));
 	OutLines.Add(TEXT("- / = opponent skill   . (period) hide this"));
-}
-
-void AIJPTestGameMode::HandleGoal(EIJPSide DefendingSide)
-{
-	++(DefendingSide == EIJPSide::Left ? RightScore : LeftScore);
-	UpdateScoreDisplay();
-	GetArena()->FlashScore(IJP::Opposite(DefendingSide));
-
-	// The side that just conceded receives the next serve.
-	ScheduleServe(DefendingSide);
-}
-
-void AIJPTestGameMode::ScheduleServe(EIJPSide Toward)
-{
-	NextServeSide = Toward;
-	if (AIJPBall* Ball = GetBall())
-	{
-		Ball->BlinkAtCentre();
-	}
-	GetWorldTimerManager().SetTimer(ServeTimer, this, &AIJPTestGameMode::ServeBall, FMath::Max(ServeDelay, UE_KINDA_SMALL_NUMBER));
-}
-
-void AIJPTestGameMode::ServeBall()
-{
-	AIJPBall* Ball = GetBall();
-	if (Ball && !Ball->IsInPlay())
-	{
-		Ball->Serve(NextServeSide, FMath::FRandRange(-MaxServeAngleDeg, MaxServeAngleDeg));
-	}
-}
-
-void AIJPTestGameMode::UpdateScoreDisplay() const
-{
-	if (AIJPArena* ArenaPtr = GetArena())
-	{
-		ArenaPtr->SetScore(EIJPSide::Left, LeftScore);
-		ArenaPtr->SetScore(EIJPSide::Right, RightScore);
-	}
 }

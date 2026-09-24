@@ -11,6 +11,7 @@ class AIJPArena;
 class AIJPBall;
 class AIJPPaddleAIController;
 class UIJPAIProfile;
+class UIJPMatchComponent;
 
 /**
  * Setup shared by every IJPong mode: find the level's arena, give the player the left paddle,
@@ -34,6 +35,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Game")
 	AIJPBall* GetBall() const;
 
+	/** Runs the matches played in this mode. Subclasses decide when to start them. */
+	UFUNCTION(BlueprintPure, Category = "Game")
+	UIJPMatchComponent* GetMatch() const { return Match; }
+
 	/** The side the local player plays. */
 	static constexpr EIJPSide PlayerSide = EIJPSide::Left;
 
@@ -54,6 +59,9 @@ protected:
 	/** How the AI plays. Set in DefaultGame.ini; empty uses UIJPAIProfile's defaults. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Game|AI")
 	TSoftObjectPtr<UIJPAIProfile> AIProfile;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game|Components")
+	TObjectPtr<UIJPMatchComponent> Match;
 
 private:
 	UPROPERTY(Transient)

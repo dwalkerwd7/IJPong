@@ -10,6 +10,7 @@
 #include "Engine/World.h"
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPBall.h"
+#include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPPaddle.h"
 #include "Tests/IJPTestWorld.h"
 
@@ -33,7 +34,7 @@ namespace IJPTestModeTests
 	}
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPTestModeResetTest, "IJPong.TestMode.ResetScoreZeroesAndReserves", IJPTestModeTests::Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPTestModeResetTest, "IJPong.TestMode.RestartMatchZeroesAndReserves", IJPTestModeTests::Flags)
 bool FIJPTestModeResetTest::RunTest(const FString& Parameters)
 {
 	FIJPTestWorld Test;
@@ -46,14 +47,14 @@ bool FIJPTestModeResetTest::RunTest(const FString& Parameters)
 	Test.RunFor(0.5f, [Left] { Left->AddMoveInput(1.f); });
 	Ball->Serve(EIJPSide::Left, 0.f);
 	UTEST_TRUE("Goal", IJPTestModeTests::RunUntil(Test, 2.f, [Ball] { return !Ball->IsInPlay(); }));
-	UTEST_EQUAL("Right scored", Mode->GetScore(EIJPSide::Right), 1);
+	UTEST_EQUAL("Right scored", Mode->GetMatch()->GetScore(EIJPSide::Right), 1);
 
-	// Reset mid-rally: scores clear, the ball is taken out of play, and a fresh serve follows.
+	// Restart mid-rally: scores clear, the ball is taken out of play, and a fresh serve follows.
 	Test.RunFor(1.2f);
 	UTEST_TRUE("Next rally under way", Ball->IsInPlay());
-	Mode->ResetScore();
-	UTEST_EQUAL("Left score cleared", Mode->GetScore(EIJPSide::Left), 0);
-	UTEST_EQUAL("Right score cleared", Mode->GetScore(EIJPSide::Right), 0);
+	Mode->RestartMatch();
+	UTEST_EQUAL("Left score cleared", Mode->GetMatch()->GetScore(EIJPSide::Left), 0);
+	UTEST_EQUAL("Right score cleared", Mode->GetMatch()->GetScore(EIJPSide::Right), 0);
 	UTEST_FALSE("Rally abandoned", Ball->IsInPlay());
 	UTEST_TRUE("Serves again after the delay", IJPTestModeTests::RunUntil(Test, 2.f, [Ball] { return Ball->IsInPlay(); }));
 	return true;
@@ -152,6 +153,7 @@ bool FIJPTestModeOverlayTest::RunTest(const FString& Parameters)
 	UTEST_TRUE("Shows the opponent skill", Overlay().Contains(TEXT("Opponent skill: 0.50")));
 	UTEST_TRUE("Shows who drives your paddle", Overlay().Contains(TEXT("Your paddle: you")));
 	UTEST_TRUE("Lists the keys", Overlay().Contains(TEXT(". (period) hide this")));
+	UTEST_TRUE("Shows the match rules", Overlay().Contains(TEXT("Match: first to 5")));
 
 	// It reflects changes as they happen.
 	Mode->AdjustOpponentSkill(0.2f);

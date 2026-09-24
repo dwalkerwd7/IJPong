@@ -30,9 +30,9 @@ UENUM(BlueprintType)
 enum class EIJPMatchPhase : uint8
 {
 	None,
+	/** Ball blinking at the centre, waiting to be served (also the pause after each point). */
 	Serve,
 	Rally,
-	PointScored,
 	MatchOver
 };
 

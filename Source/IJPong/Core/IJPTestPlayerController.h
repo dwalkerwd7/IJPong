@@ -20,7 +20,7 @@ protected:
 
 private:
 	AIJPTestGameMode* GetTestGameMode() const;
-	void HandleResetScore();
+	void HandleRestartMatch();
 	void HandleServe();
 	void HandleToggleAI();
 	void HandleSkillDown();

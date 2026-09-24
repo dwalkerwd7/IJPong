@@ -6,9 +6,11 @@
 #include "Core/IJPGameModeBase.h"
 #include "IJPTestGameMode.generated.h"
 
+class UIJPMatchRules;
+
 /**
- * Endless play for trying out a level: serve -> goal -> score -> serve, forever, no win condition.
- * Also has test tools (bound to debug keys by AIJPTestPlayerController): reset the score,
+ * Match after match for trying out a level, with the rules from config (MatchRules).
+ * Also has test tools (bound to debug keys by AIJPTestPlayerController): start a new match,
  * serve now, hand the player's paddle to an AI to watch the level play itself, and nudge the
  * opponent's skill up and down.
  */
@@ -20,14 +22,11 @@ class IJPONG_API AIJPTestGameMode : public AIJPGameModeBase
 public:
 	AIJPTestGameMode();
 
-	UFUNCTION(BlueprintPure, Category = "Test")
-	int32 GetScore(EIJPSide Side) const { return Side == EIJPSide::Left ? LeftScore : RightScore; }
-
-	/** Zero both scores and start a fresh serve after the usual delay. */
+	/** Abandon the current match and start a new one. Null Rules uses the configured MatchRules. */
 	UFUNCTION(BlueprintCallable, Category = "Test")
-	void ResetScore();
+	void RestartMatch(const UIJPMatchRules* Rules = nullptr);
 
-	/** Serve immediately toward a random side, abandoning any rally in progress. */
+	/** Serve immediately toward a random side, abandoning any rally in progress. Once a match is over, starts a new one. */
 	UFUNCTION(BlueprintCallable, Category = "Test")
 	void ServeNow();
 
@@ -48,28 +47,11 @@ public:
 protected:
 	virtual void OnArenaReady() override;
 
-	/** Pause before each serve, including the first. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Test|Serve", meta = (ClampMin = "0", Units = "s"))
-	float ServeDelay = 1.f;
-
-	/** Serves leave at a random angle within +-this from horizontal. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Test|Serve", meta = (ClampMin = "0", Units = "deg"))
-	float MaxServeAngleDeg = 30.f;
+	/** The matches played here. Set in DefaultGame.ini; empty uses UIJPMatchRules' defaults. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Test|Match")
+	TSoftObjectPtr<UIJPMatchRules> MatchRules;
 
 private:
-	UFUNCTION()
-	void HandleGoal(EIJPSide DefendingSide);
-
-	void ScheduleServe(EIJPSide Toward);
-	void ServeBall();
-	void UpdateScoreDisplay() const;
-	static EIJPSide RandomSide() { return FMath::RandBool() ? EIJPSide::Left : EIJPSide::Right; }
-
 	UPROPERTY(Transient)
 	TObjectPtr<AIJPPaddleAIController> PlayerSideAI;
-
-	FTimerHandle ServeTimer;
-	EIJPSide NextServeSide = EIJPSide::Left;
-	int32 LeftScore = 0;
-	int32 RightScore = 0;
 };

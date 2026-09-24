@@ -11,6 +11,8 @@
 #include "Engine/World.h"
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPBall.h"
+#include "Gameplay/IJPMatchComponent.h"
+#include "Gameplay/IJPMatchRules.h"
 #include "Gameplay/IJPPaddle.h"
 #include "Tests/IJPTestWorld.h"
 
@@ -32,6 +34,14 @@ namespace IJPAITests
 		Profile->ErrorSpread = { 0.f, 0.f };
 		Profile->AimSpread = { 0.f, 0.f };
 		return Profile;
+	}
+
+	/** Long AI-vs-AI runs count goals over minutes, so nobody may win and stop the match. */
+	UIJPMatchRules* EndlessRules()
+	{
+		UIJPMatchRules* Rules = NewObject<UIJPMatchRules>();
+		Rules->WinTarget = 0;
+		return Rules;
 	}
 
 	bool RunUntil(FIJPTestWorld& Test, float MaxSeconds, TFunctionRef<bool()> Condition)
@@ -115,6 +125,7 @@ bool FIJPAIMatchTest::RunTest(const FString& Parameters)
 	AIJPBall* Ball = Arena->GetBall();
 	AIJPTestGameMode* GameMode = Cast<AIJPTestGameMode>(Test.GetWorld()->GetAuthGameMode());
 	UTEST_NOT_NULL("GameMode", GameMode);
+	GameMode->RestartMatch(IJPAITests::EndlessRules());
 
 	// The game mode's AI plays right with the project's configured profile; give it a default-profile twin on the left.
 	AIJPPaddleAIController* RightAI = IJPAITests::GetAI(Arena, EIJPSide::Right);
@@ -146,9 +157,9 @@ bool FIJPAIMatchTest::RunTest(const FString& Parameters)
 		LastHits = Hits;
 	});
 
-	const int32 Goals = GameMode->GetScore(EIJPSide::Left) + GameMode->GetScore(EIJPSide::Right);
+	const int32 Goals = GameMode->GetMatch()->GetScore(EIJPSide::Left) + GameMode->GetMatch()->GetScore(EIJPSide::Right);
 	AddInfo(FString::Printf(TEXT("AI vs AI, 120s: %d goals (L %d - R %d), %d paddle hits, longest rally %d"),
-		Goals, GameMode->GetScore(EIJPSide::Left), GameMode->GetScore(EIJPSide::Right), TotalHits, LongestRally));
+		Goals, GameMode->GetMatch()->GetScore(EIJPSide::Left), GameMode->GetMatch()->GetScore(EIJPSide::Right), TotalHits, LongestRally));
 
 	UTEST_TRUE("Beatable: goals get scored", Goals >= 3);
 	UTEST_TRUE("Competent: plenty of returns", TotalHits >= 2 * Goals);
@@ -175,6 +186,7 @@ bool FIJPAISpectrumTest::RunTest(const FString& Parameters)
 	AIJPArena* Arena = Test.GetArena();
 	AIJPTestGameMode* GameMode = Cast<AIJPTestGameMode>(Test.GetWorld()->GetAuthGameMode());
 	UTEST_NOT_NULL("GameMode", GameMode);
+	GameMode->RestartMatch(IJPAITests::EndlessRules());
 
 	// Same profile both sides; only the skill dial differs.
 	AIJPPaddleAIController* Strong = IJPAITests::GetAI(Arena, EIJPSide::Right);
@@ -189,8 +201,8 @@ bool FIJPAISpectrumTest::RunTest(const FString& Parameters)
 
 	Test.RunFor(120.f);
 
-	const int32 StrongScore = GameMode->GetScore(EIJPSide::Right);
-	const int32 WeakScore = GameMode->GetScore(EIJPSide::Left);
+	const int32 StrongScore = GameMode->GetMatch()->GetScore(EIJPSide::Right);
+	const int32 WeakScore = GameMode->GetMatch()->GetScore(EIJPSide::Left);
 	AddInfo(FString::Printf(TEXT("Skill 0.85 vs 0.15 over 120s: %d - %d"), StrongScore, WeakScore));
 	UTEST_TRUE("Stronger AI outscores the weaker one clearly", StrongScore >= WeakScore + 3);
 	return true;

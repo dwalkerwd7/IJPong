@@ -9,6 +9,7 @@
 #include "Engine/World.h"
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPBall.h"
+#include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPPongMath.h"
 #include "Tests/IJPTestWorld.h"
@@ -130,14 +131,14 @@ bool FIJPBallGoalTest::RunTest(const FString& Parameters)
 	UTEST_NOT_NULL("GameMode", GameMode);
 
 	// Get the left paddle out of the way (pinned to the top wall), then serve straight at its goal.
-	// Serving before the game mode's own first serve (at ServeDelay) means that one is skipped.
+	// Serving before the game mode's own first serve (after the serve delay) means that one is skipped.
 	Test.RunFor(0.5f, [Paddle] { Paddle->AddMoveInput(1.f); });
 	Ball->Serve(EIJPSide::Left, 0.f);
 
 	UTEST_TRUE("Ball went into the goal", IJPBallTests::RunUntil(Test, 2.f, [Ball] { return !Ball->IsInPlay(); }));
 	UTEST_EQUAL("No rally hits", Ball->GetRallyHits(), 0);
-	UTEST_EQUAL("Right scored", GameMode->GetScore(EIJPSide::Right), 1);
-	UTEST_EQUAL("Left didn't", GameMode->GetScore(EIJPSide::Left), 0);
+	UTEST_EQUAL("Right scored", GameMode->GetMatch()->GetScore(EIJPSide::Right), 1);
+	UTEST_EQUAL("Left didn't", GameMode->GetMatch()->GetScore(EIJPSide::Left), 0);
 	UTEST_TRUE("Ball hidden between points", Ball->IsHidden());
 
 	// After the serve delay, the side that conceded receives the next serve.
