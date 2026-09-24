@@ -1,6 +1,6 @@
 # It's Just Pong
 
-Unreal Engine 5.8 C++ game (single runtime module `IJPong`). Working concept, "The Lie": it starts as a faithful 1972 Pong that slowly unravels into something bigger. The chapter ideas in the original plan (`~/.claude/plans/i-d-like-to-plan-reactive-newell.md`) are **tentative, not a spec**.
+Unreal Engine 5.8 C++ game (single runtime module `IJPong`). Concept: a **roguelite Pong that gets better as you progress**. It starts lo-fi (1972 black and white, heavy CRT, menus included) and upgrades era by era (more colour, more on screen, a cleaner CRT) up to a hard "Pong on steroids" endgame with bosses, multiple ball types, and paddle classes (sprite + ability + per-class skill tree). Two progressions: per-class skill trees, and the game's era, which is the "story". The living design doc is <https://claude.ai/code/artifact/37b5614d-b98a-4d6a-b6ad-9c29eee56660> (read it with the Claude Docs tools). Its proposals and open questions are **not decided** until the user settles them. The earlier "The Lie" concept and its chapter plan (`~/.claude/plans/i-d-like-to-plan-reactive-newell.md`) are superseded.
 
 ## How we work
 - **Step by step, as a learning exercise.** Claude writes the code in small chunks and walks through it. The user reviews before we move on. One step per turn, never several systems at once.
