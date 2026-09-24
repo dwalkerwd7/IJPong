@@ -42,6 +42,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Test")
 	void AdjustOpponentSkill(float Delta);
 
+	/** The debug overlay's text: the test tools' current state and the key legend. */
+	void GetDebugLines(TArray<FString>& OutLines) const;
+
 protected:
 	virtual void OnArenaReady() override;
 

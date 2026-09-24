@@ -2,6 +2,7 @@
 
 #include "Core/IJPTestGameMode.h"
 #include "AI/IJPPaddleAIController.h"
+#include "Core/IJPTestHUD.h"
 #include "Core/IJPTestPlayerController.h"
 #include "Engine/Engine.h"
 #include "EngineUtils.h"
@@ -13,6 +14,7 @@
 AIJPTestGameMode::AIJPTestGameMode()
 {
 	PlayerControllerClass = AIJPTestPlayerController::StaticClass();
+	HUDClass = AIJPTestHUD::StaticClass();
 }
 
 void AIJPTestGameMode::OnArenaReady()
@@ -94,6 +96,16 @@ void AIJPTestGameMode::AdjustOpponentSkill(float Delta)
 		// Same key each time, so repeated presses replace the message instead of stacking.
 		GEngine->AddOnScreenDebugMessage(static_cast<uint64>(GetUniqueID()), 2.f, FColor::White, FString::Printf(TEXT("Opponent skill: %.2f"), Skill));
 	}
+}
+
+void AIJPTestGameMode::GetDebugLines(TArray<FString>& OutLines) const
+{
+	const AIJPArena* ArenaPtr = GetArena();
+	OutLines.Add(TEXT("TEST MODE"));
+	OutLines.Add(FString::Printf(TEXT("Opponent skill: %.2f"), ArenaPtr ? ArenaPtr->GetOpponentSkill() : 0.f));
+	OutLines.Add(FString::Printf(TEXT("Your paddle: %s"), IsPlayerSideAI() ? TEXT("AI") : TEXT("you")));
+	OutLines.Add(TEXT("R reset score   F serve now   T AI vs AI"));
+	OutLines.Add(TEXT("- / = opponent skill   F1 hide this"));
 }
 
 void AIJPTestGameMode::HandleGoal(EIJPSide DefendingSide)

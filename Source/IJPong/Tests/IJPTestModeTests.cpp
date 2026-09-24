@@ -135,4 +135,30 @@ bool FIJPTestModeSkillTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPTestModeOverlayTest, "IJPong.TestMode.OverlayShowsToolState", IJPTestModeTests::Flags)
+bool FIJPTestModeOverlayTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = IJPTestModeTests::GetMode(Test);
+	UTEST_NOT_NULL("Test game mode", Mode);
+
+	auto Overlay = [Mode]
+	{
+		TArray<FString> Lines;
+		Mode->GetDebugLines(Lines);
+		return FString::Join(Lines, TEXT(" | "));
+	};
+
+	UTEST_TRUE("Shows the opponent skill", Overlay().Contains(TEXT("Opponent skill: 0.50")));
+	UTEST_TRUE("Shows who drives your paddle", Overlay().Contains(TEXT("Your paddle: you")));
+	UTEST_TRUE("Lists the keys", Overlay().Contains(TEXT("F1 hide this")));
+
+	// It reflects changes as they happen.
+	Mode->AdjustOpponentSkill(0.2f);
+	Mode->SetPlayerSideAI(true);
+	UTEST_TRUE("Skill updates", Overlay().Contains(TEXT("Opponent skill: 0.70")));
+	UTEST_TRUE("AI vs AI shows", Overlay().Contains(TEXT("Your paddle: AI")));
+	return true;
+}
+
 #endif

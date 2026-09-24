@@ -3,6 +3,7 @@
 #include "Core/IJPTestPlayerController.h"
 #include "Core/IJPInputSettings.h"
 #include "Core/IJPTestGameMode.h"
+#include "Core/IJPTestHUD.h"
 #include "Core/IJPTypes.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -50,6 +51,7 @@ void AIJPTestPlayerController::SetupInputComponent()
 	Bind(Settings->DebugToggleAIAction, &AIJPTestPlayerController::HandleToggleAI);
 	Bind(Settings->DebugSkillDownAction, &AIJPTestPlayerController::HandleSkillDown);
 	Bind(Settings->DebugSkillUpAction, &AIJPTestPlayerController::HandleSkillUp);
+	Bind(Settings->DebugToggleOverlayAction, &AIJPTestPlayerController::HandleToggleOverlay);
 }
 
 AIJPTestGameMode* AIJPTestPlayerController::GetTestGameMode() const
@@ -94,5 +96,13 @@ void AIJPTestPlayerController::HandleSkillUp()
 	if (AIJPTestGameMode* GameMode = GetTestGameMode())
 	{
 		GameMode->AdjustOpponentSkill(0.1f);
+	}
+}
+
+void AIJPTestPlayerController::HandleToggleOverlay()
+{
+	if (AIJPTestHUD* TestHUD = GetHUD<AIJPTestHUD>())
+	{
+		TestHUD->ToggleOverlay();
 	}
 }
