@@ -112,4 +112,27 @@ bool FIJPTestModeAIvsAITest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPTestModeSkillTest, "IJPong.TestMode.AdjustOpponentSkillLive", IJPTestModeTests::Flags)
+bool FIJPTestModeSkillTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = IJPTestModeTests::GetMode(Test);
+	UTEST_NOT_NULL("Test game mode", Mode);
+	AIJPArena* Arena = Mode->GetArena();
+	AIJPPaddleAIController* AI = Cast<AIJPPaddleAIController>(Arena->GetPaddle(EIJPSide::Right)->GetController());
+	UTEST_NOT_NULL("AI", AI);
+	const float Start = Arena->GetOpponentSkill();
+
+	Mode->AdjustOpponentSkill(0.2f);
+	UTEST_EQUAL_TOLERANCE("Arena skill raised", Arena->GetOpponentSkill(), Start + 0.2f, KINDA_SMALL_NUMBER);
+	UTEST_EQUAL_TOLERANCE("Applied to the AI live", AI->GetSkill(), Arena->GetOpponentSkill(), KINDA_SMALL_NUMBER);
+
+	Mode->AdjustOpponentSkill(5.f);
+	UTEST_EQUAL("Clamped at 1", Arena->GetOpponentSkill(), 1.f);
+	Mode->AdjustOpponentSkill(-5.f);
+	UTEST_EQUAL("Clamped at 0", Arena->GetOpponentSkill(), 0.f);
+	UTEST_EQUAL("AI follows", AI->GetSkill(), 0.f);
+	return true;
+}
+
 #endif

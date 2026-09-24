@@ -9,7 +9,8 @@
 /**
  * Endless play for trying out a level: serve -> goal -> score -> serve, forever, no win condition.
  * Also has test tools (bound to debug keys by AIJPTestPlayerController): reset the score,
- * serve now, and hand the player's paddle to an AI to watch the level play itself.
+ * serve now, hand the player's paddle to an AI to watch the level play itself, and nudge the
+ * opponent's skill up and down.
  */
 UCLASS()
 class IJPONG_API AIJPTestGameMode : public AIJPGameModeBase
@@ -36,6 +37,10 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Test")
 	bool IsPlayerSideAI() const { return PlayerSideAI != nullptr; }
+
+	/** Nudge the arena's opponent skill (clamped 0..1) and apply it live to every AI paddle. Shows the new value on screen. */
+	UFUNCTION(BlueprintCallable, Category = "Test")
+	void AdjustOpponentSkill(float Delta);
 
 protected:
 	virtual void OnArenaReady() override;

@@ -3,6 +3,8 @@
 #include "Core/IJPTestGameMode.h"
 #include "AI/IJPPaddleAIController.h"
 #include "Core/IJPTestPlayerController.h"
+#include "Engine/Engine.h"
+#include "EngineUtils.h"
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPBall.h"
 #include "Gameplay/IJPPaddle.h"
@@ -68,6 +70,29 @@ void AIJPTestGameMode::SetPlayerSideAI(bool bEnable)
 		{
 			PossessPlayerPaddle(It->Get());
 		}
+	}
+}
+
+void AIJPTestGameMode::AdjustOpponentSkill(float Delta)
+{
+	AIJPArena* ArenaPtr = GetArena();
+	if (!ArenaPtr)
+	{
+		return;
+	}
+
+	ArenaPtr->SetOpponentSkill(ArenaPtr->GetOpponentSkill() + Delta);
+	const float Skill = ArenaPtr->GetOpponentSkill();
+	for (TActorIterator<AIJPPaddleAIController> It(GetWorld()); It; ++It)
+	{
+		It->SetSkill(Skill);
+	}
+
+	UE_LOG(LogIJPong, Log, TEXT("Opponent skill: %.2f"), Skill);
+	if (GEngine)
+	{
+		// Same key each time, so repeated presses replace the message instead of stacking.
+		GEngine->AddOnScreenDebugMessage(static_cast<uint64>(GetUniqueID()), 2.f, FColor::White, FString::Printf(TEXT("Opponent skill: %.2f"), Skill));
 	}
 }
 

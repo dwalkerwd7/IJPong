@@ -31,6 +31,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AI")
 	void SetProfile(const UIJPAIProfile* InProfile);
 
+	/** Where on the difficulty spectrum this opponent plays: 0 = hopeless, 1 = near-perfect. */
+	UFUNCTION(BlueprintCallable, Category = "AI")
+	void SetSkill(float InSkill) { Skill = FMath::Clamp(InSkill, 0.f, 1.f); }
+
+	UFUNCTION(BlueprintPure, Category = "AI")
+	float GetSkill() const { return Skill; }
+
 	/** For repeatable tests. */
 	void SetRandomSeed(int32 Seed) { Random.Initialize(Seed); }
 
@@ -51,6 +58,7 @@ private:
 	TObjectPtr<const UIJPAIProfile> Profile;
 
 	FRandomStream Random;
+	float Skill = 0.5f;
 	float DecisionTimer = 0.f;
 	float TargetY = 0.f;
 	float ShotError = 0.f;

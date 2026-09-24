@@ -38,4 +38,10 @@ public:
 
 	UPROPERTY(Config, EditAnywhere, Category = "Debug")
 	TSoftObjectPtr<UInputAction> DebugToggleAIAction;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Debug")
+	TSoftObjectPtr<UInputAction> DebugSkillDownAction;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Debug")
+	TSoftObjectPtr<UInputAction> DebugSkillUpAction;
 };

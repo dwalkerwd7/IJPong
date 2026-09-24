@@ -63,7 +63,7 @@ void AIJPPaddleAIController::Tick(float DeltaSeconds)
 	if (DecisionTimer <= 0.f)
 	{
 		Decide(*Paddle, *Ball);
-		DecisionTimer = FMath::Max(DecisionTimer + GetProfile().ReactionTime, 0.f);
+		DecisionTimer = FMath::Max(DecisionTimer + GetProfile().ReactionTime.At(Skill), 0.f);
 	}
 
 	Steer(*Paddle);
@@ -89,8 +89,8 @@ void AIJPPaddleAIController::Decide(const AIJPPaddle& Paddle, const AIJPBall& Ba
 		// so the paddle doesn't jitter between decisions.
 		bBallIncoming = true;
 		const float SpeedFraction = Ball.GetMaxSpeed() > 0.f ? BallVelocity.Size() / Ball.GetMaxSpeed() : 1.f;
-		ShotError = Random.FRandRange(-1.f, 1.f) * P.ErrorSpread * SpeedFraction;
-		ShotAim = Random.FRandRange(-1.f, 1.f) * P.AimSpread;
+		ShotError = Random.FRandRange(-1.f, 1.f) * P.ErrorSpread.At(Skill) * SpeedFraction;
+		ShotAim = Random.FRandRange(-1.f, 1.f) * P.AimSpread.At(Skill);
 	}
 
 	const FVector2D HalfExtents = Paddle.GetArena()->GetHalfExtents();
@@ -119,6 +119,6 @@ void AIJPPaddleAIController::Steer(AIJPPaddle& Paddle) const
 		return;
 	}
 
-	const float Scale = bBallIncoming ? P.SpeedScale : P.IdleSpeedScale;
+	const float Scale = (bBallIncoming ? P.SpeedScale : P.IdleSpeedScale).At(Skill);
 	Paddle.AddMoveInput(FMath::Clamp(Delta / P.SlowRadius, -1.f, 1.f) * Scale);
 }

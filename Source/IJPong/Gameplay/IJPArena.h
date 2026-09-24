@@ -79,6 +79,13 @@ public:
 	UIJPCRTComponent* GetCRT() const { return CRT; }
 	UCameraComponent* GetCamera() const { return Camera; }
 
+	/** This screen's opponent difficulty, 0 (hopeless) .. 1 (near-perfect). */
+	UFUNCTION(BlueprintPure, Category = "Arena")
+	float GetOpponentSkill() const { return OpponentSkill; }
+
+	UFUNCTION(BlueprintCallable, Category = "Arena")
+	void SetOpponentSkill(float Skill) { OpponentSkill = FMath::Clamp(Skill, 0.f, 1.f); }
+
 	/** The tone set in use: the configured asset, or UIJPToneSet's defaults if none loaded. */
 	const UIJPToneSet& GetToneSet() const;
 
@@ -130,6 +137,13 @@ protected:
 	/** Spawned for both sides at BeginPlay. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Spawning")
 	TSubclassOf<AIJPPaddle> PaddleClass;
+
+	/**
+	 * How good the AI opponent is on this screen: 0 = hopeless, 1 = near-perfect. There are no
+	 * difficulty settings in the game; difficulty is authored here, per arena.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|AI", meta = (ClampMin = "0", ClampMax = "1", UIMin = "0", UIMax = "1"))
+	float OpponentSkill = 0.5f;
 
 	/** Spawned at BeginPlay, waiting at the centre until served. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Spawning")

@@ -29,8 +29,8 @@ namespace IJPAITests
 	UIJPAIProfile* MakePerfectProfile()
 	{
 		UIJPAIProfile* Profile = NewObject<UIJPAIProfile>();
-		Profile->ErrorSpread = 0.f;
-		Profile->AimSpread = 0.f;
+		Profile->ErrorSpread = { 0.f, 0.f };
+		Profile->AimSpread = { 0.f, 0.f };
 		return Profile;
 	}
 
@@ -102,7 +102,7 @@ bool FIJPAIDriftTest::RunTest(const FString& Parameters)
 	Test.RunFor(0.4f, [&] { FastestDrift = FMath::Max(FastestDrift, FMath::Abs(Paddle->GetPlaneVelocity())); });
 	UTEST_TRUE("Ball still heading away", Ball->GetPlaneVelocity().X < 0.f);
 	UTEST_TRUE("Moved back toward centre", FMath::Abs(Paddle->GetPlanePosition().Y) < FMath::Abs(HitY) - 20.f);
-	UTEST_TRUE("Drifts at idle speed, not full speed", FastestDrift <= Profile->IdleSpeedScale * Paddle->GetMaxSpeed() + 1.f);
+	UTEST_TRUE("Drifts at idle speed, not full speed", FastestDrift <= Profile->IdleSpeedScale.At(AI->GetSkill()) * Paddle->GetMaxSpeed() + 1.f);
 	UTEST_EQUAL_TOLERANCE("Heading for the centre", AI->GetTargetY(), 0.f, KINDA_SMALL_NUMBER);
 	return true;
 }
@@ -154,6 +154,45 @@ bool FIJPAIMatchTest::RunTest(const FString& Parameters)
 	UTEST_TRUE("Competent: plenty of returns", TotalHits >= 2 * Goals);
 	UTEST_TRUE("Competent: real rallies happen", LongestRally >= 5);
 	UTEST_TRUE("Every hit is a separate contact (>= 0.3s apart)", ShortestGap >= 0.3f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPAISkillFromArenaTest, "IJPong.AI.SkillComesFromTheArena", IJPAITests::Flags)
+bool FIJPAISkillFromArenaTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test(IJPAITests::ArenaTransform);
+	AIJPArena* Arena = Test.GetArena();
+	AIJPPaddleAIController* AI = IJPAITests::GetAI(Arena, EIJPSide::Right);
+	UTEST_NOT_NULL("AI", AI);
+	UTEST_EQUAL("AI plays at the arena's opponent skill", AI->GetSkill(), Arena->GetOpponentSkill());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPAISpectrumTest, "IJPong.AI.HigherSkillBeatsLowerSkill", IJPAITests::Flags)
+bool FIJPAISpectrumTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test(IJPAITests::ArenaTransform);
+	AIJPArena* Arena = Test.GetArena();
+	AIJPTestGameMode* GameMode = Cast<AIJPTestGameMode>(Test.GetWorld()->GetAuthGameMode());
+	UTEST_NOT_NULL("GameMode", GameMode);
+
+	// Same profile both sides; only the skill dial differs.
+	AIJPPaddleAIController* Strong = IJPAITests::GetAI(Arena, EIJPSide::Right);
+	AIJPPaddleAIController* Weak = Test.GetWorld()->SpawnActor<AIJPPaddleAIController>();
+	UTEST_NOT_NULL("Strong AI", Strong);
+	UTEST_NOT_NULL("Weak AI", Weak);
+	Weak->Possess(Arena->GetPaddle(EIJPSide::Left));
+	Strong->SetSkill(0.85f);
+	Weak->SetSkill(0.15f);
+	Strong->SetRandomSeed(3);
+	Weak->SetRandomSeed(4);
+
+	Test.RunFor(120.f);
+
+	const int32 StrongScore = GameMode->GetScore(EIJPSide::Right);
+	const int32 WeakScore = GameMode->GetScore(EIJPSide::Left);
+	AddInfo(FString::Printf(TEXT("Skill 0.85 vs 0.15 over 120s: %d - %d"), StrongScore, WeakScore));
+	UTEST_TRUE("Stronger AI outscores the weaker one clearly", StrongScore >= WeakScore + 3);
 	return true;
 }
 

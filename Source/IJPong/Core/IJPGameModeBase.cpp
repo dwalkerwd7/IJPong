@@ -84,6 +84,7 @@ AIJPPaddleAIController* AIJPGameModeBase::SpawnAIPaddle(EIJPSide Side)
 	if (AI)
 	{
 		AI->SetProfile(AIProfile.LoadSynchronous());
+		AI->SetSkill(Arena->GetOpponentSkill());
 		AI->Possess(Paddle);
 	}
 	return AI;

@@ -48,6 +48,8 @@ void AIJPTestPlayerController::SetupInputComponent()
 	Bind(Settings->DebugResetScoreAction, &AIJPTestPlayerController::HandleResetScore);
 	Bind(Settings->DebugServeAction, &AIJPTestPlayerController::HandleServe);
 	Bind(Settings->DebugToggleAIAction, &AIJPTestPlayerController::HandleToggleAI);
+	Bind(Settings->DebugSkillDownAction, &AIJPTestPlayerController::HandleSkillDown);
+	Bind(Settings->DebugSkillUpAction, &AIJPTestPlayerController::HandleSkillUp);
 }
 
 AIJPTestGameMode* AIJPTestPlayerController::GetTestGameMode() const
@@ -76,5 +78,21 @@ void AIJPTestPlayerController::HandleToggleAI()
 	if (AIJPTestGameMode* GameMode = GetTestGameMode())
 	{
 		GameMode->SetPlayerSideAI(!GameMode->IsPlayerSideAI());
+	}
+}
+
+void AIJPTestPlayerController::HandleSkillDown()
+{
+	if (AIJPTestGameMode* GameMode = GetTestGameMode())
+	{
+		GameMode->AdjustOpponentSkill(-0.1f);
+	}
+}
+
+void AIJPTestPlayerController::HandleSkillUp()
+{
+	if (AIJPTestGameMode* GameMode = GetTestGameMode())
+	{
+		GameMode->AdjustOpponentSkill(0.1f);
 	}
 }
