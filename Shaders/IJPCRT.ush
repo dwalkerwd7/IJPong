@@ -11,10 +11,15 @@
 // EMaterialSceneTextureId::PPI_PostProcessInput0: the frame as it arrives at this post-process pass.
 #define IJP_POSTPROCESS_INPUT0 14
 
-/** The frame's colour at a point given in viewport UV (0..1 across the camera's view). */
+/**
+ * The frame's colour at a point given in viewport UV (0..1 across the camera's view).
+ * PostProcessInput0 has its own viewport within its texture, which need not match the scene
+ * buffer's (e.g. when the 4:3 view is pillarboxed inside a wider buffer), so convert with the
+ * input's own mapping, not ViewportUVToBufferUV; the latter shifts the picture off-centre.
+ */
 float3 IJPSampleScreen(float2 ViewportUV)
 {
-	return SceneTextureLookup(ViewportUVToBufferUV(ViewportUV), IJP_POSTPROCESS_INPUT0, true).rgb;
+	return SceneTextureLookup(ViewportUVToSceneTextureUV(ViewportUV, IJP_POSTPROCESS_INPUT0), IJP_POSTPROCESS_INPUT0, true).rgb;
 }
 
 /**
