@@ -5,6 +5,7 @@ Unreal Engine 5.8 C++ game (single runtime module `IJPong`). Concept: a **roguel
 ## How we work
 - **Step by step, as a learning exercise.** Claude writes the code in small chunks and walks through it. The user reviews before we move on. One step per turn, never several systems at once.
 - **The user owns the design; Claude owns the development.** Design (gameplay rules, content, balance direction, feel, presentation style): present the real choices with a recommendation, then wait. Development (architecture, code structure, data layout, tools, tests): Claude decides and briefly explains the choice in the step summary.
+- **All tuning waits for the first playtest.** Every number (difficulty, coins, cooldowns, sizes, speeds, rewards, pacing) is a placeholder, exposed as data. Don't ask about values or spend steps adjusting them until the user has playtested.
 - **Build present-first.** Build what the player sees first, add general reusable features as we go, and design levels/chapters later from features that already exist. Don't justify decisions with speculative future chapters.
 - The user is comfortable in UE C++: explain architecture and game-specific techniques, not UCLASS/UPROPERTY basics.
 - **Every step ends with a build and a commit.** Claude commits at the end of each step without asking. Commit messages end with the Co-Authored-By line.
