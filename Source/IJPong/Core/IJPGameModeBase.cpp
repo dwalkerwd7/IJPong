@@ -136,6 +136,7 @@ void AIJPGameModeBase::SetRival(const UIJPRival* InRival)
 	}
 
 	const EIJPSide RivalSide = IJP::Opposite(PlayerSide);
+	Arena->SetPortraits(RivalSide, Rival ? Rival->Portraits : FIJPPortraits());
 	const UIJPPaddleClass* RivalClass = Rival ? Rival->PaddleClass.Get() : nullptr;
 	Arena->SetPaddleClass(RivalSide, RivalClass ? RivalClass : Arena->GetConfiguredPaddleClass(RivalSide));
 

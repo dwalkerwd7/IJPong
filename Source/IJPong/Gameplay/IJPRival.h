@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "Narrative/IJPPortrait.h"
 #include "IJPRival.generated.h"
 
 class UIJPAbility;
@@ -124,6 +125,10 @@ public:
 	/** Played after the rival loses (one at random). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Conversations")
 	TArray<TObjectPtr<UIJPConversation>> Loss;
+
+	/** Their faces, shown by their health in eras with sprites. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival")
+	FIJPPortraits Portraits;
 
 	/** The rival's voice when their chat bubble babbles: a multiple of the tone set's Talk pitch. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival", meta = (ClampMin = "0.25", ClampMax = "4"))

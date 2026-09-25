@@ -24,6 +24,8 @@ class UIJPGoalComponent;
 class UIJPSevenSegmentComponent;
 class UIJPChargePipsComponent;
 class UIJPHealthBarComponent;
+class UIJPPortraitComponent;
+struct FIJPPortraits;
 class AIJPSpellStrike;
 class UIJPToneSet;
 class UIJPToneSynthComponent;
@@ -107,6 +109,12 @@ public:
 	void SetHealthDisplay(EIJPSide Side, float Health, float MaxHealth, bool bInstant = false);
 
 	UIJPHealthBarComponent* GetHealthBar(EIJPSide Side) const { return Side == EIJPSide::Left ? LeftHealthBar : RightHealthBar; }
+
+	/** Side's character portrait, by its health (eras with sprites). */
+	UIJPPortraitComponent* GetPortrait(EIJPSide Side) const { return Side == EIJPSide::Left ? LeftPortrait : RightPortrait; }
+
+	/** Whose faces Side's portrait shows (unset = no portrait). */
+	void SetPortraits(EIJPSide Side, const FIJPPortraits& Portraits);
 
 	/** Side's spell charge, as pips under its health (Total 0 hides them). */
 	void SetChargePips(EIJPSide Side, int32 Filled, int32 Total);
@@ -363,6 +371,13 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<UIJPHealthBarComponent> RightHealthBar;
 
+	/** Each side's character portrait (only rivals have faces so far). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<UIJPPortraitComponent> LeftPortrait;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<UIJPPortraitComponent> RightPortrait;
+
 	/** Spell charge under each side's health. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<UIJPChargePipsComponent> LeftPips;
@@ -377,7 +392,11 @@ protected:
 	void LayoutHealth();
 	bool ShowsHealthBar(EIJPSide Side) const;
 
+	/** Each portrait's mood from the health race: smug ahead, rattled behind, neutral level. */
+	void UpdateMoods();
+
 	float HealthMax[2] = { 0.f, 0.f };
+	float HealthNow[2] = { 0.f, 0.f };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<UCameraComponent> Camera;

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "Narrative/IJPPortrait.h"
 #include "IJPConversation.generated.h"
 
 /** Who says a line: the player's paddle or the opponent's. */
@@ -29,6 +30,10 @@ struct FIJPConversationLine
 	/** Seconds the full line stays up once typed out. 0 = a readable time from its length. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Line", meta = (ClampMin = "0", Units = "s"))
 	float HoldTime = 0.f;
+
+	/** The speaker's face while the line is up (if they have a portrait). Mood = the match decides. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Line")
+	EIJPExpression Expression = EIJPExpression::Mood;
 };
 
 /** A short exchange of lines between the two paddles, shown in their chat bubbles in order. */

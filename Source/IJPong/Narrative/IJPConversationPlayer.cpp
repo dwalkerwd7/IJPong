@@ -5,6 +5,7 @@
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPPaddle.h"
 #include "Narrative/IJPConversation.h"
+#include "Narrative/IJPPortraitComponent.h"
 #include "Narrative/IJPSpeechBubbleComponent.h"
 #include "TimerManager.h"
 
@@ -64,6 +65,8 @@ void UIJPConversationPlayer::PlayLine(int32 Index)
 	}
 
 	Speaking = Paddle->GetSpeechBubble();
+	SpeakingSide = Side;
+	Arena->GetPortrait(Side)->SetLineExpression(Line.Expression);
 	Speaking->OnLineFinished.AddDynamic(this, &UIJPConversationPlayer::HandleLineFinished);
 	Speaking->Say(Line.Text, Line.HoldTime);
 }
@@ -94,6 +97,11 @@ void UIJPConversationPlayer::Unbind()
 	if (Speaking.IsValid())
 	{
 		Speaking->OnLineFinished.RemoveDynamic(this, &UIJPConversationPlayer::HandleLineFinished);
+		// The line's face goes with it: back to the match mood.
+		if (Arena.IsValid())
+		{
+			Arena->GetPortrait(SpeakingSide)->SetLineExpression(EIJPExpression::Mood);
+		}
 	}
 	Speaking = nullptr;
 }

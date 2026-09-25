@@ -43,7 +43,7 @@ AIJPBall::AIJPBall()
 	SpriteQuad->SetStaticMesh(PlaneMesh.Object);
 	SpriteQuad->CastShadow = false;
 	SpriteQuad->SetVisibility(false);
-	SpriteQuad->SetRelativeLocationAndRotation(FVector(0.f, 51.f, 0.f), FRotator(0.f, 0.f, -90.f));
+	SpriteQuad->SetRelativeLocationAndRotation(FVector(0.f, 51.f, 0.f), IJP::SpriteQuadRotation);
 	IJP::ConfigureAsVisualOnly(SpriteQuad);
 }
 

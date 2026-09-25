@@ -58,6 +58,7 @@ private:
 
 	TWeakObjectPtr<AIJPArena> Arena;
 	TWeakObjectPtr<UIJPSpeechBubbleComponent> Speaking;
+	EIJPSide SpeakingSide = EIJPSide::Left;
 	FTimerHandle GapTimer;
 	EIJPSide PlayerSide = EIJPSide::Left;
 	int32 LineIndex = 0;

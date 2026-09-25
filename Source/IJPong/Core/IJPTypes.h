@@ -48,4 +48,11 @@ namespace IJP
 
 	/** Make a primitive purely visual. */
 	IJPONG_API void ConfigureAsVisualOnly(UPrimitiveComponent* Component);
+
+	/**
+	 * Turns /Engine/BasicShapes/Plane (lying flat, facing +Z) upright in the arena's plane so a texture
+	 * on it reads the right way round to the camera: its top up (+Z) and its left at -X. The plane
+	 * shows the camera its back, so sprite materials are two-sided.
+	 */
+	inline const FRotator SpriteQuadRotation(0.f, 0.f, 90.f);
 }

@@ -59,8 +59,7 @@ AIJPPaddle::AIJPPaddle()
 	SpriteQuad->SetStaticMesh(PlaneMesh.Object);
 	SpriteQuad->CastShadow = false;
 	SpriteQuad->SetVisibility(false);
-	// The plane lies in its XY facing +Z; turn it to face the camera (+Y) with its Y running down the screen.
-	SpriteQuad->SetRelativeRotation(FRotator(0.f, 0.f, -90.f));
+	SpriteQuad->SetRelativeRotation(IJP::SpriteQuadRotation);
 	IJP::ConfigureAsVisualOnly(SpriteQuad);
 
 	AimLine = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AimLine"));

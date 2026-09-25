@@ -2,6 +2,7 @@
 
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPHealthBarComponent.h"
+#include "Narrative/IJPPortraitComponent.h"
 #include "Abilities/IJPAbility_Split.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Audio/IJPToneSet.h"
@@ -98,6 +99,11 @@ AIJPArena::AIJPArena()
 	RightHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("RightHealthBar"));
 	RightHealthBar->SetupAttachment(Root);
 	RightHealthBar->SetRelativeScale3D(FVector(-1.f, 1.f, 1.f)); // Mirrored: drains toward the net too.
+
+	LeftPortrait = CreateDefaultSubobject<UIJPPortraitComponent>(TEXT("LeftPortrait"));
+	LeftPortrait->SetupAttachment(Root);
+	RightPortrait = CreateDefaultSubobject<UIJPPortraitComponent>(TEXT("RightPortrait"));
+	RightPortrait->SetupAttachment(Root);
 
 	LeftPips = CreateDefaultSubobject<UIJPChargePipsComponent>(TEXT("LeftPips"));
 	LeftPips->SetupAttachment(Root);
@@ -390,6 +396,8 @@ void AIJPArena::RefreshHealthLook()
 			Number->StopFlash();
 		}
 		Number->SetVisibility(!Bar->IsShown());
+
+		GetPortrait(Side)->SetLook(Era && Era->bShowSprites, GetSpriteMaterial(), CurrentPalette.Get(Side == EIJPSide::Left ? EIJPPaletteRole::LeftPaddle : EIJPPaletteRole::RightPaddle));
 	}
 	LayoutHealth();
 }
@@ -404,6 +412,13 @@ void AIJPArena::LayoutHealth()
 		const float Sign = IJP::SideSign(Side);
 		UIJPHealthBarComponent* Bar = GetHealthBar(Side);
 		UIJPChargePipsComponent* Pips = GetChargePips(Side);
+
+		// The portrait sits at the top, just inside the bar's net end (or in the corner without a bar).
+		UIJPPortraitComponent* Portrait = GetPortrait(Side);
+		const float OuterEdge = Sign * (HalfExtents.X - HealthBarMargin.X);
+		const float BarWidth = Bar->IsShown() ? Bar->GetSize().X + 8.f : 0.f;
+		Portrait->SetRelativeLocation(FVector(OuterEdge - Sign * (BarWidth + Portrait->Size * 0.5f), 0.f, HalfExtents.Y - HealthBarMargin.Y - Portrait->Size * 0.5f));
+
 		if (Bar->IsShown())
 		{
 			// The bar hugs its own side's top corner; the pips sit centred under it.
@@ -420,8 +435,25 @@ void AIJPArena::LayoutHealth()
 	}
 }
 
+void AIJPArena::SetPortraits(EIJPSide Side, const FIJPPortraits& Portraits)
+{
+	GetPortrait(Side)->SetPortraits(Portraits);
+}
+
+void AIJPArena::UpdateMoods()
+{
+	const bool bRace = HealthMax[0] > 0.f && HealthMax[1] > 0.f;
+	const float Lead = bRace ? HealthNow[0] / HealthMax[0] - HealthNow[1] / HealthMax[1] : 0.f;
+	for (const EIJPSide Side : { EIJPSide::Left, EIJPSide::Right })
+	{
+		const float SideLead = Side == EIJPSide::Left ? Lead : -Lead;
+		GetPortrait(Side)->SetMood(SideLead > KINDA_SMALL_NUMBER ? EIJPExpression::Smug : SideLead < -KINDA_SMALL_NUMBER ? EIJPExpression::Rattled : EIJPExpression::Neutral);
+	}
+}
+
 void AIJPArena::SetHealthDisplay(EIJPSide Side, float Health, float MaxHealth, bool bInstant)
 {
+	HealthNow[Side == EIJPSide::Left ? 0 : 1] = Health;
 	float& Max = HealthMax[Side == EIJPSide::Left ? 0 : 1];
 	const bool bHadHealth = Max > 0.f;
 	Max = FMath::Max(MaxHealth, 0.f);
@@ -433,6 +465,7 @@ void AIJPArena::SetHealthDisplay(EIJPSide Side, float Health, float MaxHealth, b
 	{
 		GetHealthBar(Side)->SetFraction(Health / Max, bInstant);
 	}
+	UpdateMoods();
 }
 
 void AIJPArena::HandleEraChanged(const UIJPEra* NewEra)

@@ -92,7 +92,7 @@ void UIJPHealthBarComponent::Layout()
 	// (outer edge, vertical centre; X right, Z up).
 	const float Scale = 1.f / Style.PixelsPerUnit;
 	const FVector2D FrameSize = GetSize();
-	FramePiece->SetRelativeLocationAndRotation(FVector(FrameSize.X * 0.5f, BarFrameDepth, 0.f), FRotator(0.f, 0.f, -90.f));
+	FramePiece->SetRelativeLocationAndRotation(FVector(FrameSize.X * 0.5f, BarFrameDepth, 0.f), IJP::SpriteQuadRotation);
 	FramePiece->SetRelativeScale3D(FVector(FrameSize.X / BarPlaneSize, FrameSize.Y / BarPlaneSize, 1.f));
 
 	const FVector2D FillSize = FVector2D(Style.Fill->GetSizeX(), Style.Fill->GetSizeY()) * Scale;
@@ -101,7 +101,7 @@ void UIJPHealthBarComponent::Layout()
 	const float FillZ = FrameSize.Y * 0.5f - FillCorner.Y - FillSize.Y * 0.5f;
 	for (UStaticMeshComponent* Piece : { TrailPiece.Get(), FillPiece.Get() })
 	{
-		Piece->SetRelativeLocationAndRotation(FVector(FillX, Piece == FillPiece ? BarFillDepth : BarTrailDepth, FillZ), FRotator(0.f, 0.f, -90.f));
+		Piece->SetRelativeLocationAndRotation(FVector(FillX, Piece == FillPiece ? BarFillDepth : BarTrailDepth, FillZ), IJP::SpriteQuadRotation);
 		Piece->SetRelativeScale3D(FVector(FillSize.X / BarPlaneSize, FillSize.Y / BarPlaneSize, 1.f));
 	}
 }
