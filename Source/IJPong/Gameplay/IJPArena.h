@@ -25,6 +25,8 @@ class UIJPSevenSegmentComponent;
 class UIJPChargePipsComponent;
 class UIJPHealthBarComponent;
 class UIJPPortraitComponent;
+class UIJPBackdropComponent;
+class UIJPBackdrop;
 struct FIJPPortraits;
 class AIJPSpellStrike;
 class UIJPToneSet;
@@ -113,6 +115,11 @@ public:
 	/** Side's character portrait, by its health (eras with sprites). */
 	UIJPPortraitComponent* GetPortrait(EIJPSide Side) const { return Side == EIJPSide::Left ? LeftPortrait : RightPortrait; }
 
+	/** The scenery behind the court (shown in eras with sprites; null = none). Starts unbroken. */
+	void SetBackdrop(const UIJPBackdrop* Backdrop);
+
+	UIJPBackdropComponent* GetBackdrop() const { return Backdrop; }
+
 	/** Whose faces Side's portrait shows (unset = no portrait). */
 	void SetPortraits(EIJPSide Side, const FIJPPortraits& Portraits);
 
@@ -163,6 +170,9 @@ public:
 
 	/** The era palette on screen now. */
 	const FIJPPalette& GetPalette() const { return CurrentPalette; }
+
+	/** Material for backdrop layers (M_PongBackdrop): a see-through texture times a colour, scrolled by an offset. */
+	UMaterialInterface* GetBackdropMaterial() const { return BackdropMaterial.LoadSynchronous(); }
 
 	/** Material for sprites (M_PongSprite): a texture times a colour, cut out by its alpha, with 9-slice stretching. */
 	UMaterialInterface* GetSpriteMaterial() const { return SpriteMaterial.LoadSynchronous(); }
@@ -303,6 +313,10 @@ protected:
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Arena|Look")
 	TSoftObjectPtr<UMaterialInterface> PongMaterial;
 
+	/** Backdrop material (M_PongBackdrop via DefaultGame.ini). */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Arena|Look")
+	TSoftObjectPtr<UMaterialInterface> BackdropMaterial;
+
 	/** Sprite material (M_PongSprite via DefaultGame.ini). */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Arena|Look")
 	TSoftObjectPtr<UMaterialInterface> SpriteMaterial;
@@ -370,6 +384,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<UIJPHealthBarComponent> RightHealthBar;
+
+	/** Scenery behind everything (eras with sprites). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<UIJPBackdropComponent> Backdrop;
 
 	/** Each side's character portrait (only rivals have faces so far). */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")

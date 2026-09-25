@@ -9,6 +9,7 @@
 class UIJPActConfig;
 class UMaterialInterface;
 class UIJPToneSet;
+class UIJPBackdrop;
 class UTexture2D;
 
 /** The parts of the screen a palette colours. */
@@ -135,6 +136,10 @@ public:
 	/** Balls use their early, square "classic" sprite where they have one (the early sprite eras). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Look", meta = (EditCondition = "bShowSprites"))
 	bool bClassicBallSprites = false;
+
+	/** Scenery behind the court (eras with sprites): one picked at random for each fight. Empty = a plain screen. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Look", meta = (EditCondition = "bShowSprites"))
+	TArray<TObjectPtr<UIJPBackdrop>> Backdrops;
 
 	/** Health as bars instead of seven-segment numbers (eras with sprites only; unset = keep the numbers). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Look", meta = (EditCondition = "bShowSprites"))

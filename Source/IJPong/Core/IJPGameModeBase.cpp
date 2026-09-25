@@ -1,6 +1,8 @@
 // It's Just Pong
 
 #include "Core/IJPGameModeBase.h"
+#include "Era/IJPEraSubsystem.h"
+#include "Era/IJPEra.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "AI/IJPAIProfile.h"
 #include "AI/IJPPaddleAIController.h"
@@ -101,6 +103,15 @@ void AIJPGameModeBase::BeginMatch(const UIJPMatchRules* Rules)
 	const UIJPConversation* PreMatch = Rival ? UIJPConversation::PickRandom(Rival->PreMatch) : nullptr;
 	Match->StartMatch(Arena, Rules, PreMatch != nullptr);
 	Boss->Restart(); // a fresh fight: back to its first form
+
+	// The scenery: the rival's own (a boss's arena), else one of the era's at random.
+	const UIJPBackdrop* Scenery = Rival ? Rival->Backdrop.Get() : nullptr;
+	if (!Scenery)
+	{
+		const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
+		Scenery = Era && !Era->Backdrops.IsEmpty() ? Era->Backdrops[FMath::RandHelper(Era->Backdrops.Num())].Get() : nullptr;
+	}
+	Arena->SetBackdrop(Scenery);
 	if (PreMatch)
 	{
 		// HandleConversationFinished releases the serve.

@@ -3,6 +3,7 @@
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPHealthBarComponent.h"
 #include "Narrative/IJPPortraitComponent.h"
+#include "Presentation/IJPBackdropComponent.h"
 #include "Abilities/IJPAbility_Split.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Audio/IJPToneSet.h"
@@ -99,6 +100,9 @@ AIJPArena::AIJPArena()
 	RightHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("RightHealthBar"));
 	RightHealthBar->SetupAttachment(Root);
 	RightHealthBar->SetRelativeScale3D(FVector(-1.f, 1.f, 1.f)); // Mirrored: drains toward the net too.
+
+	Backdrop = CreateDefaultSubobject<UIJPBackdropComponent>(TEXT("Backdrop"));
+	Backdrop->SetupAttachment(Root);
 
 	LeftPortrait = CreateDefaultSubobject<UIJPPortraitComponent>(TEXT("LeftPortrait"));
 	LeftPortrait->SetupAttachment(Root);
@@ -371,6 +375,14 @@ void AIJPArena::ApplyPalette(const FIJPPalette& Palette)
 		}
 	}
 	RefreshHealthLook();
+	Backdrop->SetShown(ShowsSprites());
+}
+
+void AIJPArena::SetBackdrop(const UIJPBackdrop* InBackdrop)
+{
+	const float ScreenHeight = Camera->OrthoWidth / FMath::Max(Camera->AspectRatio, 0.01f);
+	Backdrop->SetBackdrop(InBackdrop, GetBackdropMaterial(), FVector2D(Camera->OrthoWidth, ScreenHeight));
+	Backdrop->SetShown(ShowsSprites());
 }
 
 bool AIJPArena::ShowsHealthBar(EIJPSide Side) const
@@ -453,6 +465,11 @@ void AIJPArena::UpdateMoods()
 
 void AIJPArena::SetHealthDisplay(EIJPSide Side, float Health, float MaxHealth, bool bInstant)
 {
+	// A hit (not a new match or a set health) shakes the scenery.
+	if (!bInstant && Health < HealthNow[Side == EIJPSide::Left ? 0 : 1])
+	{
+		Backdrop->Shake();
+	}
 	HealthNow[Side == EIJPSide::Left ? 0 : 1] = Health;
 	float& Max = HealthMax[Side == EIJPSide::Left ? 0 : 1];
 	const bool bHadHealth = Max > 0.f;

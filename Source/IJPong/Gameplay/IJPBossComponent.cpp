@@ -1,6 +1,7 @@
 // It's Just Pong
 
 #include "Gameplay/IJPBossComponent.h"
+#include "Presentation/IJPBackdropComponent.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Core/IJPGameModeBase.h"
 #include "Gameplay/IJPArena.h"
@@ -113,6 +114,11 @@ void UIJPBossComponent::EnterPhase(int32 Index)
 	}
 	if (Phase.SplitGap > 0.f)
 	{
+		// It breaks apart, and so does its arena.
+		if (Arena.IsValid())
+		{
+			Arena->GetBackdrop()->Break();
+		}
 		Paddle->SetSplitGap(Phase.SplitGap);
 	}
 }

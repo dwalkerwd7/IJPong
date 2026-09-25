@@ -9,6 +9,7 @@
 
 class UIJPAbility;
 class UIJPAIProfile;
+class UIJPBackdrop;
 class UIJPConversation;
 class UIJPPaddleClass;
 
@@ -125,6 +126,10 @@ public:
 	/** Played after the rival loses (one at random). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Conversations")
 	TArray<TObjectPtr<UIJPConversation>> Loss;
+
+	/** Their own scenery (a boss's arena), used instead of the era's in eras with sprites. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival")
+	TObjectPtr<UIJPBackdrop> Backdrop;
 
 	/** Their faces, shown by their health in eras with sprites. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival")
