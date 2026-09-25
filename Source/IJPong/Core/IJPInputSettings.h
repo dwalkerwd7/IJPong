@@ -26,6 +26,14 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Input")
 	TSoftObjectPtr<UInputAction> MovePaddleAction;
 
+	/** Digital: use the paddle's class skill. */
+	UPROPERTY(Config, EditAnywhere, Category = "Input")
+	TSoftObjectPtr<UInputAction> ClassSkillAction;
+
+	/** Digital: use the paddle's run ability. */
+	UPROPERTY(Config, EditAnywhere, Category = "Input")
+	TSoftObjectPtr<UInputAction> RunAbilityAction;
+
 	/** Only added in the test game mode. */
 	UPROPERTY(Config, EditAnywhere, Category = "Debug")
 	TSoftObjectPtr<UInputMappingContext> DebugMappingContext;

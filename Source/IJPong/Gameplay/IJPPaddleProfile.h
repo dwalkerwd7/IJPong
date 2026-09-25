@@ -6,8 +6,10 @@
 #include "Engine/DataAsset.h"
 #include "IJPPaddleProfile.generated.h"
 
+class UIJPAbility;
+
 /**
- * What makes one paddle different from another: its size and how it moves.
+ * What makes one paddle different from another: its size, how it moves, and its class skill.
  * Each arena picks one per side, so a level can give the player and the opponent different paddles.
  * All distances are in arena plane units.
  */
@@ -27,6 +29,10 @@ public:
 	/** Time to go from rest to MaxSpeed (and back to rest). 0 = fully instant. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Movement", meta = (ClampMin = "0", Units = "s"))
 	float RampTime = 0.05f;
+
+	/** Equipped in the class-skill slot when the paddle spawns. Empty = none. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Abilities")
+	TObjectPtr<UIJPAbility> ClassSkill;
 
 	/** How long the paddle blinks off when the ball hits it. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Presentation", meta = (ClampMin = "0.01", Units = "s"))

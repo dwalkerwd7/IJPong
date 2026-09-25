@@ -1,6 +1,7 @@
 // It's Just Pong
 
 #include "Core/IJPTestGameMode.h"
+#include "Abilities/IJPAbilityComponent.h"
 #include "AI/IJPPaddleAIController.h"
 #include "Core/IJPTestHUD.h"
 #include "Core/IJPTestPlayerController.h"
@@ -23,6 +24,10 @@ AIJPTestGameMode::AIJPTestGameMode()
 
 void AIJPTestGameMode::OnArenaReady()
 {
+	if (AIJPPaddle* PlayerPaddle = GetArena()->GetPaddle(PlayerSide))
+	{
+		PlayerPaddle->GetAbilities()->Equip(EIJPAbilitySlot::RunAbility, PlayerRunAbility.LoadSynchronous());
+	}
 	RestartMatch();
 }
 
@@ -140,6 +145,25 @@ void AIJPTestGameMode::GetDebugLines(TArray<FString>& OutLines) const
 		: FString(TEXT("Era: none")));
 
 	OutLines.Add(FString::Printf(TEXT("Balls in play: %d"), ArenaPtr ? ArenaPtr->GetNumBallsInPlay() : 0));
+
+	// The player's abilities: name and state per slot.
+	const AIJPPaddle* PlayerPaddle = ArenaPtr ? ArenaPtr->GetPaddle(PlayerSide) : nullptr;
+	if (const UIJPAbilityComponent* Abilities = PlayerPaddle ? PlayerPaddle->GetAbilities() : nullptr)
+	{
+		auto Describe = [Abilities](EIJPAbilitySlot Slot, const TCHAR* Key) -> FString
+		{
+			const UIJPAbility* Ability = Abilities->GetAbility(Slot);
+			if (!Ability)
+			{
+				return FString::Printf(TEXT("%s: -"), Key);
+			}
+			const FString State = Ability->IsActive() ? FString(TEXT("ACTIVE"))
+				: Abilities->IsReady(Slot) ? FString(TEXT("ready"))
+				: FString::Printf(TEXT("%.1fs"), Abilities->GetCooldownRemaining(Slot));
+			return FString::Printf(TEXT("%s %s: %s"), Key, *Ability->DisplayName.ToString(), *State);
+		};
+		OutLines.Add(Describe(EIJPAbilitySlot::ClassSkill, TEXT("[Space]")) + TEXT("   ") + Describe(EIJPAbilitySlot::RunAbility, TEXT("[E]")));
+	}
 
 	const UIJPMatchComponent* MatchPtr = GetMatch();
 	if (MatchPtr->IsOver())

@@ -6,6 +6,7 @@
 #include "Core/IJPGameModeBase.h"
 #include "IJPTestGameMode.generated.h"
 
+class UIJPAbility;
 class UIJPBallType;
 class UIJPMatchRules;
 
@@ -59,6 +60,10 @@ protected:
 	/** The matches played here. Set in DefaultGame.ini; empty uses UIJPMatchRules' defaults. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Test|Match")
 	TSoftObjectPtr<UIJPMatchRules> MatchRules;
+
+	/** Equipped in the player paddle's run-ability slot (until runs hand them out). Set in DefaultGame.ini. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Test|Abilities")
+	TSoftObjectPtr<UIJPAbility> PlayerRunAbility;
 
 	/** Types the add-ball key picks from. Set in DefaultGame.ini; empty = the arena's default type. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Test|Balls")

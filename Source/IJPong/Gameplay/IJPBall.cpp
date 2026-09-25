@@ -105,6 +105,7 @@ void AIJPBall::Serve(EIJPSide Toward, float AngleDeg)
 
 	Position = PreviousPosition = FVector2D::ZeroVector;
 	Speed = GetType().BaseSpeed;
+	UnboostedSpeed = 0.f;
 	Velocity = FVector2D(IJP::SideSign(Toward) * FMath::Cos(AngleRad), FMath::Sin(AngleRad)) * Speed;
 	Accumulator = 0.f;
 	RallyHits = 0;
@@ -114,6 +115,21 @@ void AIJPBall::Serve(EIJPSide Toward, float AngleDeg)
 	UpdateDrawnTransform(1.f);
 }
 
+void AIJPBall::Boost(float Multiplier)
+{
+	if (!bInPlay)
+	{
+		return;
+	}
+	if (UnboostedSpeed <= 0.f)
+	{
+		UnboostedSpeed = Speed;
+	}
+	// May go past MaxSpeed: the sweep can't tunnel, and it only lasts this one shot.
+	Speed *= Multiplier;
+	Velocity = Velocity.GetSafeNormal() * Speed;
+}
+
 void AIJPBall::ResetBall()
 {
 	ServeBlinker.Cancel();
@@ -121,6 +137,7 @@ void AIJPBall::ResetBall()
 	Position = PreviousPosition = FVector2D::ZeroVector;
 	Velocity = FVector2D::ZeroVector;
 	Speed = 0.f;
+	UnboostedSpeed = 0.f;
 	Accumulator = 0.f;
 	RallyHits = 0;
 	bInPlay = false;
@@ -242,10 +259,12 @@ bool AIJPBall::TryPaddleBounce(AIJPPaddle* Paddle, const FVector2D& Normal)
 	const float Reach = Paddle->GetSize().Y * 0.5f + GetSize() * 0.5f;
 	const float Offset = (Position.Y - Paddle->GetPlanePosition().Y) / Reach;
 
-	Speed = FMath::Min(Speed + GetType().SpeedPerHit, GetType().MaxSpeed);
+	const float RallySpeed = UnboostedSpeed > 0.f ? UnboostedSpeed : Speed;
+	UnboostedSpeed = 0.f;
+	Speed = FMath::Min(RallySpeed + GetType().SpeedPerHit, GetType().MaxSpeed);
 	Velocity = FIJPPongMath::ComputePaddleBounce(Offset, Speed, MaxBounceAngleDeg, -GoalDir);
 	++RallyHits;
-	OnPaddleHit.Broadcast(Paddle);
+	OnPaddleHit.Broadcast(this, Paddle);
 	return true;
 }
 

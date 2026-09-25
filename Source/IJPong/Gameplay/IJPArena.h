@@ -275,7 +275,7 @@ private:
 	AIJPPaddle* SpawnPaddle(EIJPSide Side);
 
 	UFUNCTION()
-	void HandleBallPaddleHit(AIJPPaddle* Paddle);
+	void HandleBallPaddleHit(AIJPBall* HitBall, AIJPPaddle* Paddle);
 
 	UFUNCTION()
 	void HandleBallBounce();

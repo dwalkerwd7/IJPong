@@ -9,7 +9,7 @@
 struct FInputActionValue;
 
 /**
- * Adds the Pong mapping context, forwards the move axis to the possessed paddle,
+ * Adds the Pong mapping context, forwards the move axis and ability buttons to the possessed paddle,
  * and keeps the view on the paddle's arena camera instead of the pawn.
  */
 UCLASS()
@@ -27,4 +27,6 @@ protected:
 
 private:
 	void HandleMove(const FInputActionValue& Value);
+	void HandleClassSkill();
+	void HandleRunAbility();
 };

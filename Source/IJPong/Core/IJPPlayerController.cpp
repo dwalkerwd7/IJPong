@@ -1,6 +1,7 @@
 // It's Just Pong
 
 #include "Core/IJPPlayerController.h"
+#include "Abilities/IJPAbilityComponent.h"
 #include "Core/IJPInputSettings.h"
 #include "Core/IJPTypes.h"
 #include "EnhancedInputComponent.h"
@@ -41,7 +42,8 @@ void AIJPPlayerController::SetupInputComponent()
 	Super::SetupInputComponent();
 
 	UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(InputComponent);
-	UInputAction* MoveAction = GetDefault<UIJPInputSettings>()->MovePaddleAction.LoadSynchronous();
+	const UIJPInputSettings* Settings = GetDefault<UIJPInputSettings>();
+	UInputAction* MoveAction = Settings->MovePaddleAction.LoadSynchronous();
 	if (EnhancedInput && MoveAction)
 	{
 		// Triggered fires every frame the axis is non-zero; the paddle consumes input per tick.
@@ -50,6 +52,19 @@ void AIJPPlayerController::SetupInputComponent()
 	else
 	{
 		UE_LOG(LogIJPong, Warning, TEXT("Can't bind paddle movement: missing Enhanced Input component or MovePaddleAction."));
+	}
+
+	if (!EnhancedInput)
+	{
+		return;
+	}
+	if (UInputAction* ClassSkill = Settings->ClassSkillAction.LoadSynchronous())
+	{
+		EnhancedInput->BindAction(ClassSkill, ETriggerEvent::Started, this, &AIJPPlayerController::HandleClassSkill);
+	}
+	if (UInputAction* RunAbility = Settings->RunAbilityAction.LoadSynchronous())
+	{
+		EnhancedInput->BindAction(RunAbility, ETriggerEvent::Started, this, &AIJPPlayerController::HandleRunAbility);
 	}
 }
 
@@ -63,6 +78,22 @@ void AIJPPlayerController::OnPossess(APawn* InPawn)
 		{
 			SetViewTarget(Arena);
 		}
+	}
+}
+
+void AIJPPlayerController::HandleClassSkill()
+{
+	if (AIJPPaddle* Paddle = GetPawn<AIJPPaddle>())
+	{
+		Paddle->GetAbilities()->TryActivate(EIJPAbilitySlot::ClassSkill);
+	}
+}
+
+void AIJPPlayerController::HandleRunAbility()
+{
+	if (AIJPPaddle* Paddle = GetPawn<AIJPPaddle>())
+	{
+		Paddle->GetAbilities()->TryActivate(EIJPAbilitySlot::RunAbility);
 	}
 }
 

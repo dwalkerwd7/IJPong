@@ -17,7 +17,7 @@ class UStaticMeshComponent;
 struct FHitResult;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FIJPBallGoalSignature, AIJPBall*, Ball, EIJPSide, DefendingSide);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FIJPBallPaddleHitSignature, AIJPPaddle*, Paddle);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FIJPBallPaddleHitSignature, AIJPBall*, Ball, AIJPPaddle*, Paddle);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FIJPBallBounceSignature);
 
 /**
@@ -63,6 +63,13 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Ball")
 	bool IsBlinking() const { return ServeBlinker.IsRunning(); }
+
+	/**
+	 * Speed the ball up by Multiplier for this one shot: the next paddle hit carries on from the
+	 * speed it had before the boost, as if it never happened. For abilities like Smash.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Ball")
+	void Boost(float Multiplier);
 
 	/** Take the ball out of play and hide it at the centre. */
 	UFUNCTION(BlueprintCallable, Category = "Ball")
@@ -147,6 +154,8 @@ private:
 	FVector2D PreviousPosition = FVector2D::ZeroVector;
 	FVector2D Velocity = FVector2D::ZeroVector;
 	float Speed = 0.f;
+	/** The speed before a Boost, which the next paddle hit builds on. 0 = not boosted. */
+	float UnboostedSpeed = 0.f;
 	float Accumulator = 0.f;
 	int32 RallyHits = 0;
 	bool bInPlay = false;

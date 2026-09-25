@@ -1,6 +1,7 @@
 // It's Just Pong
 
 #include "Gameplay/IJPArena.h"
+#include "Abilities/IJPAbilityComponent.h"
 #include "Audio/IJPToneSet.h"
 #include "Audio/IJPToneSynthComponent.h"
 #include "Camera/CameraComponent.h"
@@ -290,10 +291,11 @@ void AIJPArena::HandleEraChanged(const UIJPEra* NewEra)
 	ApplyPalette(NewEra ? NewEra->Palette : FIJPPalette());
 }
 
-void AIJPArena::HandleBallPaddleHit(AIJPPaddle* Paddle)
+void AIJPArena::HandleBallPaddleHit(AIJPBall* HitBall, AIJPPaddle* Paddle)
 {
 	Tones->PlayTone(GetToneSet().PaddleHit);
 	Paddle->Flicker();
+	Paddle->GetAbilities()->HandleBallHit(*HitBall);
 }
 
 void AIJPArena::HandleBallBounce()

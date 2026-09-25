@@ -10,6 +10,7 @@
 
 class AIJPArena;
 class UBoxComponent;
+class UIJPAbilityComponent;
 class UIJPPaddleProfile;
 class UStaticMeshComponent;
 
@@ -72,6 +73,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	float GetRampTime() const;
 
+	/** Stretch the paddle's length (1 = the profile's). Stays inside the walls. For abilities like Grow. */
+	UFUNCTION(BlueprintCallable, Category = "Paddle")
+	void SetLengthScale(float Scale);
+
+	UFUNCTION(BlueprintPure, Category = "Paddle")
+	UIJPAbilityComponent* GetAbilities() const { return Abilities; }
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Layout")
 	float VisualDepth = 10.f;
@@ -86,9 +94,14 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
 	TObjectPtr<UStaticMeshComponent> Visual;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
+	TObjectPtr<UIJPAbilityComponent> Abilities;
+
 private:
 	void ApplyLayout();
 	void UpdateTransform();
+	/** Keep the paddle between the walls. True if it had to move. */
+	bool ClampToWalls();
 
 	UPROPERTY(Transient)
 	TObjectPtr<const UIJPPaddleProfile> Profile;
@@ -100,4 +113,5 @@ private:
 	float PlaneY = 0.f;
 	float Velocity = 0.f;
 	float PendingInput = 0.f;
+	float LengthScale = 1.f;
 };

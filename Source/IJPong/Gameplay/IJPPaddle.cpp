@@ -1,6 +1,7 @@
 // It's Just Pong
 
 #include "Gameplay/IJPPaddle.h"
+#include "Abilities/IJPAbilityComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -23,6 +24,8 @@ AIJPPaddle::AIJPPaddle()
 	Visual->SetStaticMesh(CubeMesh.Object);
 	Visual->CastShadow = false;
 	IJP::ConfigureAsVisualOnly(Visual);
+
+	Abilities = CreateDefaultSubobject<UIJPAbilityComponent>(TEXT("Abilities"));
 
 	// The arena camera is the view; the paddle never owns one.
 	bFindCameraComponentWhenViewTarget = false;
@@ -50,6 +53,8 @@ void AIJPPaddle::InitPaddle(AIJPArena* InArena, EIJPSide InSide, float InLaneX, 
 
 	Visual->SetMaterial(0, InArena->GetPaletteMaterial(InSide == EIJPSide::Left ? EIJPPaletteRole::LeftPaddle : EIJPPaletteRole::RightPaddle));
 	UpdateTransform();
+
+	Abilities->Equip(EIJPAbilitySlot::ClassSkill, GetProfile()->ClassSkill);
 }
 
 const UIJPPaddleProfile* AIJPPaddle::GetProfile() const
@@ -59,7 +64,29 @@ const UIJPPaddleProfile* AIJPPaddle::GetProfile() const
 
 FVector2D AIJPPaddle::GetSize() const
 {
-	return GetProfile()->Size;
+	const FVector2D Size = GetProfile()->Size;
+	return FVector2D(Size.X, Size.Y * LengthScale);
+}
+
+void AIJPPaddle::SetLengthScale(float Scale)
+{
+	LengthScale = FMath::Max(Scale, KINDA_SMALL_NUMBER);
+	ApplyLayout();
+	if (Arena.IsValid())
+	{
+		// Growing next to a wall pushes the paddle away from it rather than into it.
+		ClampToWalls();
+		UpdateTransform();
+	}
+}
+
+bool AIJPPaddle::ClampToWalls()
+{
+	const float MaxY = FMath::Max(0.f, Arena->GetHalfExtents().Y - GetSize().Y * 0.5f);
+	const float Clamped = FMath::Clamp(PlaneY, -MaxY, MaxY);
+	const bool bMoved = Clamped != PlaneY;
+	PlaneY = Clamped;
+	return bMoved;
 }
 
 float AIJPPaddle::GetMaxSpeed() const
@@ -126,10 +153,8 @@ void AIJPPaddle::Tick(float DeltaSeconds)
 	}
 
 	// Stay between the walls. Hitting a wall kills the velocity, so the paddle doesn't "push" into it.
-	const float MaxY = FMath::Max(0.f, ArenaPtr->GetHalfExtents().Y - GetSize().Y * 0.5f);
-	const float NewY = PlaneY + Velocity * DeltaSeconds;
-	PlaneY = FMath::Clamp(NewY, -MaxY, MaxY);
-	if (PlaneY != NewY)
+	PlaneY += Velocity * DeltaSeconds;
+	if (ClampToWalls())
 	{
 		Velocity = 0.f;
 	}
