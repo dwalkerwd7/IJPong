@@ -26,7 +26,11 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Input")
 	TSoftObjectPtr<UInputAction> MovePaddleAction;
 
-	/** Digital: use the paddle's class skill. */
+	/** Axis1D: -1 left / +1 right, for menus and the run map. */
+	UPROPERTY(Config, EditAnywhere, Category = "Input")
+	TSoftObjectPtr<UInputAction> UIStepAction;
+
+	/** Digital: use the paddle's class skill (also confirms on menus and the run map). */
 	UPROPERTY(Config, EditAnywhere, Category = "Input")
 	TSoftObjectPtr<UInputAction> ClassSkillAction;
 

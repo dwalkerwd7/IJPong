@@ -7,9 +7,11 @@
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
+#include "GameFramework/GameModeBase.h"
+#include "GameFramework/WorldSettings.h"
 #include "Gameplay/IJPArena.h"
 
-FIJPTestWorld::FIJPTestWorld(const FTransform& ArenaTransform, TFunction<void(AIJPArena&)> SetupArena)
+FIJPTestWorld::FIJPTestWorld(const FTransform& ArenaTransform, TFunction<void(AIJPArena&)> SetupArena, TSubclassOf<AGameModeBase> GameMode)
 {
 	// A standalone game instance creates its own Game world context and world, like a packaged game does.
 	GameInstance = NewObject<UGameInstance>(GEngine);
@@ -20,6 +22,10 @@ FIJPTestWorld::FIJPTestWorld(const FTransform& ArenaTransform, TFunction<void(AI
 	World->AddToRoot();
 
 	// Same order as UEngine::LoadMap: game mode, level actors, initialise, begin play.
+	if (GameMode)
+	{
+		World->GetWorldSettings()->DefaultGameMode = GameMode;
+	}
 	World->SetGameMode(FURL());
 	Arena = World->SpawnActor<AIJPArena>(AIJPArena::StaticClass(), ArenaTransform);
 	if (SetupArena)

@@ -67,6 +67,17 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Game")
 	UIJPConversationPlayer* GetConversations() const { return Conversations; }
 
+	/** Set how well the opponent plays (0..1) on the arena, and on its AI now. */
+	UFUNCTION(BlueprintCallable, Category = "Game")
+	void SetOpponentSkill(float Skill);
+
+	/**
+	 * Menu-style input (a map, later menus). Step = -1 left / +1 right; Confirm = the class-skill
+	 * button. Return true to consume it; false lets it through to the paddle as usual.
+	 */
+	virtual bool HandleUIStep(int32 Direction) { return false; }
+	virtual bool HandleUIConfirm() { return false; }
+
 	/** The side the local player plays. */
 	static constexpr EIJPSide PlayerSide = EIJPSide::Left;
 

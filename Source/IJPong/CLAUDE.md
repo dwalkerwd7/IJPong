@@ -7,6 +7,7 @@ Includes are relative to the module root (`PublicIncludePaths.Add(ModuleDirector
 - `Presentation/`: screen look. `UIJPCRTComponent` puts the CRT post-process on every camera of its owner. The HLSL is in the project's `Shaders/IJPCRT.ush` (mapped to `/IJPong` by the tiny `IJPongShaders` module).
 - `Era/`: `UIJPEra` Data Asset (CRT, tones, palette) and `UIJPEraSubsystem`, the current era, followed live by arenas and CRT components.
 - `Abilities/`: `UIJPAbility` (one subclass per behaviour, Data Assets for tuning, a runtime copy per slot) and `UIJPAbilityComponent` (the paddle's slots and cooldowns).
+- `Run/`: the roguelite run: `UIJPActConfig`, `FIJPRunMap` (generation), `UIJPRunSubsystem` (run state) and `AIJPRunMapView` (the map screen). `Core/IJPRunGameMode` plays it.
 - `Narrative/`: `UIJPConversation` Data Asset, `UIJPSpeechBubbleComponent` (on each paddle) and `UIJPConversationPlayer` (on the game mode).
 - `AI/`: paddle AI controller and its `UIJPAIProfile` Data Asset. The AI drives paddles through the same `AddMoveInput` as the player.
 - `Tests/`: integration tests only

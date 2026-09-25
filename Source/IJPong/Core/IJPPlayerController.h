@@ -28,5 +28,6 @@ protected:
 private:
 	void HandleMove(const FInputActionValue& Value);
 	void HandleClassSkill();
+	void HandleUIStep(const FInputActionValue& Value);
 	void HandleRunAbility();
 };

@@ -36,6 +36,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Match")
 	void StartMatch(AIJPArena* InArena, const UIJPMatchRules* InRules, bool bHoldServe = false);
 
+	/** Abandon the match: no winner, balls out of play, nothing more happens until StartMatch. */
+	UFUNCTION(BlueprintCallable, Category = "Match")
+	void StopMatch();
+
 	/** Let a held serve go: it follows after the rules' serve delay. */
 	UFUNCTION(BlueprintCallable, Category = "Match")
 	void ReleaseServe();

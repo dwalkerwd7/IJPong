@@ -57,6 +57,17 @@ AIJPBall* UIJPMatchComponent::LaunchExtraBall(const UIJPBallType* Type)
 	return Extra;
 }
 
+void UIJPMatchComponent::StopMatch()
+{
+	GetWorld()->GetTimerManager().ClearTimer(ServeTimer);
+	bServeHeld = false;
+	Phase = EIJPMatchPhase::None;
+	if (Arena)
+	{
+		Arena->ResetBalls();
+	}
+}
+
 void UIJPMatchComponent::ReleaseServe()
 {
 	if (!bServeHeld)

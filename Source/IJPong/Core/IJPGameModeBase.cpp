@@ -67,6 +67,22 @@ void AIJPGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController*
 	PossessPlayerPaddle(NewPlayer);
 }
 
+void AIJPGameModeBase::SetOpponentSkill(float Skill)
+{
+	if (!Arena)
+	{
+		return;
+	}
+	Arena->SetOpponentSkill(Skill);
+	if (AIJPPaddle* Paddle = Arena->GetPaddle(IJP::Opposite(PlayerSide)))
+	{
+		if (AIJPPaddleAIController* AI = Cast<AIJPPaddleAIController>(Paddle->GetController()))
+		{
+			AI->SetSkill(Arena->GetOpponentSkill());
+		}
+	}
+}
+
 void AIJPGameModeBase::BeginMatch(const UIJPMatchRules* Rules)
 {
 	Conversations->Stop();

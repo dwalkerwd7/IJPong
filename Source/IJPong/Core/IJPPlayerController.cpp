@@ -2,6 +2,7 @@
 
 #include "Core/IJPPlayerController.h"
 #include "Abilities/IJPAbilityComponent.h"
+#include "Core/IJPGameModeBase.h"
 #include "Core/IJPInputSettings.h"
 #include "Core/IJPTypes.h"
 #include "EnhancedInputComponent.h"
@@ -62,6 +63,11 @@ void AIJPPlayerController::SetupInputComponent()
 	{
 		EnhancedInput->BindAction(ClassSkill, ETriggerEvent::Started, this, &AIJPPlayerController::HandleClassSkill);
 	}
+	if (UInputAction* UIStep = Settings->UIStepAction.LoadSynchronous())
+	{
+		// Started: one step per press, not one per frame held.
+		EnhancedInput->BindAction(UIStep, ETriggerEvent::Started, this, &AIJPPlayerController::HandleUIStep);
+	}
 	if (UInputAction* RunAbility = Settings->RunAbilityAction.LoadSynchronous())
 	{
 		EnhancedInput->BindAction(RunAbility, ETriggerEvent::Started, this, &AIJPPlayerController::HandleRunAbility);
@@ -81,8 +87,22 @@ void AIJPPlayerController::OnPossess(APawn* InPawn)
 	}
 }
 
+void AIJPPlayerController::HandleUIStep(const FInputActionValue& Value)
+{
+	const float Axis = Value.Get<float>();
+	if (AIJPGameModeBase* GameMode = GetWorld()->GetAuthGameMode<AIJPGameModeBase>(); GameMode && Axis != 0.f)
+	{
+		GameMode->HandleUIStep(Axis > 0.f ? 1 : -1);
+	}
+}
+
 void AIJPPlayerController::HandleClassSkill()
 {
+	// On a menu or the map, the button confirms instead.
+	if (AIJPGameModeBase* GameMode = GetWorld()->GetAuthGameMode<AIJPGameModeBase>(); GameMode && GameMode->HandleUIConfirm())
+	{
+		return;
+	}
 	if (AIJPPaddle* Paddle = GetPawn<AIJPPaddle>())
 	{
 		Paddle->GetAbilities()->TryActivate(EIJPAbilitySlot::ClassSkill);
