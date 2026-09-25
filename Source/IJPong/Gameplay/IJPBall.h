@@ -121,6 +121,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ball")
 	bool IsHeld() const { return HeldBy.IsValid(); }
 
+	/** Drawn with its type's sprite (eras with sprites) rather than the plain square. */
+	UFUNCTION(BlueprintPure, Category = "Ball")
+	bool IsSpriteShown() const;
+
 	/** A Ghost ball currently out of sight (its type's GhostBand). */
 	UFUNCTION(BlueprintPure, Category = "Ball")
 	bool IsGhosted() const { return bGhosted; }
@@ -250,6 +254,13 @@ private:
 	/** This ball's own copy of the arena's material, so each ball can show its type's colour. */
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> ColourMaterial;
+
+	/** The type's sprite on a flat quad at the cube's front face (eras with sprites). */
+	UPROPERTY(VisibleAnywhere, Category = "Ball|Components")
+	TObjectPtr<UStaticMeshComponent> SpriteQuad;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> SpriteMaterial;
 
 	FIJPBlinker ServeBlinker;
 	FVector2D Position = FVector2D::ZeroVector;

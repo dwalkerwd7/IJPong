@@ -6,6 +6,8 @@
 #include "Engine/DataAsset.h"
 #include "IJPBallType.generated.h"
 
+class UTexture2D;
+
 /**
  * What kind of ball this is: its size, how fast it goes and what it's worth. The defaults are
  * the standard 1972 ball. New ball types are new assets, not code.
@@ -41,6 +43,14 @@ public:
 	/** This type's colour cue, shown only in eras whose palette turns on bBallTypeColours. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Look")
 	FLinearColor Colour = FLinearColor::White;
+
+	/** The ball's sprite (greyscale, tinted by its colour), shown in eras with sprites. Empty = a plain square. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Look")
+	TObjectPtr<UTexture2D> Sprite;
+
+	/** An early, square version used by eras that ask for classic balls. Empty = Sprite. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Look")
+	TObjectPtr<UTexture2D> ClassicSprite;
 
 	// --- Behaviours (any mix; all off by default) ---
 

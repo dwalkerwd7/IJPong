@@ -1,6 +1,9 @@
 // It's Just Pong
 
 #include "Gameplay/IJPBall.h"
+#include "Era/IJPEraSubsystem.h"
+#include "Era/IJPEra.h"
+#include "Engine/Texture2D.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
@@ -32,6 +35,16 @@ AIJPBall::AIJPBall()
 	Visual->SetStaticMesh(CubeMesh.Object);
 	Visual->CastShadow = false;
 	IJP::ConfigureAsVisualOnly(Visual);
+
+	// On the cube's front face; the cube is already scaled to the ball, so the quad fits it at scale 1.
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> PlaneMesh(TEXT("/Engine/BasicShapes/Plane.Plane"));
+	SpriteQuad = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SpriteQuad"));
+	SpriteQuad->SetupAttachment(Visual);
+	SpriteQuad->SetStaticMesh(PlaneMesh.Object);
+	SpriteQuad->CastShadow = false;
+	SpriteQuad->SetVisibility(false);
+	SpriteQuad->SetRelativeLocationAndRotation(FVector(0.f, 51.f, 0.f), FRotator(0.f, 0.f, -90.f));
+	IJP::ConfigureAsVisualOnly(SpriteQuad);
 }
 
 void AIJPBall::OnConstruction(const FTransform& Transform)
@@ -67,11 +80,44 @@ const UIJPBallType& AIJPBall::GetType() const
 
 void AIJPBall::RefreshColour()
 {
-	if (ColourMaterial && Arena.IsValid())
+	if (!Arena.IsValid())
 	{
-		static const FName ColorParam(TEXT("Color"));
-		ColourMaterial->SetVectorParameterValue(ColorParam, Arena->GetBallColour(Type));
+		return;
 	}
+	static const FName ColorParam(TEXT("Color"));
+	const FLinearColor Colour = Arena->GetBallColour(Type);
+	if (ColourMaterial)
+	{
+		ColourMaterial->SetVectorParameterValue(ColorParam, Colour);
+	}
+
+	// The type's sprite in eras that show them (the early "classic" one where asked for).
+	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
+	const UIJPBallType& BallType = GetType();
+	UTexture2D* Sprite = Era && Era->bClassicBallSprites && BallType.ClassicSprite ? BallType.ClassicSprite.Get() : BallType.Sprite.Get();
+	const bool bSprite = Arena->ShowsSprites() && Sprite;
+	if (bSprite && !SpriteMaterial)
+	{
+		if (UMaterialInterface* Base = Arena->GetSpriteMaterial())
+		{
+			SpriteMaterial = UMaterialInstanceDynamic::Create(Base, this);
+			SpriteQuad->SetMaterial(0, SpriteMaterial);
+		}
+	}
+	if (bSprite && SpriteMaterial)
+	{
+		static const FName SpriteParam(TEXT("Sprite"));
+		SpriteMaterial->SetTextureParameterValue(SpriteParam, Sprite);
+		SpriteMaterial->SetVectorParameterValue(ColorParam, Colour);
+	}
+	SpriteQuad->SetVisibility(bSprite && SpriteMaterial);
+	// The cube stays for the sprite's sake only as its parent: hide its faces by hiding just it.
+	Visual->SetVisibility(!(bSprite && SpriteMaterial), false);
+}
+
+bool AIJPBall::IsSpriteShown() const
+{
+	return SpriteQuad->IsVisible();
 }
 
 float AIJPBall::GetSize() const

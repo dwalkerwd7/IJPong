@@ -325,6 +325,12 @@ void AIJPArena::SetBarrierUp(EIJPSide Side, bool bUp)
 	(bLeft ? LeftBarrierVisual : RightBarrierVisual)->SetVisibility(bUp);
 }
 
+bool AIJPArena::ShowsSprites() const
+{
+	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
+	return Era && Era->bShowSprites;
+}
+
 UPrimitiveComponent* AIJPArena::GetBarrier(EIJPSide Side) const
 {
 	return Side == EIJPSide::Left ? LeftBarrier : RightBarrier;
@@ -344,10 +350,17 @@ void AIJPArena::ApplyPalette(const FIJPPalette& Palette)
 		PaletteMaterials[i]->SetVectorParameterValue(ColorParam, Palette.Get(static_cast<EIJPPaletteRole>(i)));
 	}
 
-	// Each ball has its own material, since its colour can depend on its type.
+	// Each ball has its own material, since its colour can depend on its type; sprites follow the era too.
 	for (AIJPBall* Each : Balls)
 	{
 		Each->RefreshColour();
+	}
+	for (const EIJPSide Side : { EIJPSide::Left, EIJPSide::Right })
+	{
+		if (AIJPPaddle* Paddle = GetPaddle(Side))
+		{
+			Paddle->RefreshSprite();
+		}
 	}
 }
 

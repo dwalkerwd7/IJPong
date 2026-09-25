@@ -1,6 +1,7 @@
 // It's Just Pong
 
 #include "Gameplay/IJPPaddle.h"
+#include "Engine/Texture2D.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Narrative/IJPSpeechBubbleComponent.h"
 #include "Components/BoxComponent.h"
@@ -52,6 +53,16 @@ AIJPPaddle::AIJPPaddle()
 	ArmedHalo->SetVisibility(false);
 	IJP::ConfigureAsVisualOnly(ArmedHalo);
 
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> PlaneMesh(TEXT("/Engine/BasicShapes/Plane.Plane"));
+	SpriteQuad = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SpriteQuad"));
+	SpriteQuad->SetupAttachment(Collision);
+	SpriteQuad->SetStaticMesh(PlaneMesh.Object);
+	SpriteQuad->CastShadow = false;
+	SpriteQuad->SetVisibility(false);
+	// The plane lies in its XY facing +Z; turn it to face the camera (+Y) with its Y running down the screen.
+	SpriteQuad->SetRelativeRotation(FRotator(0.f, 0.f, -90.f));
+	IJP::ConfigureAsVisualOnly(SpriteQuad);
+
 	AimLine = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AimLine"));
 	AimLine->SetupAttachment(Collision);
 	AimLine->SetStaticMesh(CubeMesh.Object);
@@ -96,6 +107,7 @@ void AIJPPaddle::InitPaddle(AIJPArena* InArena, EIJPSide InSide, float InLaneX, 
 		ArmedHalo->SetMaterial(0, ArmedHaloMaterial);
 	}
 	SetPaddleClass(InClass);
+	RefreshSprite();
 }
 
 void AIJPPaddle::SetPaddleClass(const UIJPPaddleClass* InClass)
@@ -109,6 +121,7 @@ void AIJPPaddle::SetPaddleClass(const UIJPPaddleClass* InClass)
 		UpdateTransform();
 	}
 	Abilities->Equip(EIJPAbilitySlot::ClassSkill, InClass ? InClass->ClassSkill.Get() : nullptr);
+	RefreshSprite();
 }
 
 const UIJPPaddleProfile* AIJPPaddle::GetProfile() const
@@ -240,6 +253,10 @@ void AIJPPaddle::ApplyLayout()
 	const FVector2D HaloSize = Size + FVector2D(ArmedHaloMargin * 2.f);
 	ArmedHalo->SetRelativeLocation(FVector(0.f, -VisualDepth * 0.5f - 1.f, 0.f));
 	ArmedHalo->SetRelativeScale3D(FVector(HaloSize.X / CubeSize, 1.f / CubeSize, HaloSize.Y / CubeSize));
+	if (Arena.IsValid())
+	{
+		RefreshSprite();
+	}
 }
 
 void AIJPPaddle::Flicker()
@@ -247,14 +264,62 @@ void AIJPPaddle::Flicker()
 	// Hidden now, shown again after one toggle. Only the visual: the collision never flickers.
 	FlickerBlinker.Start(this, GetProfile()->FlickerTime, 1, false, [this](bool bShow)
 	{
-		Visual->SetVisibility(bShow);
+		Visual->SetVisibility(bShow && !bUsingSprite);
 		VisualBottom->SetVisibility(bShow && SplitGap > 0.f);
+		SpriteQuad->SetVisibility(bShow && bUsingSprite);
 	});
 }
 
 bool AIJPPaddle::IsVisualShown() const
 {
-	return Visual->IsVisible();
+	return Visual->IsVisible() || SpriteQuad->IsVisible();
+}
+
+bool AIJPPaddle::IsSpriteShown() const
+{
+	return bUsingSprite;
+}
+
+void AIJPPaddle::RefreshSprite()
+{
+	const AIJPArena* ArenaPtr = Arena.Get();
+	UTexture2D* Sprite = PaddleClass ? PaddleClass->Sprite.Get() : nullptr;
+	const bool bSprite = ArenaPtr && ArenaPtr->ShowsSprites() && Sprite && SplitGap <= 0.f;
+	if (bSprite && !SpriteMaterial)
+	{
+		if (UMaterialInterface* Base = ArenaPtr->GetSpriteMaterial())
+		{
+			SpriteMaterial = UMaterialInstanceDynamic::Create(Base, this);
+			SpriteQuad->SetMaterial(0, SpriteMaterial);
+		}
+	}
+	bUsingSprite = bSprite && SpriteMaterial;
+	if (!bUsingSprite)
+	{
+		SpriteQuad->SetVisibility(false);
+		Visual->SetVisibility(true);
+		return;
+	}
+
+	// Stretch the sprite's middle to the paddle's length, keeping its end caps (the texture's own
+	// proportions give its natural length at this width).
+	static const FName SpriteParam(TEXT("Sprite"));
+	static const FName ColorParam(TEXT("Color"));
+	static const FName StretchParam(TEXT("Stretch"));
+	static const FName CapParam(TEXT("Cap"));
+	const FVector2D Size = GetSize();
+	const float NaturalLength = Size.X * Sprite->GetSizeY() / FMath::Max(Sprite->GetSizeX(), 1);
+	SpriteMaterial->SetTextureParameterValue(SpriteParam, Sprite);
+	SpriteMaterial->SetVectorParameterValue(ColorParam, ArenaPtr->GetPalette().Get(Side == EIJPSide::Left ? EIJPPaletteRole::LeftPaddle : EIJPPaletteRole::RightPaddle));
+	SpriteMaterial->SetScalarParameterValue(StretchParam, Size.Y / FMath::Max(NaturalLength, 1.f));
+	SpriteMaterial->SetScalarParameterValue(CapParam, PaddleClass->SpriteCap);
+	const float PlaneSize = 100.f; // /Engine/BasicShapes/Plane is 100 units square.
+	SpriteQuad->SetRelativeLocation(FVector(0.f, VisualDepth * 0.5f + 1.f, 0.f));
+	// The art is drawn for the left paddle; the right one mirrors it so both face the court.
+	const float Facing = Side == EIJPSide::Right ? -1.f : 1.f;
+	SpriteQuad->SetRelativeScale3D(FVector(Facing * Size.X / PlaneSize, Size.Y / PlaneSize, 1.f));
+	SpriteQuad->SetVisibility(true);
+	Visual->SetVisibility(false);
 }
 
 void AIJPPaddle::SetAimDirection(const FVector2D& Direction)

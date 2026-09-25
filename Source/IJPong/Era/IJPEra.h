@@ -93,6 +93,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Look")
 	FIJPPalette Palette;
 
+	/** Paddles and balls are drawn with their sprites (tinted by the palette). Off = plain rectangles (1972). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Look")
+	bool bShowSprites = false;
+
+	/** Balls use their early, square "classic" sprite where they have one (the early sprite eras). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Look", meta = (EditCondition = "bShowSprites"))
+	bool bClassicBallSprites = false;
+
 	/** Shown when a run climbs into this era (e.g. "1978 - ARCADE"). Empty = DisplayName. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Run")
 	FText TitleCard;

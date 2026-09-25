@@ -51,6 +51,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	const UIJPPaddleProfile* GetProfile() const;
 
+	/** Show the class's sprite (or the plain rectangle) for the current era, size and colour. */
+	void RefreshSprite();
+
+	UFUNCTION(BlueprintPure, Category = "Paddle")
+	bool IsSpriteShown() const;
+
 	/** Blink off briefly: a contact cue for ball hits. */
 	UFUNCTION(BlueprintCallable, Category = "Paddle")
 	void Flicker();
@@ -227,6 +233,16 @@ protected:
 	/** The glow behind the paddle while a skill is armed. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
 	TObjectPtr<UStaticMeshComponent> ArmedHalo;
+
+	/** The class's sprite on a flat quad in front of the box (eras with sprites). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
+	TObjectPtr<UStaticMeshComponent> SpriteQuad;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> SpriteMaterial;
+
+	/** Drawn with the sprite rather than the box (kept apart from visibility, which flickers). */
+	bool bUsingSprite = false;
 
 	/** A thin line showing where a held ball will go (the Catcher). */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
