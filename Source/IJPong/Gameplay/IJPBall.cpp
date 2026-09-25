@@ -106,6 +106,7 @@ void AIJPBall::Serve(EIJPSide Toward, float AngleDeg)
 	Position = PreviousPosition = FVector2D::ZeroVector;
 	Speed = GetType().BaseSpeed;
 	UnboostedSpeed = 0.f;
+	CurveTimeLeft = 0.f;
 	Velocity = FVector2D(IJP::SideSign(Toward) * FMath::Cos(AngleRad), FMath::Sin(AngleRad)) * Speed;
 	Accumulator = 0.f;
 	RallyHits = 0;
@@ -130,6 +131,39 @@ void AIJPBall::Boost(float Multiplier)
 	Velocity = Velocity.GetSafeNormal() * Speed;
 }
 
+void AIJPBall::Curve(float DegreesPerSecond, float Duration, float BendUp)
+{
+	if (bInPlay)
+	{
+		CurveRate = DegreesPerSecond;
+		CurveTimeLeft = Duration;
+		CurveBend = BendUp >= 0.f ? 1.f : -1.f;
+	}
+}
+
+void AIJPBall::Launch(const FVector2D& InPosition, const FVector2D& InVelocity)
+{
+	ServeBlinker.Cancel();
+	Position = PreviousPosition = InPosition;
+	Velocity = InVelocity;
+	Speed = InVelocity.Size();
+	UnboostedSpeed = 0.f;
+	CurveTimeLeft = 0.f;
+	Accumulator = 0.f;
+	RallyHits = 0;
+	bInPlay = true;
+
+	SetActorHiddenInGame(false);
+	UpdateDrawnTransform(1.f);
+}
+
+void AIJPBall::SetPlaneVelocity(const FVector2D& InVelocity)
+{
+	Velocity = InVelocity;
+	Speed = InVelocity.Size();
+	UnboostedSpeed = 0.f;
+}
+
 void AIJPBall::ResetBall()
 {
 	ServeBlinker.Cancel();
@@ -138,6 +172,7 @@ void AIJPBall::ResetBall()
 	Velocity = FVector2D::ZeroVector;
 	Speed = 0.f;
 	UnboostedSpeed = 0.f;
+	CurveTimeLeft = 0.f;
 	Accumulator = 0.f;
 	RallyHits = 0;
 	bInPlay = false;
@@ -174,6 +209,15 @@ void AIJPBall::Tick(float DeltaSeconds)
 
 void AIJPBall::Substep(float StepSeconds)
 {
+	if (CurveTimeLeft > 0.f)
+	{
+		// Turn toward the bend. Rotating counter-clockwise lifts a ball moving right and drops one
+		// moving left, so the sign depends on which way it's going.
+		const float Turn = FMath::DegreesToRadians(CurveRate * StepSeconds) * CurveBend * FMath::Sign(Velocity.X);
+		Velocity = FIJPPongMath::ClampAngle(Velocity.GetRotated(FMath::RadiansToDegrees(Turn)), MaxBounceAngleDeg);
+		CurveTimeLeft -= StepSeconds;
+	}
+
 	float Remaining = StepSeconds;
 	for (int32 Bounce = 0; Bounce < MaxBouncesPerStep && Remaining > 0.f && bInPlay; ++Bounce)
 	{
@@ -218,6 +262,7 @@ void AIJPBall::HandleHit(const FHitResult& Hit)
 	{
 		bInPlay = false;
 		Velocity = FVector2D::ZeroVector;
+		CurveTimeLeft = 0.f;
 		SetActorHiddenInGame(true);
 		OnGoal.Broadcast(this, Goal->DefendingSide);
 		return;
@@ -240,7 +285,11 @@ void AIJPBall::HandleHit(const FHitResult& Hit)
 		}
 	}
 
-	// Walls, and the top/bottom edges of paddles: a plain mirror bounce.
+	// Walls, and the top/bottom edges of paddles: a plain mirror bounce. A curve mirrors with it.
+	if (FMath::Abs(Normal.Y) > FMath::Abs(Normal.X))
+	{
+		CurveBend = -CurveBend;
+	}
 	Velocity = FIJPPongMath::ClampAngle(FIJPPongMath::Reflect(Velocity, Normal), MaxBounceAngleDeg);
 	OnBounce.Broadcast();
 }
@@ -259,6 +308,7 @@ bool AIJPBall::TryPaddleBounce(AIJPPaddle* Paddle, const FVector2D& Normal)
 	const float Reach = Paddle->GetSize().Y * 0.5f + GetSize() * 0.5f;
 	const float Offset = (Position.Y - Paddle->GetPlanePosition().Y) / Reach;
 
+	CurveTimeLeft = 0.f;
 	const float RallySpeed = UnboostedSpeed > 0.f ? UnboostedSpeed : Speed;
 	UnboostedSpeed = 0.f;
 	Speed = FMath::Min(RallySpeed + GetType().SpeedPerHit, GetType().MaxSpeed);

@@ -78,6 +78,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Arena")
 	void ClearWinner();
 
+	/** Raise or drop Side's barrier: a ball-blocking line just in front of that side's goal. */
+	UFUNCTION(BlueprintCallable, Category = "Arena")
+	void SetBarrierUp(EIJPSide Side, bool bUp);
+
+	UFUNCTION(BlueprintPure, Category = "Arena")
+	bool IsBarrierUp(EIJPSide Side) const;
+
 	UIJPSevenSegmentComponent* GetScoreDisplay(EIJPSide Side) const { return Side == EIJPSide::Left ? LeftScore : RightScore; }
 
 	/** The paddle defending this side's goal. Null before BeginPlay. */
@@ -166,6 +173,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Layout")
 	float GoalDepth = 100.f;
 
+	/** Barrier lines (see SetBarrierUp): distance of their centre in from the goal line, and thickness. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Layout")
+	float BarrierInset = 12.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Layout")
+	float BarrierThickness = 6.f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Layout")
 	FVector2D NetDashSize = FVector2D(6.f, 18.f);
 
@@ -245,6 +259,18 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<UIJPGoalComponent> RightGoal;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<UBoxComponent> LeftBarrier;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<UBoxComponent> RightBarrier;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<UStaticMeshComponent> LeftBarrierVisual;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<UStaticMeshComponent> RightBarrierVisual;
 
 	/** The screen behind the playfield, filling the camera's frame. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")

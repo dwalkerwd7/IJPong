@@ -79,6 +79,14 @@ FVector2D AIJPPaddle::GetSize() const
 	return FVector2D(Size.X, Size.Y * LengthScale);
 }
 
+void AIJPPaddle::Dash(float Distance, float Duration)
+{
+	// Steering this very frame wins over the last direction (input arrives before the paddle ticks).
+	const float Direction = PendingInput != 0.f ? FMath::Sign(PendingInput) : LastMoveSign;
+	DashTimeLeft = FMath::Max(Duration, UE_KINDA_SMALL_NUMBER);
+	DashVelocity = Direction * Distance / DashTimeLeft;
+}
+
 void AIJPPaddle::SetLengthScale(float Scale)
 {
 	LengthScale = FMath::Max(Scale, KINDA_SMALL_NUMBER);
@@ -150,17 +158,35 @@ void AIJPPaddle::Tick(float DeltaSeconds)
 		return;
 	}
 
-	// Ramp toward the target speed at a constant rate, so reaching MaxSpeed from rest takes RampTime.
-	const float MaxSpeed = GetMaxSpeed();
-	const float RampTime = GetRampTime();
-	const float TargetVelocity = Input * MaxSpeed;
-	if (RampTime <= 0.f)
+	if (Input != 0.f)
 	{
-		Velocity = TargetVelocity;
+		LastMoveSign = FMath::Sign(Input);
+	}
+
+	const float MaxSpeed = GetMaxSpeed();
+	if (DashTimeLeft > 0.f)
+	{
+		// Mid-dash: fixed burst speed. It ends at normal top speed, so the paddle doesn't slide on.
+		Velocity = DashVelocity;
+		DashTimeLeft -= DeltaSeconds;
+		if (DashTimeLeft <= 0.f)
+		{
+			Velocity = FMath::Clamp(DashVelocity, -MaxSpeed, MaxSpeed);
+		}
 	}
 	else
 	{
-		Velocity = FMath::FInterpConstantTo(Velocity, TargetVelocity, DeltaSeconds, MaxSpeed / RampTime);
+		// Ramp toward the target speed at a constant rate, so reaching MaxSpeed from rest takes RampTime.
+		const float RampTime = GetRampTime();
+		const float TargetVelocity = Input * MaxSpeed;
+		if (RampTime <= 0.f)
+		{
+			Velocity = TargetVelocity;
+		}
+		else
+		{
+			Velocity = FMath::FInterpConstantTo(Velocity, TargetVelocity, DeltaSeconds, MaxSpeed / RampTime);
+		}
 	}
 
 	// Stay between the walls. Hitting a wall kills the velocity, so the paddle doesn't "push" into it.
@@ -168,6 +194,7 @@ void AIJPPaddle::Tick(float DeltaSeconds)
 	if (ClampToWalls())
 	{
 		Velocity = 0.f;
+		DashTimeLeft = 0.f;
 	}
 
 	UpdateTransform();

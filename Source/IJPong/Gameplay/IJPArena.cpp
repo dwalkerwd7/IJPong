@@ -40,6 +40,24 @@ AIJPArena::AIJPArena()
 	BottomWall->SetupAttachment(Root);
 	IJP::ConfigureAsBallBlocker(BottomWall);
 
+	// Barriers exist from the start but block nothing and show nothing until raised.
+	for (const EIJPSide Side : { EIJPSide::Left, EIJPSide::Right })
+	{
+		const bool bLeft = Side == EIJPSide::Left;
+		UBoxComponent* Barrier = CreateDefaultSubobject<UBoxComponent>(bLeft ? TEXT("LeftBarrier") : TEXT("RightBarrier"));
+		Barrier->SetupAttachment(Root);
+		IJP::ConfigureAsBallBlocker(Barrier);
+		Barrier->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		UStaticMeshComponent* BarrierVisual = CreateDefaultSubobject<UStaticMeshComponent>(bLeft ? TEXT("LeftBarrierVisual") : TEXT("RightBarrierVisual"));
+		BarrierVisual->SetupAttachment(Root);
+		BarrierVisual->SetStaticMesh(CubeMesh.Object);
+		BarrierVisual->CastShadow = false;
+		BarrierVisual->SetVisibility(false);
+		IJP::ConfigureAsVisualOnly(BarrierVisual);
+		(bLeft ? LeftBarrier : RightBarrier) = Barrier;
+		(bLeft ? LeftBarrierVisual : RightBarrierVisual) = BarrierVisual;
+	}
+
 	LeftGoal = CreateDefaultSubobject<UIJPGoalComponent>(TEXT("LeftGoal"));
 	LeftGoal->SetupAttachment(Root);
 	LeftGoal->DefendingSide = EIJPSide::Left;
@@ -116,6 +134,21 @@ void AIJPArena::OnConstruction(const FTransform& Transform)
 	BottomWall->SetRelativeLocation(FVector(0.f, 0.f, -WallCentreY));
 	BottomWall->SetBoxExtent(FVector(HalfExtents.X + GoalDepth, HalfBlockerDepth, WallThickness * 0.5f));
 
+	// Barriers: full-height lines just inside each goal line, behind the paddles.
+	const float BarrierX = HalfExtents.X - BarrierInset;
+	const float CubeUnits = 100.f; // /Engine/BasicShapes/Cube is 100 units, centred.
+	for (const EIJPSide Side : { EIJPSide::Left, EIJPSide::Right })
+	{
+		const bool bLeft = Side == EIJPSide::Left;
+		const FVector Centre(IJP::SideSign(Side) * BarrierX, 0.f, 0.f);
+		UBoxComponent* Barrier = bLeft ? LeftBarrier : RightBarrier;
+		Barrier->SetRelativeLocation(Centre);
+		Barrier->SetBoxExtent(FVector(BarrierThickness * 0.5f, HalfBlockerDepth, HalfExtents.Y));
+		UStaticMeshComponent* BarrierVisual = bLeft ? LeftBarrierVisual : RightBarrierVisual;
+		BarrierVisual->SetRelativeLocation(Centre);
+		BarrierVisual->SetRelativeScale3D(FVector(BarrierThickness / CubeUnits, VisualDepth / CubeUnits, HalfExtents.Y * 2.f / CubeUnits));
+	}
+
 	// Goals start at the goal line and extend outward, covering the full height including walls.
 	const float GoalCentreX = HalfExtents.X + GoalDepth * 0.5f;
 	const FVector GoalExtent(GoalDepth * 0.5f, HalfBlockerDepth, OuterHalfY);
@@ -126,7 +159,7 @@ void AIJPArena::OnConstruction(const FTransform& Transform)
 
 	// The base material in the editor; BeginPlay swaps in the palette's instances.
 	UMaterialInterface* BaseMaterial = PongMaterial.LoadSynchronous();
-	for (UPrimitiveComponent* Piece : TArray<UPrimitiveComponent*>{ Background, WallVisuals, NetVisuals, LeftScore, RightScore })
+	for (UPrimitiveComponent* Piece : TArray<UPrimitiveComponent*>{ Background, WallVisuals, NetVisuals, LeftScore, RightScore, LeftBarrierVisual, RightBarrierVisual })
 	{
 		Piece->SetMaterial(0, BaseMaterial);
 	}
@@ -268,6 +301,21 @@ void AIJPArena::CreatePaletteMaterials()
 	NetVisuals->SetMaterial(0, GetPaletteMaterial(EIJPPaletteRole::Net));
 	LeftScore->SetMaterial(0, GetPaletteMaterial(EIJPPaletteRole::Score));
 	RightScore->SetMaterial(0, GetPaletteMaterial(EIJPPaletteRole::Score));
+	// A barrier is its paddle's, so it takes that paddle's colour.
+	LeftBarrierVisual->SetMaterial(0, GetPaletteMaterial(EIJPPaletteRole::LeftPaddle));
+	RightBarrierVisual->SetMaterial(0, GetPaletteMaterial(EIJPPaletteRole::RightPaddle));
+}
+
+void AIJPArena::SetBarrierUp(EIJPSide Side, bool bUp)
+{
+	const bool bLeft = Side == EIJPSide::Left;
+	(bLeft ? LeftBarrier : RightBarrier)->SetCollisionEnabled(bUp ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
+	(bLeft ? LeftBarrierVisual : RightBarrierVisual)->SetVisibility(bUp);
+}
+
+bool AIJPArena::IsBarrierUp(EIJPSide Side) const
+{
+	return (Side == EIJPSide::Left ? LeftBarrier : RightBarrier)->GetCollisionEnabled() != ECollisionEnabled::NoCollision;
 }
 
 void AIJPArena::ApplyPalette(const FIJPPalette& Palette)

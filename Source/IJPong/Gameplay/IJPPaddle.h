@@ -83,6 +83,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	float GetRampTime() const;
 
+	/**
+	 * Burst Distance along the lane over Duration, ignoring MaxSpeed and input, in the direction the
+	 * paddle is being steered (or last was). Stops early at a wall. For abilities like Dash.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Paddle")
+	void Dash(float Distance, float Duration);
+
+	UFUNCTION(BlueprintPure, Category = "Paddle")
+	bool IsDashing() const { return DashTimeLeft > 0.f; }
+
 	/** Stretch the paddle's length (1 = the profile's). Stays inside the walls. For abilities like Grow. */
 	UFUNCTION(BlueprintCallable, Category = "Paddle")
 	void SetLengthScale(float Scale);
@@ -124,4 +134,8 @@ private:
 	float Velocity = 0.f;
 	float PendingInput = 0.f;
 	float LengthScale = 1.f;
+	/** +1 or -1: the way the paddle was last steered. */
+	float LastMoveSign = 1.f;
+	float DashVelocity = 0.f;
+	float DashTimeLeft = 0.f;
 };

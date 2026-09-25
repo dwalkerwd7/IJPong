@@ -71,6 +71,25 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Ball")
 	void Boost(float Multiplier);
 
+	/**
+	 * Bend the ball's path for Duration seconds, turning DegreesPerSecond toward BendUp (+1 up the
+	 * screen, -1 down). A wall bounce mirrors the bend with the rest of the motion; the next paddle
+	 * hit, a goal or a reset ends it. For abilities like Curve shot.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Ball")
+	void Curve(float DegreesPerSecond, float Duration, float BendUp);
+
+	UFUNCTION(BlueprintPure, Category = "Ball")
+	bool IsCurving() const { return CurveTimeLeft > 0.f; }
+
+	/** Put the ball in play at Position with Velocity (plane space), e.g. a copy split off another ball. */
+	UFUNCTION(BlueprintCallable, Category = "Ball")
+	void Launch(const FVector2D& InPosition, const FVector2D& InVelocity);
+
+	/** Change direction and speed mid-flight. The rally's speed-up carries on from the new speed. */
+	UFUNCTION(BlueprintCallable, Category = "Ball")
+	void SetPlaneVelocity(const FVector2D& InVelocity);
+
 	/** Take the ball out of play and hide it at the centre. */
 	UFUNCTION(BlueprintCallable, Category = "Ball")
 	void ResetBall();
@@ -157,6 +176,10 @@ private:
 	/** The speed before a Boost, which the next paddle hit builds on. 0 = not boosted. */
 	float UnboostedSpeed = 0.f;
 	float Accumulator = 0.f;
+	float CurveRate = 0.f;
+	float CurveTimeLeft = 0.f;
+	/** +1 bends up the screen, -1 down. */
+	float CurveBend = 0.f;
 	int32 RallyHits = 0;
 	bool bInPlay = false;
 };
