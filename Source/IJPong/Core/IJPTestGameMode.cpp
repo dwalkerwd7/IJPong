@@ -15,6 +15,8 @@
 #include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPMatchRules.h"
 #include "Gameplay/IJPPaddle.h"
+#include "Gameplay/IJPPaddleClass.h"
+#include "Gameplay/IJPRival.h"
 
 AIJPTestGameMode::AIJPTestGameMode()
 {
@@ -122,6 +124,42 @@ void AIJPTestGameMode::CycleEra(int32 Direction)
 	}
 }
 
+void AIJPTestGameMode::CyclePlayerClass(int32 Direction)
+{
+	AIJPPaddle* Paddle = GetArena() ? GetArena()->GetPaddle(PlayerSide) : nullptr;
+	if (!Paddle || PlayerClasses.IsEmpty())
+	{
+		return;
+	}
+
+	// From a class that isn't in the list, start counting from the first.
+	const int32 Num = PlayerClasses.Num();
+	const int32 Current = FMath::Max(PlayerClasses.IndexOfByKey(Paddle->GetPaddleClass()), 0);
+	const UIJPPaddleClass* Next = PlayerClasses[((Current + Direction) % Num + Num) % Num].LoadSynchronous();
+	Paddle->SetPaddleClass(Next);
+	ShowMessage(2, FString::Printf(TEXT("Your class: %s"), Next ? *Next->DisplayName.ToString() : TEXT("none")));
+}
+
+void AIJPTestGameMode::CycleRival(int32 Direction)
+{
+	// Positions -1 (no rival) .. Num-1, wrapping.
+	const int32 Count = Rivals.Num() + 1;
+	RivalIndex = ((RivalIndex + 1 + Direction) % Count + Count) % Count - 1;
+	const UIJPRival* Next = Rivals.IsValidIndex(RivalIndex) ? Rivals[RivalIndex].LoadSynchronous() : nullptr;
+	SetRival(Next);
+	ShowMessage(3, FString::Printf(TEXT("Opponent: %s"), Next ? *Next->DisplayName.ToString() : TEXT("no rival")));
+}
+
+void AIJPTestGameMode::ShowMessage(int32 Key, const FString& Message) const
+{
+	UE_LOG(LogIJPong, Log, TEXT("%s"), *Message);
+	if (GEngine)
+	{
+		// Same key each time, so repeated presses replace the message instead of stacking.
+		GEngine->AddOnScreenDebugMessage(static_cast<uint64>(GetUniqueID()) + Key, 2.f, FColor::White, Message);
+	}
+}
+
 void AIJPTestGameMode::AddRandomBall()
 {
 	const UIJPBallType* Type = ExtraBallTypes.IsEmpty() ? nullptr : ExtraBallTypes[FMath::RandHelper(ExtraBallTypes.Num())].LoadSynchronous();
@@ -145,6 +183,16 @@ void AIJPTestGameMode::GetDebugLines(TArray<FString>& OutLines) const
 		: FString(TEXT("Era: none")));
 
 	OutLines.Add(FString::Printf(TEXT("Balls in play: %d"), ArenaPtr ? ArenaPtr->GetNumBallsInPlay() : 0));
+
+	auto ClassName = [ArenaPtr](EIJPSide Side) -> FString
+	{
+		const AIJPPaddle* Paddle = ArenaPtr ? ArenaPtr->GetPaddle(Side) : nullptr;
+		const UIJPPaddleClass* PaddleClass = Paddle ? Paddle->GetPaddleClass() : nullptr;
+		return PaddleClass ? PaddleClass->DisplayName.ToString() : FString(TEXT("none"));
+	};
+	const UIJPRival* CurrentRival = GetRival();
+	OutLines.Add(FString::Printf(TEXT("You: %s   Opponent: %s (%s)"), *ClassName(PlayerSide),
+		CurrentRival ? *CurrentRival->DisplayName.ToString() : TEXT("no rival"), *ClassName(IJP::Opposite(PlayerSide))));
 
 	// The player's abilities: name and state per slot.
 	const AIJPPaddle* PlayerPaddle = ArenaPtr ? ArenaPtr->GetPaddle(PlayerSide) : nullptr;
@@ -180,5 +228,5 @@ void AIJPTestGameMode::GetDebugLines(TArray<FString>& OutLines) const
 	}
 
 	OutLines.Add(TEXT("R new match   F serve now   T AI vs AI   B add ball"));
-	OutLines.Add(TEXT("- / = opponent skill   [ / ] era   . (period) hide this"));
+	OutLines.Add(TEXT("- / = opponent skill   [ / ] era   C class   V rival   . (period) hide this"));
 }

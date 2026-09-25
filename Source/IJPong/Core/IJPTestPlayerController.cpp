@@ -55,6 +55,8 @@ void AIJPTestPlayerController::SetupInputComponent()
 	Bind(Settings->DebugEraPrevAction, &AIJPTestPlayerController::HandleEraPrev);
 	Bind(Settings->DebugEraNextAction, &AIJPTestPlayerController::HandleEraNext);
 	Bind(Settings->DebugAddBallAction, &AIJPTestPlayerController::HandleAddBall);
+	Bind(Settings->DebugCyclePlayerClassAction, &AIJPTestPlayerController::HandleCyclePlayerClass);
+	Bind(Settings->DebugCycleRivalAction, &AIJPTestPlayerController::HandleCycleRival);
 }
 
 AIJPTestGameMode* AIJPTestPlayerController::GetTestGameMode() const
@@ -123,6 +125,22 @@ void AIJPTestPlayerController::HandleAddBall()
 	if (AIJPTestGameMode* GameMode = GetTestGameMode())
 	{
 		GameMode->AddRandomBall();
+	}
+}
+
+void AIJPTestPlayerController::HandleCyclePlayerClass()
+{
+	if (AIJPTestGameMode* GameMode = GetTestGameMode())
+	{
+		GameMode->CyclePlayerClass(1);
+	}
+}
+
+void AIJPTestPlayerController::HandleCycleRival()
+{
+	if (AIJPTestGameMode* GameMode = GetTestGameMode())
+	{
+		GameMode->CycleRival(1);
 	}
 }
 

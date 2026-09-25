@@ -10,6 +10,7 @@
 #include "Engine/World.h"
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPPaddle.h"
+#include "Gameplay/IJPPaddleClass.h"
 #include "Gameplay/IJPPaddleProfile.h"
 #include "Tests/IJPTestWorld.h"
 
@@ -143,7 +144,9 @@ bool FIJPPaddleProfileTest::RunTest(const FString& Parameters)
 	Long->Size = FVector2D(12.f, 140.f);
 	Long->MaxSpeed = 300.f;
 
-	FIJPTestWorld Test(IJPPaddleTests::ArenaTransform, [Long](AIJPArena& Arena) { Arena.SetPaddleProfile(EIJPSide::Left, Long); });
+	UIJPPaddleClass* LongClass = NewObject<UIJPPaddleClass>();
+	LongClass->Profile = Long;
+	FIJPTestWorld Test(IJPPaddleTests::ArenaTransform, [LongClass](AIJPArena& Arena) { Arena.SetPaddleClass(EIJPSide::Left, LongClass); });
 	AIJPArena* Arena = Test.GetArena();
 	AIJPPaddle* Left = Arena->GetPaddle(EIJPSide::Left);
 	AIJPPaddle* Right = Arena->GetPaddle(EIJPSide::Right);

@@ -12,7 +12,7 @@
 #include "Gameplay/IJPBall.h"
 #include "Gameplay/IJPBallType.h"
 #include "Gameplay/IJPPaddle.h"
-#include "Gameplay/IJPPaddleProfile.h"
+#include "Gameplay/IJPPaddleClass.h"
 #include "Tests/IJPTestWorld.h"
 
 namespace IJPAbilityTests
@@ -41,19 +41,19 @@ namespace IJPAbilityTests
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPSmashTest, "IJPong.Ability.SmashSpeedsUpOnlyTheNextReturn", IJPAbilityTests::Flags)
 bool FIJPSmashTest::RunTest(const FString& Parameters)
 {
-	// The left paddle's class comes with Smash (x2), equipped from its profile at spawn.
+	// The left paddle's class comes with Smash (x2), equipped from the class at spawn.
 	UIJPAbility_Smash* Smash = NewObject<UIJPAbility_Smash>(GetTransientPackage());
 	Smash->SpeedMultiplier = 2.f;
-	UIJPPaddleProfile* Profile = NewObject<UIJPPaddleProfile>(GetTransientPackage());
-	Profile->ClassSkill = Smash;
-	FIJPTestWorld Test(FTransform::Identity, [Profile](AIJPArena& Arena) { Arena.SetPaddleProfile(EIJPSide::Left, Profile); });
+	UIJPPaddleClass* PaddleClass = NewObject<UIJPPaddleClass>(GetTransientPackage());
+	PaddleClass->ClassSkill = Smash;
+	FIJPTestWorld Test(FTransform::Identity, [PaddleClass](AIJPArena& Arena) { Arena.SetPaddleClass(EIJPSide::Left, PaddleClass); });
 
 	AIJPArena* Arena = Test.GetArena();
 	AIJPBall* Ball = Arena->GetBall();
 	AIJPPaddle* Left = Arena->GetPaddle(EIJPSide::Left);
 	UIJPAbilityComponent* Abilities = Left->GetAbilities();
 	const UIJPAbility* Equipped = Abilities->GetAbility(EIJPAbilitySlot::ClassSkill);
-	UTEST_TRUE("Profile's class skill equipped", Equipped && Equipped->IsA<UIJPAbility_Smash>());
+	UTEST_TRUE("Class skill equipped", Equipped && Equipped->IsA<UIJPAbility_Smash>());
 	UTEST_TRUE("As the slot's own copy", Equipped != Smash);
 
 	// Both paddles stand still in the middle, so the ball goes straight back and forth.

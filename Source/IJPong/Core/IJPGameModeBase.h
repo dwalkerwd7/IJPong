@@ -12,6 +12,7 @@ class AIJPBall;
 class AIJPPaddleAIController;
 class UIJPAIProfile;
 class UIJPMatchComponent;
+class UIJPRival;
 
 /**
  * Setup shared by every IJPong mode: find the level's arena, give the player the left paddle,
@@ -39,6 +40,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Game")
 	UIJPMatchComponent* GetMatch() const { return Match; }
 
+	/**
+	 * Who the opponent is: their class goes on the opponent's paddle and their style on its AI, now.
+	 * Null = the arena's own class for that side and the default AI profile.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Game")
+	void SetRival(const UIJPRival* InRival);
+
+	UFUNCTION(BlueprintPure, Category = "Game")
+	const UIJPRival* GetRival() const { return Rival; }
+
 	/** The side the local player plays. */
 	static constexpr EIJPSide PlayerSide = EIJPSide::Left;
 
@@ -64,6 +75,12 @@ protected:
 	TObjectPtr<UIJPMatchComponent> Match;
 
 private:
+	/** The AI profile for Side's AI: the rival's on the opponent's side, else the configured one. */
+	const UIJPAIProfile* GetAIProfileFor(EIJPSide Side) const;
+
 	UPROPERTY(Transient)
 	TObjectPtr<AIJPArena> Arena;
+
+	UPROPERTY(Transient)
+	TObjectPtr<const UIJPRival> Rival;
 };

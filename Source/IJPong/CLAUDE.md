@@ -3,7 +3,7 @@
 ## Layout
 Includes are relative to the module root (`PublicIncludePaths.Add(ModuleDirectory)`), e.g. `#include "Gameplay/IJPArena.h"`.
 - `Core/`: shared types, game framework classes (GameMode, GameState, PlayerController)
-- `Gameplay/`: arena, balls (`UIJPBallType` Data Assets), paddles, goals, match, maths
+- `Gameplay/`: arena, balls (`UIJPBallType`), paddles (`UIJPPaddleClass` -> `UIJPPaddleProfile`), rivals (`UIJPRival`), goals, match, maths
 - `Presentation/`: screen look. `UIJPCRTComponent` puts the CRT post-process on every camera of its owner. The HLSL is in the project's `Shaders/IJPCRT.ush` (mapped to `/IJPong` by the tiny `IJPongShaders` module).
 - `Era/`: `UIJPEra` Data Asset (CRT, tones, palette) and `UIJPEraSubsystem`, the current era, followed live by arenas and CRT components.
 - `Abilities/`: `UIJPAbility` (one subclass per behaviour, Data Assets for tuning, a runtime copy per slot) and `UIJPAbilityComponent` (the paddle's slots and cooldowns).

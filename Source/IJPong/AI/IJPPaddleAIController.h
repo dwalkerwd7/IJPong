@@ -28,6 +28,9 @@ public:
 
 	virtual void Tick(float DeltaSeconds) override;
 
+	/** The profile in use: the one set, or UIJPAIProfile's defaults. */
+	const UIJPAIProfile& GetProfile() const;
+
 	/** Null falls back to UIJPAIProfile's defaults. */
 	UFUNCTION(BlueprintCallable, Category = "AI")
 	void SetProfile(const UIJPAIProfile* InProfile);
@@ -51,7 +54,6 @@ protected:
 	virtual void OnUnPossess() override;
 
 private:
-	const UIJPAIProfile& GetProfile() const;
 	/** The in-play ball heading for this paddle that will reach it soonest, or null. */
 	const AIJPBall* PickIncomingBall(const AIJPPaddle& Paddle) const;
 	void Decide(const AIJPPaddle& Paddle, const AIJPBall* Ball);

@@ -8,7 +8,7 @@
 
 class AIJPTestGameMode;
 
-/** The normal player controller plus the test mode's debug keys (reset score, serve now, AI vs AI, opponent skill, overlay, era, extra ball). */
+/** The normal player controller plus the test mode's debug keys (reset score, serve now, AI vs AI, opponent skill, overlay, era, extra ball, class, rival). */
 UCLASS()
 class IJPONG_API AIJPTestPlayerController : public AIJPPlayerController
 {
@@ -29,4 +29,6 @@ private:
 	void HandleEraPrev();
 	void HandleEraNext();
 	void HandleAddBall();
+	void HandleCyclePlayerClass();
+	void HandleCycleRival();
 };

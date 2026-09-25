@@ -17,7 +17,7 @@ class UStaticMeshComponent;
 class AIJPBall;
 class UIJPBallType;
 class AIJPPaddle;
-class UIJPPaddleProfile;
+class UIJPPaddleClass;
 class UIJPCRTComponent;
 class UIJPGoalComponent;
 class UIJPSevenSegmentComponent;
@@ -133,8 +133,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Arena")
 	void SetOpponentSkill(float Skill) { OpponentSkill = FMath::Clamp(Skill, 0.f, 1.f); }
 
-	/** Choose a side's paddle. Takes effect when the paddles spawn at BeginPlay. */
-	void SetPaddleProfile(EIJPSide Side, UIJPPaddleProfile* Profile);
+	/** Choose a side's paddle class. Before BeginPlay it's used at spawn; after, the paddle switches now. */
+	UFUNCTION(BlueprintCallable, Category = "Arena")
+	void SetPaddleClass(EIJPSide Side, const UIJPPaddleClass* SideClass);
+
+	/** The class this arena was set up with for Side (config, level, or SetPaddleClass before BeginPlay). */
+	const UIJPPaddleClass* GetConfiguredPaddleClass(EIJPSide Side) const;
 
 	/** The tone set in use: this arena's override, else the era's, else UIJPToneSet's defaults. */
 	const UIJPToneSet& GetToneSet() const;
@@ -192,13 +196,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Layout")
 	float PaddleInset = 40.f;
 
-	/** The player's (left) paddle. Default from DefaultGame.ini; empty uses UIJPPaddleProfile's defaults. */
+	/** The player's (left) paddle class. Default from DefaultGame.ini; empty = default stats, no skill. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Arena|Paddles")
-	TSoftObjectPtr<UIJPPaddleProfile> LeftPaddleProfile;
+	TSoftObjectPtr<UIJPPaddleClass> LeftPaddleClass;
 
-	/** The opponent's (right) paddle. Default from DefaultGame.ini; empty uses UIJPPaddleProfile's defaults. */
+	/** The opponent's (right) paddle class. Default from DefaultGame.ini; a rival can replace it. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Arena|Paddles")
-	TSoftObjectPtr<UIJPPaddleProfile> RightPaddleProfile;
+	TSoftObjectPtr<UIJPPaddleClass> RightPaddleClass;
 
 	/** Spawned for both sides at BeginPlay. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Spawning")

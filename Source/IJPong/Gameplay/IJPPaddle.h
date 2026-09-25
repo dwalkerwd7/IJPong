@@ -11,6 +11,7 @@
 class AIJPArena;
 class UBoxComponent;
 class UIJPAbilityComponent;
+class UIJPPaddleClass;
 class UIJPPaddleProfile;
 class UStaticMeshComponent;
 
@@ -31,11 +32,20 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 
 	/**
-	 * Called by the arena right after spawning. Applies the profile (null = UIJPPaddleProfile's defaults)
+	 * Called by the arena right after spawning. Applies the class (null = default stats, no skill)
 	 * and places the paddle in its lane, centred vertically.
 	 */
-	void InitPaddle(AIJPArena* InArena, EIJPSide InSide, float InLaneX, const UIJPPaddleProfile* InProfile);
+	void InitPaddle(AIJPArena* InArena, EIJPSide InSide, float InLaneX, const UIJPPaddleClass* InClass);
 
+	/** Become another class now: its stats and class skill. Stays in its lane, inside the walls. */
+	UFUNCTION(BlueprintCallable, Category = "Paddle")
+	void SetPaddleClass(const UIJPPaddleClass* InClass);
+
+	/** Null = no class (default stats). */
+	UFUNCTION(BlueprintPure, Category = "Paddle")
+	const UIJPPaddleClass* GetPaddleClass() const { return PaddleClass; }
+
+	/** Base stats: the class's profile, or UIJPPaddleProfile's defaults. */
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	const UIJPPaddleProfile* GetProfile() const;
 
@@ -104,7 +114,7 @@ private:
 	bool ClampToWalls();
 
 	UPROPERTY(Transient)
-	TObjectPtr<const UIJPPaddleProfile> Profile;
+	TObjectPtr<const UIJPPaddleClass> PaddleClass;
 
 	TWeakObjectPtr<AIJPArena> Arena;
 	FIJPBlinker FlickerBlinker;

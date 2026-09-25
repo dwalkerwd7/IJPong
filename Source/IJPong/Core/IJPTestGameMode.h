@@ -9,6 +9,8 @@
 class UIJPAbility;
 class UIJPBallType;
 class UIJPMatchRules;
+class UIJPPaddleClass;
+class UIJPRival;
 
 /**
  * Match after match for trying out a level, with the rules from config (MatchRules).
@@ -47,6 +49,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Test")
 	void CycleEra(int32 Direction);
 
+	/** Step the player's paddle through PlayerClasses (wrapping). */
+	UFUNCTION(BlueprintCallable, Category = "Test")
+	void CyclePlayerClass(int32 Direction);
+
+	/** Step the opponent through Rivals, with "no rival" (the arena's own class) between the last and the first. */
+	UFUNCTION(BlueprintCallable, Category = "Test")
+	void CycleRival(int32 Direction);
+
 	/** Launch one extra ball of a random ExtraBallTypes type into the current rally. */
 	UFUNCTION(BlueprintCallable, Category = "Test")
 	void AddRandomBall();
@@ -65,11 +75,24 @@ protected:
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Test|Abilities")
 	TSoftObjectPtr<UIJPAbility> PlayerRunAbility;
 
+	/** Classes the class key steps through. Set in DefaultGame.ini. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Test|Classes")
+	TArray<TSoftObjectPtr<UIJPPaddleClass>> PlayerClasses;
+
+	/** Rivals the rival key steps through. Set in DefaultGame.ini. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Test|Classes")
+	TArray<TSoftObjectPtr<UIJPRival>> Rivals;
+
 	/** Types the add-ball key picks from. Set in DefaultGame.ini; empty = the arena's default type. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Test|Balls")
 	TArray<TSoftObjectPtr<UIJPBallType>> ExtraBallTypes;
 
 private:
+	void ShowMessage(int32 Key, const FString& Message) const;
+
 	UPROPERTY(Transient)
 	TObjectPtr<AIJPPaddleAIController> PlayerSideAI;
+
+	/** Position in Rivals; -1 = no rival. */
+	int32 RivalIndex = -1;
 };

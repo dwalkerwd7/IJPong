@@ -64,4 +64,10 @@ public:
 
 	UPROPERTY(Config, EditAnywhere, Category = "Debug")
 	TSoftObjectPtr<UInputAction> DebugAddBallAction;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Debug")
+	TSoftObjectPtr<UInputAction> DebugCyclePlayerClassAction;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Debug")
+	TSoftObjectPtr<UInputAction> DebugCycleRivalAction;
 };

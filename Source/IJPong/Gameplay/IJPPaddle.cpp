@@ -6,6 +6,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Gameplay/IJPArena.h"
+#include "Gameplay/IJPPaddleClass.h"
 #include "Gameplay/IJPPaddleProfile.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -39,11 +40,9 @@ void AIJPPaddle::OnConstruction(const FTransform& Transform)
 	ApplyLayout();
 }
 
-void AIJPPaddle::InitPaddle(AIJPArena* InArena, EIJPSide InSide, float InLaneX, const UIJPPaddleProfile* InProfile)
+void AIJPPaddle::InitPaddle(AIJPArena* InArena, EIJPSide InSide, float InLaneX, const UIJPPaddleClass* InClass)
 {
 	check(InArena);
-	Profile = InProfile;
-	ApplyLayout();
 	Arena = InArena;
 	Side = InSide;
 	LaneX = InLaneX;
@@ -52,14 +51,26 @@ void AIJPPaddle::InitPaddle(AIJPArena* InArena, EIJPSide InSide, float InLaneX, 
 	PendingInput = 0.f;
 
 	Visual->SetMaterial(0, InArena->GetPaletteMaterial(InSide == EIJPSide::Left ? EIJPPaletteRole::LeftPaddle : EIJPPaletteRole::RightPaddle));
-	UpdateTransform();
+	SetPaddleClass(InClass);
+}
 
-	Abilities->Equip(EIJPAbilitySlot::ClassSkill, GetProfile()->ClassSkill);
+void AIJPPaddle::SetPaddleClass(const UIJPPaddleClass* InClass)
+{
+	PaddleClass = InClass;
+	ApplyLayout();
+	if (Arena.IsValid())
+	{
+		// A longer class can't stick through a wall it was resting against.
+		ClampToWalls();
+		UpdateTransform();
+	}
+	Abilities->Equip(EIJPAbilitySlot::ClassSkill, InClass ? InClass->ClassSkill.Get() : nullptr);
 }
 
 const UIJPPaddleProfile* AIJPPaddle::GetProfile() const
 {
-	return Profile ? Profile.Get() : GetDefault<UIJPPaddleProfile>();
+	const UIJPPaddleProfile* Profile = PaddleClass ? PaddleClass->Profile.Get() : nullptr;
+	return Profile ? Profile : GetDefault<UIJPPaddleProfile>();
 }
 
 FVector2D AIJPPaddle::GetSize() const

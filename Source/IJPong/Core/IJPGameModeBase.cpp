@@ -8,6 +8,8 @@
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPPaddle.h"
+#include "Gameplay/IJPPaddleClass.h"
+#include "Gameplay/IJPRival.h"
 
 AIJPGameModeBase::AIJPGameModeBase()
 {
@@ -59,6 +61,36 @@ void AIJPGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController*
 	PossessPlayerPaddle(NewPlayer);
 }
 
+void AIJPGameModeBase::SetRival(const UIJPRival* InRival)
+{
+	Rival = InRival;
+	if (!Arena)
+	{
+		return;
+	}
+
+	const EIJPSide RivalSide = IJP::Opposite(PlayerSide);
+	const UIJPPaddleClass* RivalClass = Rival ? Rival->PaddleClass.Get() : nullptr;
+	Arena->SetPaddleClass(RivalSide, RivalClass ? RivalClass : Arena->GetConfiguredPaddleClass(RivalSide));
+
+	if (AIJPPaddle* Paddle = Arena->GetPaddle(RivalSide))
+	{
+		if (AIJPPaddleAIController* AI = Cast<AIJPPaddleAIController>(Paddle->GetController()))
+		{
+			AI->SetProfile(GetAIProfileFor(RivalSide));
+		}
+	}
+}
+
+const UIJPAIProfile* AIJPGameModeBase::GetAIProfileFor(EIJPSide Side) const
+{
+	if (Rival && Rival->AIProfile && Side != PlayerSide)
+	{
+		return Rival->AIProfile;
+	}
+	return AIProfile.LoadSynchronous();
+}
+
 AIJPBall* AIJPGameModeBase::GetBall() const
 {
 	return Arena ? Arena->GetBall() : nullptr;
@@ -86,7 +118,7 @@ AIJPPaddleAIController* AIJPGameModeBase::SpawnAIPaddle(EIJPSide Side)
 	AIJPPaddleAIController* AI = GetWorld()->SpawnActor<AIJPPaddleAIController>(AIControllerClass, Params);
 	if (AI)
 	{
-		AI->SetProfile(AIProfile.LoadSynchronous());
+		AI->SetProfile(GetAIProfileFor(Side));
 		AI->SetSkill(Arena->GetOpponentSkill());
 		AI->Possess(Paddle);
 	}

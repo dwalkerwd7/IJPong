@@ -14,7 +14,7 @@
 #include "Gameplay/IJPBallType.h"
 #include "Gameplay/IJPGoalComponent.h"
 #include "Gameplay/IJPPaddle.h"
-#include "Gameplay/IJPPaddleProfile.h"
+#include "Gameplay/IJPPaddleClass.h"
 #include "Gameplay/IJPSevenSegmentComponent.h"
 #include "Presentation/IJPCRTComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -227,8 +227,8 @@ AIJPPaddle* AIJPArena::SpawnPaddle(EIJPSide Side)
 	AIJPPaddle* Paddle = GetWorld()->SpawnActor<AIJPPaddle>(PaddleClass, GetActorTransform(), Params);
 	if (Paddle)
 	{
-		const TSoftObjectPtr<UIJPPaddleProfile>& Profile = Side == EIJPSide::Left ? LeftPaddleProfile : RightPaddleProfile;
-		Paddle->InitPaddle(this, Side, GetLaneX(Side), Profile.LoadSynchronous());
+		const TSoftObjectPtr<UIJPPaddleClass>& SideClass = Side == EIJPSide::Left ? LeftPaddleClass : RightPaddleClass;
+		Paddle->InitPaddle(this, Side, GetLaneX(Side), SideClass.LoadSynchronous());
 	}
 	return Paddle;
 }
@@ -398,9 +398,21 @@ void AIJPArena::ClearWinner()
 	RightScore->StopFlash();
 }
 
-void AIJPArena::SetPaddleProfile(EIJPSide Side, UIJPPaddleProfile* Profile)
+void AIJPArena::SetPaddleClass(EIJPSide Side, const UIJPPaddleClass* SideClass)
 {
-	(Side == EIJPSide::Left ? LeftPaddleProfile : RightPaddleProfile) = Profile;
+	if (AIJPPaddle* Paddle = GetPaddle(Side))
+	{
+		Paddle->SetPaddleClass(SideClass);
+	}
+	else
+	{
+		(Side == EIJPSide::Left ? LeftPaddleClass : RightPaddleClass) = const_cast<UIJPPaddleClass*>(SideClass);
+	}
+}
+
+const UIJPPaddleClass* AIJPArena::GetConfiguredPaddleClass(EIJPSide Side) const
+{
+	return (Side == EIJPSide::Left ? LeftPaddleClass : RightPaddleClass).LoadSynchronous();
 }
 
 AIJPPaddle* AIJPArena::GetPaddle(EIJPSide Side) const
