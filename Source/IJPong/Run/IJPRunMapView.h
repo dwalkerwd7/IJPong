@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Presentation/IJPBlinker.h"
+#include "Run/IJPRunMap.h"
 #include "IJPRunMapView.generated.h"
 
 class AIJPArena;
@@ -14,7 +15,43 @@ class UInstancedStaticMeshComponent;
 class UMaterialInstanceDynamic;
 class UStaticMeshComponent;
 class UTextRenderComponent;
+class UTexture2D;
 class UIJPSkillTree;
+
+/** Icons for the map and the skill tree, drawn in place of their letters in eras with sprites. */
+USTRUCT()
+struct FIJPMapIcons
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, Category = "Icons")
+	TSoftObjectPtr<UTexture2D> Match;
+
+	UPROPERTY(EditAnywhere, Category = "Icons")
+	TSoftObjectPtr<UTexture2D> Elite;
+
+	UPROPERTY(EditAnywhere, Category = "Icons")
+	TSoftObjectPtr<UTexture2D> Rest;
+
+	UPROPERTY(EditAnywhere, Category = "Icons")
+	TSoftObjectPtr<UTexture2D> Shop;
+
+	UPROPERTY(EditAnywhere, Category = "Icons")
+	TSoftObjectPtr<UTexture2D> Event;
+
+	UPROPERTY(EditAnywhere, Category = "Icons")
+	TSoftObjectPtr<UTexture2D> Boss;
+
+	/** The skill tree's root (the class skill). */
+	UPROPERTY(EditAnywhere, Category = "Icons")
+	TSoftObjectPtr<UTexture2D> ClassSkill;
+
+	UPROPERTY(EditAnywhere, Category = "Icons")
+	TSoftObjectPtr<UTexture2D> StatNode;
+
+	UPROPERTY(EditAnywhere, Category = "Icons")
+	TSoftObjectPtr<UTexture2D> Keystone;
+};
 
 /**
  * The run's map, drawn like everything else in the game: boxes and glyph letters on a 4:3 tube
@@ -22,7 +59,7 @@ class UIJPSkillTree;
  * to the boss. It only shows the run (UIJPRunSubsystem) and keeps the player's pick among the
  * nodes they can go to next; the run game mode decides what happens.
  */
-UCLASS()
+UCLASS(Config = Game)
 class IJPONG_API AIJPRunMapView : public AActor
 {
 	GENERATED_BODY()
@@ -114,6 +151,12 @@ public:
 
 	UCameraComponent* GetCamera() const { return Camera; }
 
+	/** Icons showing now (sprite eras draw icons instead of letters). */
+	int32 GetShownIconCount() const;
+
+	/** Node letters showing now. */
+	int32 GetShownGlyphCount() const;
+
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "Map|Components")
 	TObjectPtr<USceneComponent> Root;
@@ -162,11 +205,23 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Map|Layout")
 	float CardTextSize = 13.f;
 
+	/** An icon's size, as a fraction of its node's frame. */
+	UPROPERTY(EditAnywhere, Category = "Map|Layout", meta = (ClampMin = "0.1", ClampMax = "1"))
+	float IconScale = 0.75f;
+
+	/** The icons (DefaultGame.ini). */
+	UPROPERTY(Config, EditAnywhere, Category = "Map|Look")
+	FIJPMapIcons Icons;
+
 private:
 	FVector2D NodePosition(int32 Node) const;
 	void AddFrame(UInstancedStaticMeshComponent* Target, const FVector2D& Centre, float Width, float Height) const;
 	void AddDashes(UInstancedStaticMeshComponent* Target, const FVector2D& From, const FVector2D& To) const;
 	UTextRenderComponent* MakeText(float Size);
+
+	/** Mark a node: its icon in sprite eras (when there is one), else its letter. Index is the node's glyph slot. */
+	void DrawMark(int32 Index, const TCHAR* Letter, const TSoftObjectPtr<UTexture2D>& Icon, const FVector2D& At, float BoxSize, const FLinearColor& Colour);
+	const TSoftObjectPtr<UTexture2D>& IconFor(EIJPNodeType Type) const;
 	void ApplyColours();
 	void PlaceCursor();
 	void ClearDrawing();
@@ -182,6 +237,13 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UTextRenderComponent>> Glyphs;
+
+	/** Icon quads, one per glyph slot, made as needed. */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UStaticMeshComponent>> IconQuads;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UMaterialInstanceDynamic>> IconMaterials;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> BrightMaterial;

@@ -1,6 +1,8 @@
 // It's Just Pong
 
 #include "Run/IJPRunMapView.h"
+#include "Engine/Texture2D.h"
+#include "Algo/Count.h"
 #include "Audio/IJPToneSynthComponent.h"
 #include "Audio/IJPToneSet.h"
 #include "Camera/CameraComponent.h"
@@ -228,10 +230,7 @@ void AIJPRunMapView::Refresh()
 		const FVector2D Position = NodePosition(i);
 		const float Size = Node.Type == EIJPNodeType::Boss ? NodeSize * 1.4f : NodeSize;
 		AddFrame(Pieces, Position, Size, Size);
-		Text->SetText(FText::FromString(Glyph(Node.Type)));
-		Text->SetTextRenderColor(Scaled(Palette.Score, Scale).ToFColor(true));
-		Text->SetRelativeLocation(FVector(Position.X, TextDepth, Position.Y));
-		Text->SetVisibility(true);
+		DrawMark(i, Glyph(Node.Type), IconFor(Node.Type), Position, Size, Scaled(Palette.Score, Scale));
 	}
 
 	FString ActName = Run->GetAct() ? Run->GetAct()->DisplayName.ToString().ToUpper() : FString();
@@ -537,6 +536,10 @@ void AIJPRunMapView::ClearDrawing()
 	{
 		Text->SetVisibility(false);
 	}
+	for (UStaticMeshComponent* Quad : IconQuads)
+	{
+		Quad->SetVisibility(false);
+	}
 	for (UTextRenderComponent* Text : CardTexts)
 	{
 		Text->SetVisibility(false);
@@ -591,16 +594,9 @@ void AIJPRunMapView::ShowTree(const UIJPSkillTree* Tree, bool bResetPick)
 	{
 		Glyphs.Add(MakeText(GlyphSize));
 	}
-	auto PlaceGlyph = [&](UTextRenderComponent* Text, const TCHAR* Letter, const FVector2D& At, float Scale)
-	{
-		Text->SetText(FText::FromString(Letter));
-		Text->SetTextRenderColor(Scaled(Palette.Score, Scale).ToFColor(true));
-		Text->SetRelativeLocation(FVector(At.X, TextDepth, At.Y));
-		Text->SetVisibility(true);
-	};
 	const FVector2D RootAt = TreeRootPosition();
 	AddFrame(BrightPieces, RootAt, NodeSize * 1.2f, NodeSize * 1.2f);
-	PlaceGlyph(Glyphs[0], TEXT("S"), RootAt, 1.f);
+	DrawMark(0, TEXT("S"), Icons.ClassSkill, RootAt, NodeSize * 1.2f, Palette.Score);
 
 	// Bright: owned. Mid: can buy now. Dim: not yet.
 	for (int32 i = 0; i < Tree->Nodes.Num(); ++i)
@@ -615,7 +611,7 @@ void AIJPRunMapView::ShowTree(const UIJPSkillTree* Tree, bool bResetPick)
 		AddDashes(Meta->IsOwned(Tree, i) ? MidPieces : DimPieces, From, At);
 		const float Size = Node.IsKeystone() ? NodeSize * 1.3f : NodeSize;
 		AddFrame(Pieces, At, Size, Size);
-		PlaceGlyph(Glyphs[i + 1], Node.IsKeystone() ? TEXT("K") : TEXT("+"), At, bOwned ? 1.f : bBuyable ? MidScale : DimScale);
+		DrawMark(i + 1, Node.IsKeystone() ? TEXT("K") : TEXT("+"), Node.IsKeystone() ? Icons.Keystone : Icons.StatNode, At, Size, Scaled(Palette.Score, bOwned ? 1.f : bBuyable ? MidScale : DimScale));
 	}
 
 	// START RUN, bottom centre.
@@ -769,6 +765,75 @@ void AIJPRunMapView::AddDashes(UInstancedStaticMeshComponent* Target, const FVec
 		const FVector2D Point = From + Direction * Along;
 		Target->AddInstance(FTransform(Tilt, FVector(Point.X, 0.f, Point.Y), FVector(Dash / CubeSize, 1.f / CubeSize, LineThickness / CubeSize)));
 	}
+}
+
+const TSoftObjectPtr<UTexture2D>& AIJPRunMapView::IconFor(EIJPNodeType Type) const
+{
+	switch (Type)
+	{
+	case EIJPNodeType::Elite: return Icons.Elite;
+	case EIJPNodeType::Rest:  return Icons.Rest;
+	case EIJPNodeType::Shop:  return Icons.Shop;
+	case EIJPNodeType::Event: return Icons.Event;
+	case EIJPNodeType::Boss:  return Icons.Boss;
+	default:                  return Icons.Match;
+	}
+}
+
+void AIJPRunMapView::DrawMark(int32 Index, const TCHAR* Letter, const TSoftObjectPtr<UTexture2D>& Icon, const FVector2D& At, float BoxSize, const FLinearColor& Colour)
+{
+	UTexture2D* Texture = Arena.IsValid() && Arena->ShowsSprites() ? Icon.LoadSynchronous() : nullptr;
+	UMaterialInterface* SpriteMaterial = Texture ? Arena->GetSpriteMaterial() : nullptr;
+	if (!SpriteMaterial)
+	{
+		// The letter.
+		if (IconQuads.IsValidIndex(Index))
+		{
+			IconQuads[Index]->SetVisibility(false);
+		}
+		UTextRenderComponent* Text = Glyphs[Index];
+		Text->SetText(FText::FromString(Letter));
+		Text->SetTextRenderColor(Colour.ToFColor(true));
+		Text->SetRelativeLocation(FVector(At.X, TextDepth, At.Y));
+		Text->SetVisibility(true);
+		return;
+	}
+
+	// The icon, on a quad of its own (made the first time this slot needs one).
+	while (IconQuads.Num() <= Index)
+	{
+		UStaticMeshComponent* Quad = NewObject<UStaticMeshComponent>(this);
+		Quad->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Plane.Plane")));
+		Quad->SetupAttachment(Root);
+		Quad->SetRelativeRotation(IJP::SpriteQuadRotation);
+		Quad->CastShadow = false;
+		IJP::ConfigureAsVisualOnly(Quad);
+		Quad->RegisterComponent();
+		UMaterialInstanceDynamic* Material = UMaterialInstanceDynamic::Create(SpriteMaterial, this);
+		Quad->SetMaterial(0, Material);
+		IconQuads.Add(Quad);
+		IconMaterials.Add(Material);
+	}
+	static const FName SpriteParam(TEXT("Sprite"));
+	static const FName ColorParam(TEXT("Color"));
+	IconMaterials[Index]->SetTextureParameterValue(SpriteParam, Texture);
+	IconMaterials[Index]->SetVectorParameterValue(ColorParam, Colour);
+	const float Size = BoxSize * IconScale / 100.f; // /Engine/BasicShapes/Plane is 100 units square.
+	Glyphs[Index]->SetVisibility(false); // Its letter slot stays hidden (a new one starts visible).
+	UStaticMeshComponent* Quad = IconQuads[Index];
+	Quad->SetRelativeLocation(FVector(At.X, TextDepth, At.Y));
+	Quad->SetRelativeScale3D(FVector(Size, Size, 1.f));
+	Quad->SetVisibility(true);
+}
+
+int32 AIJPRunMapView::GetShownIconCount() const
+{
+	return static_cast<int32>(Algo::CountIf(IconQuads, [](const UStaticMeshComponent* Quad) { return Quad->IsVisible(); }));
+}
+
+int32 AIJPRunMapView::GetShownGlyphCount() const
+{
+	return static_cast<int32>(Algo::CountIf(Glyphs, [](const UTextRenderComponent* Text) { return Text->IsVisible(); }));
 }
 
 UTextRenderComponent* AIJPRunMapView::MakeText(float Size)
