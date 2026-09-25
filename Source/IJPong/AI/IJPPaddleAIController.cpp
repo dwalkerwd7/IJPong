@@ -57,9 +57,15 @@ void AIJPPaddleAIController::Tick(float DeltaSeconds)
 		return;
 	}
 
-	// Only look at the balls every ReactionTime; steer toward the last decision every frame.
+	// A read shot overrides the balls; otherwise only look at them every ReactionTime and steer
+	// toward the last decision every frame.
 	DecisionTimer -= DeltaSeconds;
-	if (DecisionTimer <= 0.f)
+	if (bHasReadTarget)
+	{
+		TargetY = ReadTarget;
+		bBallIncoming = true; // move with purpose, not at the idle drift
+	}
+	else if (DecisionTimer <= 0.f)
 	{
 		Decide(*Paddle, PickIncomingBall(*Paddle));
 		DecisionTimer = FMath::Max(DecisionTimer + GetProfile().ReactionTime.At(Skill), 0.f);
@@ -67,6 +73,17 @@ void AIJPPaddleAIController::Tick(float DeltaSeconds)
 
 	Steer(*Paddle);
 	UseAbilities(*Paddle);
+}
+
+void AIJPPaddleAIController::ClearReadTarget()
+{
+	if (bHasReadTarget)
+	{
+		bHasReadTarget = false;
+		bBallIncoming = false;
+		TrackedBall = nullptr;
+		DecisionTimer = 0.f; // look at the balls right away
+	}
 }
 
 void AIJPPaddleAIController::UseAbilities(AIJPPaddle& Paddle) const

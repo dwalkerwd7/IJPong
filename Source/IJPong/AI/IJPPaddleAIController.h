@@ -45,6 +45,16 @@ public:
 	/** For repeatable tests. */
 	void SetRandomSeed(int32 Seed) { Random.Initialize(Seed); }
 
+	/**
+	 * Head for Y regardless of the balls, until ClearReadTarget. For abilities that let the AI see a
+	 * shot coming before it's played (a rival's Reader).
+	 */
+	void SetReadTarget(float Y) { ReadTarget = Y; bHasReadTarget = true; }
+
+	void ClearReadTarget();
+
+	bool HasReadTarget() const { return bHasReadTarget; }
+
 	/** Where the paddle is currently heading (plane Y). */
 	UFUNCTION(BlueprintPure, Category = "AI")
 	float GetTargetY() const { return TargetY; }
@@ -71,6 +81,8 @@ private:
 	float ShotError = 0.f;
 	float ShotAim = 0.f;
 	bool bBallIncoming = false;
+	bool bHasReadTarget = false;
+	float ReadTarget = 0.f;
 
 	/** The ball the current shot's error and aim were rolled for. */
 	TWeakObjectPtr<const AIJPBall> TrackedBall;

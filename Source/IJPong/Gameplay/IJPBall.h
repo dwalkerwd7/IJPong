@@ -121,6 +121,21 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ball")
 	bool IsHeld() const { return HeldBy.IsValid(); }
 
+	/** The paddle holding the ball, or null. */
+	UFUNCTION(BlueprintPure, Category = "Ball")
+	AIJPPaddle* GetHolder() const { return HeldBy.Get(); }
+
+	/**
+	 * Make the ball hot (0..1): the next paddle to touch it gets burned by that much, then it cools
+	 * (GetArrivalHeat tells that paddle's abilities, e.g. a catch holds for less). For rival abilities like Scorcher.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Ball")
+	void SetHeat(float InHeat) { Heat = FMath::Clamp(InHeat, 0.f, 1.f); }
+
+	/** How hot the ball was when it reached the paddle that last hit it (0 = cool). */
+	UFUNCTION(BlueprintPure, Category = "Ball")
+	float GetArrivalHeat() const { return ArrivalHeat; }
+
 	/**
 	 * Jump to NewPosition (plane space) mid-flight, keeping everything else: speed, direction, curve,
 	 * boost, rally. For rival abilities like Warp. Does nothing out of play.
@@ -246,6 +261,8 @@ private:
 	float CurveBend = 0.f;
 	int32 RallyHits = 0;
 	bool bPiercing = false;
+	float Heat = 0.f;
+	float ArrivalHeat = 0.f;
 	/** The paddle holding the ball (Hold), and where on it. */
 	TWeakObjectPtr<AIJPPaddle> HeldBy;
 	FVector2D HoldOffset = FVector2D::ZeroVector;

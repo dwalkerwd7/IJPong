@@ -4,11 +4,15 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "AI/IJPPaddleAIController.h"
 #include "Abilities/IJPAbility_Breaker.h"
+#include "Abilities/IJPAbility_Catch.h"
 #include "Abilities/IJPAbility_Glutton.h"
 #include "Abilities/IJPAbility_Grow.h"
 #include "Abilities/IJPAbility_Jammer.h"
 #include "Abilities/IJPAbility_Mirror.h"
+#include "Abilities/IJPAbility_Reader.h"
+#include "Abilities/IJPAbility_Scorcher.h"
 #include "Abilities/IJPAbility_Smash.h"
 #include "Abilities/IJPAbility_Magnet.h"
 #include "Abilities/IJPAbility_Snare.h"
@@ -455,6 +459,84 @@ bool FIJPWarpAITest::RunTest(const FString& Parameters)
 	// Crossing the net toward the player: warp it.
 	Ball->Launch(FVector2D(0.f, 50.f), FVector2D(-300.f, 0.f));
 	UTEST_TRUE("Warps", IJPRivalSkillTests::RunUntil(Test, 0.3f, [Abilities] { return Abilities->IsWindingUp(EIJPAbilitySlot::ClassSkill); }));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPReaderTest, "IJPong.RivalSkill.ReaderMovesToYourAimBeforeYouFire", IJPRivalSkillTests::Flags)
+bool FIJPReaderTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = IJPRivalSkillTests::GetMode(Test);
+	AIJPArena* Arena = Mode->GetArena();
+	AIJPPaddle* Player = Arena->GetPaddle(EIJPSide::Left);
+	AIJPPaddle* RivalPaddle = Arena->GetPaddle(EIJPSide::Right);
+	UIJPRival* Rival = NewObject<UIJPRival>(GetTransientPackage());
+	UIJPAbility_Reader* Reader = NewObject<UIJPAbility_Reader>(Rival);
+	Reader->Telegraph = 0.1f;
+	Rival->RivalSkill = Reader;
+	Mode->SetRival(Rival);
+	UIJPAbilityComponent* Abilities = RivalPaddle->GetAbilities();
+
+	// The player catches with a long hold.
+	UIJPAbility_Catch* Catch = NewObject<UIJPAbility_Catch>(GetTransientPackage());
+	Catch->HoldTime = 3.f;
+	Player->GetAbilities()->Equip(EIJPAbilitySlot::ClassSkill, Catch);
+	Player->GetAbilities()->TryActivate(EIJPAbilitySlot::ClassSkill);
+	UTEST_TRUE("The rival starts reading as soon as you arm", IJPRivalSkillTests::RunUntil(Test, 0.2f, [Abilities] { return Abilities->IsWindingUp(EIJPAbilitySlot::ClassSkill); }));
+	AIJPBall* Ball = Arena->GetBall();
+	Ball->Serve(EIJPSide::Left, 0.f);
+	UTEST_TRUE("Caught", IJPRivalSkillTests::RunUntil(Test, 2.f, [Ball] { return Ball->IsHeld(); }));
+
+	// Aim up: the rival heads for where that shot will land, before it's fired.
+	Player->SetAimAngle(35.f);
+	const UIJPAbility_Reader* Equipped = Cast<UIJPAbility_Reader>(Abilities->GetAbility(EIJPAbilitySlot::ClassSkill));
+	float Predicted = 0.f;
+	UTEST_TRUE("Reads the shot", Equipped->PredictHeldShot(Predicted));
+	UTEST_TRUE(*FString::Printf(TEXT("Somewhere worth moving to (%.0f)"), Predicted), FMath::Abs(Predicted) > 40.f);
+	Test.RunFor(1.2f);
+	UTEST_TRUE("Still holding", Ball->IsHeld());
+	UTEST_EQUAL_TOLERANCE("Already there", static_cast<float>(RivalPaddle->GetPlanePosition().Y), Predicted, 15.f);
+
+	// Once it's fired, the rival plays the ball as normal again.
+	Player->GetAbilities()->Release(EIJPAbilitySlot::ClassSkill);
+	Test.Step();
+	UTEST_FALSE("Reading stops", Cast<AIJPPaddleAIController>(RivalPaddle->GetController())->HasReadTarget());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPScorcherTest, "IJPong.RivalSkill.ScorcherBurnsYourHoldTime", IJPRivalSkillTests::Flags)
+bool FIJPScorcherTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = IJPRivalSkillTests::GetMode(Test);
+	AIJPArena* Arena = Mode->GetArena();
+	AIJPPaddle* Player = Arena->GetPaddle(EIJPSide::Left);
+	AIJPPaddle* RivalPaddle = Arena->GetPaddle(EIJPSide::Right);
+	UIJPRival* Rival = NewObject<UIJPRival>(GetTransientPackage());
+	UIJPAbility_Scorcher* Scorcher = NewObject<UIJPAbility_Scorcher>(Rival);
+	Scorcher->Telegraph = 0.1f;
+	Rival->RivalSkill = Scorcher;
+	Mode->SetRival(Rival);
+	RivalPaddle->GetController()->UnPossess(); // stays in the middle, returns straight
+	UIJPAbility_Catch* Catch = NewObject<UIJPAbility_Catch>(GetTransientPackage());
+	Catch->HoldTime = 1.f;
+	Player->GetAbilities()->Equip(EIJPAbilitySlot::ClassSkill, Catch);
+
+	// The rival heats up, then returns a ball: it goes back hot.
+	UTEST_TRUE("Heats up", RivalPaddle->GetAbilities()->TryActivate(EIJPAbilitySlot::ClassSkill));
+	Test.RunFor(0.15f);
+	UTEST_TRUE("Glowing", RivalPaddle->GetAbilities()->IsArmed());
+	Player->GetAbilities()->TryActivate(EIJPAbilitySlot::ClassSkill);
+	AIJPBall* Ball = Arena->GetBall();
+	Ball->Serve(EIJPSide::Right, 0.f);
+
+	// Caught hot: the hold burns down to 35% of a second.
+	UTEST_TRUE("Caught", IJPRivalSkillTests::RunUntil(Test, 3.f, [Ball] { return Ball->IsHeld(); }));
+	UTEST_EQUAL_TOLERANCE("It arrived hot", Ball->GetArrivalHeat(), 0.65f, 0.01f);
+	Test.RunFor(0.3f);
+	UTEST_TRUE("Still in hand just before", Ball->IsHeld());
+	Test.RunFor(0.1f);
+	UTEST_FALSE("Fired early: too hot to hold", Ball->IsHeld());
 	return true;
 }
 

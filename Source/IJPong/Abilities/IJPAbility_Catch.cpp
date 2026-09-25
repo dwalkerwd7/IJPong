@@ -18,7 +18,8 @@ void UIJPAbility_Catch::OnBallHit(AIJPBall& Ball)
 	FireSpeed = Velocity.Size();
 	Paddle->SetAimAngle(FMath::RadiansToDegrees(FMath::Atan2(Velocity.Y, FMath::Abs(Velocity.X))));
 	Held = &Ball;
-	HoldLeft = HoldTime;
+	// A hot ball (a rival's Scorcher) can't be held as long.
+	HoldLeft = HoldTime * (1.f - Ball.GetArrivalHeat());
 	Ball.Hold(Paddle);
 }
 

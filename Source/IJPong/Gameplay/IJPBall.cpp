@@ -113,6 +113,7 @@ void AIJPBall::Serve(EIJPSide Toward, float AngleDeg)
 	Accumulator = 0.f;
 	RallyHits = 0;
 	bPiercing = false;
+	Heat = ArrivalHeat = 0.f;
 	HeldBy.Reset();
 	bInPlay = true;
 
@@ -217,6 +218,7 @@ void AIJPBall::Launch(const FVector2D& InPosition, const FVector2D& InVelocity)
 	Accumulator = 0.f;
 	RallyHits = 0;
 	bPiercing = false;
+	Heat = ArrivalHeat = 0.f;
 	HeldBy.Reset();
 	bInPlay = true;
 
@@ -245,6 +247,7 @@ void AIJPBall::ResetBall()
 	CurveTimeLeft = 0.f;
 	Accumulator = 0.f;
 	RallyHits = 0;
+	Heat = ArrivalHeat = 0.f;
 	HeldBy.Reset();
 	bInPlay = false;
 
@@ -405,6 +408,9 @@ bool AIJPBall::TryPaddleBounce(AIJPPaddle* Paddle, const FVector2D& Normal)
 
 	CurveTimeLeft = 0.f;
 	bPiercing = false;
+	// Whatever heat it carried burns this paddle (its abilities read it), then it cools.
+	ArrivalHeat = Heat;
+	Heat = 0.f;
 	const float RallySpeed = UnboostedSpeed > 0.f ? UnboostedSpeed : Speed;
 	UnboostedSpeed = 0.f;
 	Speed = FMath::Min(RallySpeed + GetType().SpeedPerHit, GetType().MaxSpeed);
