@@ -29,6 +29,7 @@ void AIJPTestGameMode::OnArenaReady()
 	if (AIJPPaddle* PlayerPaddle = GetArena()->GetPaddle(PlayerSide))
 	{
 		PlayerPaddle->GetAbilities()->Equip(EIJPAbilitySlot::RunAbility, PlayerRunAbility.LoadSynchronous());
+		PlayerPaddle->GetAbilities()->Equip(EIJPAbilitySlot::Spell, PlayerSpell.LoadSynchronous());
 	}
 	if (Rivals.IsValidIndex(StartingRival))
 	{

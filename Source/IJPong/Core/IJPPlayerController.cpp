@@ -78,6 +78,10 @@ void AIJPPlayerController::SetupInputComponent()
 		// Started: one step per press, not one per frame held.
 		EnhancedInput->BindAction(UIStep, ETriggerEvent::Started, this, &AIJPPlayerController::HandleUIStep);
 	}
+	if (UInputAction* Spell = Settings->SpellAction.LoadSynchronous())
+	{
+		EnhancedInput->BindAction(Spell, ETriggerEvent::Started, this, &AIJPPlayerController::HandleSpell);
+	}
 	if (UInputAction* Item = Settings->ItemAction.LoadSynchronous())
 	{
 		EnhancedInput->BindAction(Item, ETriggerEvent::Started, this, &AIJPPlayerController::HandleItem);
@@ -147,6 +151,14 @@ void AIJPPlayerController::HandleAimKeys(const FInputActionValue& Value)
 	if (AIJPPaddle* Paddle = GetPawn<AIJPPaddle>())
 	{
 		Paddle->AddAimAngle(Value.Get<float>() * GetDefault<UIJPInputSettings>()->KeyAimSpeed * GetWorld()->GetDeltaSeconds());
+	}
+}
+
+void AIJPPlayerController::HandleSpell()
+{
+	if (AIJPPaddle* Paddle = GetPawn<AIJPPaddle>())
+	{
+		Paddle->GetAbilities()->TryActivate(EIJPAbilitySlot::Spell);
 	}
 }
 

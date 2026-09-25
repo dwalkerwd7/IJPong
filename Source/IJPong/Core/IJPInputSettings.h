@@ -46,6 +46,10 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Input", meta = (ClampMin = "0", Units = "deg"))
 	float KeyAimSpeed = 120.f;
 
+	/** Digital: cast the spell (once charged). */
+	UPROPERTY(Config, EditAnywhere, Category = "Input")
+	TSoftObjectPtr<UInputAction> SpellAction;
+
 	/** Digital: use the carried item. */
 	UPROPERTY(Config, EditAnywhere, Category = "Input")
 	TSoftObjectPtr<UInputAction> ItemAction;

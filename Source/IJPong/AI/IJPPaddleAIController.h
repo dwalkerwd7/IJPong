@@ -68,6 +68,8 @@ private:
 	const AIJPBall* PickIncomingBall(const AIJPPaddle& Paddle) const;
 	void Decide(const AIJPPaddle& Paddle, const AIJPBall* Ball);
 	void Steer(AIJPPaddle& Paddle) const;
+	/** Target, moved out of any spell zone about to land on this lane. */
+	float AvoidStrikes(const AIJPPaddle& Paddle, float Target) const;
 	/** Trigger any ability that says now is its moment (rival abilities). */
 	void UseAbilities(AIJPPaddle& Paddle) const;
 

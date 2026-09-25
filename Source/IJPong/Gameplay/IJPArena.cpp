@@ -17,6 +17,7 @@
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPPaddleClass.h"
 #include "Gameplay/IJPSevenSegmentComponent.h"
+#include "Gameplay/IJPChargePipsComponent.h"
 #include "Presentation/IJPCRTComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
@@ -90,6 +91,11 @@ AIJPArena::AIJPArena()
 
 	RightScore = CreateDefaultSubobject<UIJPSevenSegmentComponent>(TEXT("RightScore"));
 	RightScore->SetupAttachment(Root);
+
+	LeftPips = CreateDefaultSubobject<UIJPChargePipsComponent>(TEXT("LeftPips"));
+	LeftPips->SetupAttachment(Root);
+	RightPips = CreateDefaultSubobject<UIJPChargePipsComponent>(TEXT("RightPips"));
+	RightPips->SetupAttachment(Root);
 
 	CRT = CreateDefaultSubobject<UIJPCRTComponent>(TEXT("CRT"));
 
@@ -188,6 +194,9 @@ void AIJPArena::OnConstruction(const FTransform& Transform)
 	const float ScoreZ = HalfExtents.Y - ScoreOffset.Y - LeftScore->DigitSize.Y * 0.5f;
 	LeftScore->SetRelativeLocation(FVector(-ScoreOffset.X, 0.f, ScoreZ));
 	RightScore->SetRelativeLocation(FVector(ScoreOffset.X, 0.f, ScoreZ));
+	const float PipsZ = ScoreZ - LeftScore->DigitSize.Y * 0.5f - 20.f;
+	LeftPips->SetRelativeLocation(FVector(-ScoreOffset.X, 0.f, PipsZ));
+	RightPips->SetRelativeLocation(FVector(ScoreOffset.X, 0.f, PipsZ));
 
 	// Frame the playfield plus walls and margin; width follows from the screen's aspect ratio.
 	const float ScreenHeight = 2.f * (OuterHalfY + ScreenMargin);
@@ -302,6 +311,8 @@ void AIJPArena::CreatePaletteMaterials()
 	NetVisuals->SetMaterial(0, GetPaletteMaterial(EIJPPaletteRole::Net));
 	LeftScore->SetMaterial(0, GetPaletteMaterial(EIJPPaletteRole::Score));
 	RightScore->SetMaterial(0, GetPaletteMaterial(EIJPPaletteRole::Score));
+	LeftPips->SetMaterial(0, GetPaletteMaterial(EIJPPaletteRole::Score));
+	RightPips->SetMaterial(0, GetPaletteMaterial(EIJPPaletteRole::Score));
 	// A barrier is its paddle's, so it takes that paddle's colour.
 	LeftBarrierVisual->SetMaterial(0, GetPaletteMaterial(EIJPPaletteRole::LeftPaddle));
 	RightBarrierVisual->SetMaterial(0, GetPaletteMaterial(EIJPPaletteRole::RightPaddle));
@@ -496,6 +507,11 @@ AIJPPaddle* AIJPArena::GetPaddle(EIJPSide Side) const
 float AIJPArena::GetLaneX(EIJPSide Side) const
 {
 	return IJP::SideSign(Side) * (HalfExtents.X - PaddleInset);
+}
+
+void AIJPArena::SetChargePips(EIJPSide Side, int32 Filled, int32 Total)
+{
+	GetChargePips(Side)->SetCharge(Filled, Total);
 }
 
 void AIJPArena::SetScore(EIJPSide Side, int32 Score)

@@ -148,6 +148,7 @@ void AIJPGameModeBase::SetRival(const UIJPRival* InRival)
 		{
 			Paddle->GetAbilities()->Equip(EIJPAbilitySlot::ClassSkill, Rival->RivalSkill);
 		}
+		Paddle->GetAbilities()->Equip(EIJPAbilitySlot::Spell, Rival ? Rival->Spell.Get() : nullptr);
 	}
 }
 

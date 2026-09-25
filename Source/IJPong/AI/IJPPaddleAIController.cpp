@@ -7,6 +7,7 @@
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPBall.h"
 #include "Gameplay/IJPPaddle.h"
+#include "Gameplay/IJPSpellStrike.h"
 #include "Gameplay/IJPPongMath.h"
 
 AIJPPaddleAIController::AIJPPaddleAIController()
@@ -169,10 +170,36 @@ void AIJPPaddleAIController::Decide(const AIJPPaddle& Paddle, const AIJPBall* In
 	// Otherwise the ball is already past the face: keep the last target.
 }
 
+float AIJPPaddleAIController::AvoidStrikes(const AIJPPaddle& Paddle, float Target) const
+{
+	// Stand just outside any zone about to land here (the nearer edge, or the other one at a wall).
+	const float Half = Paddle.GetSize().Y * 0.5f;
+	const float Limit = Paddle.GetArena()->GetHalfExtents().Y - Half;
+	for (const TWeakObjectPtr<AIJPSpellStrike>& Weak : Paddle.GetArena()->GetStrikes())
+	{
+		const AIJPSpellStrike* Strike = Weak.Get();
+		if (!Strike || Strike->HasLanded() || Strike->GetTargetSide() != Paddle.GetSide())
+		{
+			continue;
+		}
+		const float Clear = Strike->GetHalfHeight() + Half + 6.f;
+		if (FMath::Abs(Target - Strike->GetTargetY()) < Clear)
+		{
+			const float Above = Strike->GetTargetY() + Clear;
+			const float Below = Strike->GetTargetY() - Clear;
+			const bool bAboveFits = Above <= Limit;
+			const bool bBelowFits = Below >= -Limit;
+			const bool bGoAbove = bAboveFits && (!bBelowFits || Target >= Strike->GetTargetY());
+			Target = bGoAbove ? Above : Below;
+		}
+	}
+	return Target;
+}
+
 void AIJPPaddleAIController::Steer(AIJPPaddle& Paddle) const
 {
 	const UIJPAIProfile& P = GetProfile();
-	const float Delta = TargetY - Paddle.GetPlanePosition().Y;
+	const float Delta = AvoidStrikes(Paddle, TargetY) - Paddle.GetPlanePosition().Y;
 	if (FMath::Abs(Delta) <= P.ArrivalTolerance)
 	{
 		return;

@@ -78,6 +78,10 @@ protected:
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Test|Abilities")
 	TSoftObjectPtr<UIJPAbility> PlayerRunAbility;
 
+	/** Put in the player paddle's Spell slot (the test mode always has spells). Set in DefaultGame.ini. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Test|Abilities")
+	TSoftObjectPtr<UIJPAbility> PlayerSpell;
+
 	/** Put in the player paddle's Item slot at every new match (it's one use). Set in DefaultGame.ini. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Test|Abilities")
 	TSoftObjectPtr<UIJPAbility> PlayerItem;

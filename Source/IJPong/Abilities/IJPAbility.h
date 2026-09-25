@@ -20,6 +20,8 @@ enum class EIJPAbilitySlot : uint8
 	RunAbility,
 	/** A one-use consumable (Patch, Shield...): spent when used, no cooldown. */
 	Item,
+	/** A spell (Lightning, Fireball...): charged by returns instead of a cooldown. */
+	Spell,
 	Count UMETA(Hidden)
 };
 
@@ -43,6 +45,10 @@ public:
 	/** Seconds before the slot can be used again, counted from activation. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability", meta = (ClampMin = "0", Units = "s"))
 	float Cooldown = 5.f;
+
+	/** Returns this paddle must make before it can be used again (0 = no charge needed). Spells use it. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability", meta = (ClampMin = "0"))
+	int32 ChargeCost = 0;
 
 	/**
 	 * Wind-up between the button and the effect: the paddle glows (the armed halo) and a warning

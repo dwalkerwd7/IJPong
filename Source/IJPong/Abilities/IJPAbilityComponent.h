@@ -54,6 +54,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Abilities")
 	bool IsReady(EIJPAbilitySlot Slot) const;
 
+	/** Returns banked toward the slot's ChargeCost (spells). */
+	UFUNCTION(BlueprintPure, Category = "Abilities")
+	int32 GetCharge(EIJPAbilitySlot Slot) const { return Charges[static_cast<int32>(Slot)]; }
+
+	/** Add Amount charge to every charge-based ability (up to its cost); a return adds 1. */
+	void AddCharge(int32 Amount = 1);
+
 	/** An item is in the Item slot and hasn't been used yet. */
 	UFUNCTION(BlueprintPure, Category = "Abilities")
 	bool HasItem() const;
@@ -104,6 +111,12 @@ private:
 
 	/** Time left in each slot's lock (0 = free). */
 	TArray<float> Locks;
+
+	/** Returns banked per slot (for abilities with a ChargeCost). */
+	TArray<int32> Charges;
+
+	/** Show the Spell slot's charge on the arena's pips. */
+	void ShowCharge() const;
 
 	/** The Item slot's item has been used (its effect may still be running). */
 	bool bItemSpent = false;

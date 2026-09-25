@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "Core/IJPTypes.h"
 #include "Era/IJPEra.h"
+#include "Gameplay/IJPSpellStrike.h"
 #include "IJPArena.generated.h"
 
 class UBoxComponent;
@@ -21,6 +22,8 @@ class UIJPPaddleClass;
 class UIJPCRTComponent;
 class UIJPGoalComponent;
 class UIJPSevenSegmentComponent;
+class UIJPChargePipsComponent;
+class AIJPSpellStrike;
 class UIJPToneSet;
 class UIJPToneSynthComponent;
 class UIJPEra;
@@ -98,6 +101,16 @@ public:
 	FIJPBarrierHitSignature OnBarrierHit;
 
 	UIJPSevenSegmentComponent* GetScoreDisplay(EIJPSide Side) const { return Side == EIJPSide::Left ? LeftScore : RightScore; }
+
+	/** Side's spell charge, as pips under its health (Total 0 hides them). */
+	void SetChargePips(EIJPSide Side, int32 Filled, int32 Total);
+
+	UIJPChargePipsComponent* GetChargePips(EIJPSide Side) const { return Side == EIJPSide::Left ? LeftPips : RightPips; }
+
+	/** Spells on their way in (so the AI can steer clear). */
+	void RegisterStrike(AIJPSpellStrike* Strike) { Strikes.AddUnique(Strike); }
+	void UnregisterStrike(AIJPSpellStrike* Strike) { Strikes.Remove(Strike); }
+	const TArray<TWeakObjectPtr<AIJPSpellStrike>>& GetStrikes() const { return Strikes; }
 
 	/** The paddle defending this side's goal. Null before BeginPlay. */
 	UFUNCTION(BlueprintPure, Category = "Arena")
@@ -322,6 +335,15 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<UIJPSevenSegmentComponent> RightScore;
+
+	/** Spell charge under each side's health. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<UIJPChargePipsComponent> LeftPips;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<UIJPChargePipsComponent> RightPips;
+
+	TArray<TWeakObjectPtr<AIJPSpellStrike>> Strikes;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<UCameraComponent> Camera;

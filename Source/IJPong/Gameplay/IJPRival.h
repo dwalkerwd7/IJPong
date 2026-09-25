@@ -74,6 +74,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival")
 	TObjectPtr<UIJPAbility> RivalSkill;
 
+	/** A spell they cast when charged (the Spell slot). Empty = none (for now only bosses have one). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival")
+	TObjectPtr<UIJPAbility> Spell;
+
 	/** How they play (reaction, error, aim). Empty = the game mode's AIProfile. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival")
 	TObjectPtr<UIJPAIProfile> AIProfile;

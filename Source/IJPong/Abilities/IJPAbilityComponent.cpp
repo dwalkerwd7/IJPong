@@ -20,6 +20,7 @@ UIJPAbilityComponent::UIJPAbilityComponent()
 	Cooldowns.SetNumZeroed(NumSlots);
 	WindUps.SetNumZeroed(NumSlots);
 	Locks.SetNumZeroed(NumSlots);
+	Charges.SetNumZeroed(NumSlots);
 	CooldownScales.Init(1.f, NumSlots);
 }
 
@@ -63,6 +64,8 @@ void UIJPAbilityComponent::Equip(EIJPAbilitySlot Slot, const UIJPAbility* Defini
 	}
 	Abilities[Index] = Copy;
 	Cooldowns[Index] = 0.f;
+	Charges[Index] = 0;
+	ShowCharge();
 	if (Slot == EIJPAbilitySlot::Item)
 	{
 		bItemSpent = false;
@@ -101,6 +104,11 @@ void UIJPAbilityComponent::Fire(int32 Index)
 		return;
 	}
 	Ability->Activate();
+	if (Ability->ChargeCost > 0)
+	{
+		Charges[Index] = 0; // spent: charge up again
+		ShowCharge();
+	}
 	if (Index == static_cast<int32>(EIJPAbilitySlot::Item))
 	{
 		bItemSpent = true; // one use
@@ -169,7 +177,8 @@ bool UIJPAbilityComponent::IsReady(EIJPAbilitySlot Slot) const
 {
 	const UIJPAbility* Ability = GetAbility(Slot);
 	const bool bSpent = Slot == EIJPAbilitySlot::Item && bItemSpent;
-	return Ability && !bSpent && GetCooldownRemaining(Slot) <= 0.f && !IsWindingUp(Slot) && !IsLocked(Slot) && Ability->CanActivate();
+	const bool bCharged = !Ability || Ability->ChargeCost <= 0 || GetCharge(Slot) >= Ability->ChargeCost;
+	return Ability && !bSpent && bCharged && GetCooldownRemaining(Slot) <= 0.f && !IsWindingUp(Slot) && !IsLocked(Slot) && Ability->CanActivate();
 }
 
 bool UIJPAbilityComponent::IsArmed() const
@@ -207,8 +216,35 @@ void UIJPAbilityComponent::PlayArmChirp()
 	}, FMath::Max(ToneSet.Arm.Duration, UE_KINDA_SMALL_NUMBER), false);
 }
 
+void UIJPAbilityComponent::AddCharge(int32 Amount)
+{
+	for (int32 i = 0; i < NumSlots; ++i)
+	{
+		if (Abilities[i] && Abilities[i]->ChargeCost > 0)
+		{
+			Charges[i] = FMath::Min(Charges[i] + Amount, Abilities[i]->ChargeCost);
+		}
+	}
+	ShowCharge();
+}
+
+void UIJPAbilityComponent::ShowCharge() const
+{
+	const AIJPPaddle* Paddle = GetPaddle();
+	AIJPArena* Arena = Paddle ? Paddle->GetArena() : nullptr;
+	if (!Arena)
+	{
+		return;
+	}
+	const int32 Index = static_cast<int32>(EIJPAbilitySlot::Spell);
+	const UIJPAbility* Spell = Abilities[Index];
+	Arena->SetChargePips(Paddle->GetSide(), Charges[Index], Spell ? Spell->ChargeCost : 0);
+}
+
 void UIJPAbilityComponent::HandleBallHit(AIJPBall& Ball)
 {
+	// Every return charges the spells.
+	AddCharge(1);
 	for (UIJPAbility* Ability : Abilities)
 	{
 		if (Ability)
