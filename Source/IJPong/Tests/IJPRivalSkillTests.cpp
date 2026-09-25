@@ -5,6 +5,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Abilities/IJPAbility_Breaker.h"
+#include "Abilities/IJPAbility_Glutton.h"
 #include "Abilities/IJPAbility_Magnet.h"
 #include "Abilities/IJPAbility_Snare.h"
 #include "Abilities/IJPAbilityComponent.h"
@@ -220,6 +221,70 @@ bool FIJPMagnetAITest::RunTest(const FString& Parameters)
 	Ball->Serve(EIJPSide::Right, 0.f);
 	Ball->Boost(1.6f);
 	UTEST_TRUE("Uses it", IJPRivalSkillTests::RunUntil(Test, 0.2f, [Abilities] { return Abilities->IsWindingUp(EIJPAbilitySlot::ClassSkill); }));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPGluttonTest, "IJPong.RivalSkill.GluttonSwallowsOneExtraBall", IJPRivalSkillTests::Flags)
+bool FIJPGluttonTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = IJPRivalSkillTests::GetMode(Test);
+	AIJPArena* Arena = Mode->GetArena();
+	UIJPMatchComponent* Match = Mode->GetMatch();
+	UIJPRival* Rival = NewObject<UIJPRival>(GetTransientPackage());
+	UIJPAbility_Glutton* Glutton = NewObject<UIJPAbility_Glutton>(Rival);
+	Glutton->Telegraph = 0.1f;
+	Rival->RivalSkill = Glutton;
+	Mode->SetRival(Rival);
+	AIJPPaddle* RivalPaddle = Arena->GetPaddle(EIJPSide::Right);
+	RivalPaddle->GetController()->UnPossess();
+	UIJPAbilityComponent* Abilities = RivalPaddle->GetAbilities();
+	const UIJPAbility_Glutton* Equipped = Cast<UIJPAbility_Glutton>(Abilities->GetAbility(EIJPAbilitySlot::ClassSkill));
+
+	// One ball: nothing to eat, even with its mouth open.
+	AIJPBall* Main = Arena->GetBall();
+	Main->Serve(EIJPSide::Right, 0.f);
+	UTEST_TRUE("Triggered", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
+	Test.RunFor(0.3f);
+	UTEST_TRUE("Mouth open", Abilities->IsArmed());
+	UTEST_TRUE("A lone ball is safe", Main->IsInPlay());
+
+	// A second ball: one of them is swallowed, without a goal.
+	AIJPBall* Extra = Arena->AddBall(nullptr);
+	Extra->Serve(EIJPSide::Right, 20.f);
+	const float RivalHealth = Match->GetHealth(EIJPSide::Right);
+	Test.Step();
+	UTEST_EQUAL("Swallowed one", Equipped->GetSwallowed(), 1);
+	UTEST_EQUAL("The other plays on", Arena->GetNumBallsInPlay(), 1);
+	UTEST_EQUAL("No goal for it", Match->GetHealth(EIJPSide::Right), RivalHealth);
+	UTEST_FALSE("Mouth shut", Abilities->IsArmed());
+
+	// One per use: another pair gets through whole.
+	Extra = Arena->AddBall(nullptr);
+	Extra->Serve(EIJPSide::Right, -20.f);
+	Test.RunFor(0.2f);
+	UTEST_EQUAL("Still only one", Equipped->GetSwallowed(), 1);
+	UTEST_EQUAL("Both in play", Arena->GetNumBallsInPlay(), 2);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPGluttonAITest, "IJPong.RivalSkill.GluttonWaitsForMultiBall", IJPRivalSkillTests::Flags)
+bool FIJPGluttonAITest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = IJPRivalSkillTests::GetMode(Test);
+	AIJPArena* Arena = Mode->GetArena();
+	UIJPRival* Rival = NewObject<UIJPRival>(GetTransientPackage());
+	Rival->RivalSkill = NewObject<UIJPAbility_Glutton>(Rival);
+	Mode->SetRival(Rival);
+	UIJPAbilityComponent* Abilities = Arena->GetPaddle(EIJPSide::Right)->GetAbilities();
+
+	Arena->GetBall()->Serve(EIJPSide::Right, 0.f);
+	Test.RunFor(0.2f);
+	UTEST_EQUAL("One ball: held back", Abilities->GetCooldownRemaining(EIJPAbilitySlot::ClassSkill), 0.f);
+
+	Arena->AddBall(nullptr)->Serve(EIJPSide::Right, 20.f);
+	UTEST_TRUE("Two: opens up", IJPRivalSkillTests::RunUntil(Test, 0.2f, [Abilities] { return Abilities->IsWindingUp(EIJPAbilitySlot::ClassSkill); }));
 	return true;
 }
 
