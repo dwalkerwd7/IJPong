@@ -3,7 +3,9 @@
 // CRT look for a post-process material (Blendable Location: After Tonemapping).
 // M_CRT's Custom node includes this file (via the "/IJPong" shader path the IJPongShaders module
 // maps to this folder) and its code is just:
-//   return IJPCRT(UV, ViewSize, Curvature, Vignette, ScanlineCount, ScanlineStrength, GlowStrength, GlowRadius, Tint, Flash);
+//   return IJPCRT(UV, ViewSize, Time, Curvature, Vignette, ScanlineCount, ScanlineStrength, GlowStrength, GlowRadius, Tint, Flash,
+//                 BeamSoftness, BlackLevel, HumStrength, HumSpeed, NoiseStrength);
+// The "rough tube" inputs (BeamSoftness onward) default to 0 = off; early eras turn them up.
 // Edit this file, then recompile M_CRT in the editor to see changes.
 
 #pragma once
@@ -22,9 +24,23 @@ float3 IJPSampleScreen(float2 ViewportUV)
 	return SceneTextureLookup(ViewportUVToSceneTextureUV(ViewportUV, IJP_POSTPROCESS_INPUT0), IJP_POSTPROCESS_INPUT0, true).rgb;
 }
 
+/** Pseudo-random 0..1 from a 3D point (Dave Hoskins' hash13): stable on GPUs, unlike sin-based hashes. */
+float IJPHash(float3 P)
+{
+	P = frac(P * 0.1031);
+	P += dot(P, P.zyx + 31.32);
+	return frac((P.x + P.y) * P.z);
+}
+
+// Static grain is drawn on a fixed grid of this many rows over the tube, so it looks the same at any resolution.
+#define IJP_GRAIN_ROWS 360
+// New grain pattern this many times a second (a TV redraws its noise every field).
+#define IJP_GRAIN_RATE 30
+
 /**
  * @param UV                Viewport UV of the pixel being shaded.
  * @param ViewSize          View size in pixels (for glow radius in pixels).
+ * @param Time              Seconds, for the moving effects (hum bar, grain).
  * @param Curvature         Barrel bulge. 0 = flat; ~0.05 = gentle tube.
  * @param Vignette          0..1 darkening toward the edges.
  * @param ScanlineCount     Visible lines over the full tube height (NTSC showed ~240).
@@ -33,9 +49,15 @@ float3 IJPSampleScreen(float2 ViewportUV)
  * @param GlowRadius        Halo radius in pixels (taps at 1x and 2x this).
  * @param Tint              Phosphor colour the picture is multiplied by.
  * @param Flash             0..1 momentary brightness pulse (driven from C++ by UIJPCRTComponent::Pulse).
+ * @param BeamSoftness      Horizontal smear along each line, in pixels at 1080p. 0 = sharp.
+ * @param BlackLevel        0..1 glow of the "black" tube face. 0 = true black.
+ * @param HumStrength       Brightness added by the rolling hum bar. 0 = none.
+ * @param HumSpeed          Hum bar passes per second, bottom to top.
+ * @param NoiseStrength     Static grain: flicker on lit shapes, sparse specks on black. 0 = none.
  */
-float3 IJPCRT(float2 UV, float2 ViewSize, float Curvature, float Vignette, float ScanlineCount, float ScanlineStrength,
-	float GlowStrength, float GlowRadius, float3 Tint, float Flash)
+float3 IJPCRT(float2 UV, float2 ViewSize, float Time, float Curvature, float Vignette, float ScanlineCount, float ScanlineStrength,
+	float GlowStrength, float GlowRadius, float3 Tint, float Flash,
+	float BeamSoftness, float BlackLevel, float HumStrength, float HumSpeed, float NoiseStrength)
 {
 	// 1. Curvature. For each screen pixel, find the point of the flat picture it shows: the further
 	//    from the centre, the further out we look, so the picture bulges like the front of a tube.
@@ -51,7 +73,15 @@ float3 IJPCRT(float2 UV, float2 ViewSize, float Curvature, float Vignette, float
 		return 0;
 	}
 
-	float3 Color = IJPSampleScreen(Src);
+	// Soft beam: the electron beam can't switch on and off instantly, so edges smear along the line.
+	//    Five taps across the line, weighted 1-4-6-4-1 (a small Gaussian). Scaled to the view
+	//    height, so the look doesn't change with resolution. At 0 every tap is the same point.
+	const float Smear = BeamSoftness * (ViewSize.y / 1080) / ViewSize.x;
+	float3 Color = (IJPSampleScreen(Src + float2(-2 * Smear, 0))
+		+ IJPSampleScreen(Src + float2(-Smear, 0)) * 4
+		+ IJPSampleScreen(Src) * 6
+		+ IJPSampleScreen(Src + float2(Smear, 0)) * 4
+		+ IJPSampleScreen(Src + float2(2 * Smear, 0))) / 16;
 
 	// 2. Phosphor glow. Average two rings of taps around the point and add them back as a halo,
 	//    so white shapes bleed softly into the black like a real tube.
@@ -66,6 +96,20 @@ float3 IJPCRT(float2 UV, float2 ViewSize, float Curvature, float Vignette, float
 	}
 	Glow /= 12; // 8 taps at weight 1 + 8 at weight 0.5
 	Color += Glow * GlowStrength;
+
+	// Raised blacks: the tube face never goes fully dark; lit shapes keep their full brightness.
+	Color = BlackLevel + Color * (1 - BlackLevel);
+
+	// Hum bar: a wide, soft band of extra brightness rolling up the screen (mains interference).
+	//    Src.y grows downward, so adding time moves the band up. pow() narrows the cosine into a band.
+	const float Band = pow(0.5 + 0.5 * cos(2 * PI * (Src.y + Time * HumSpeed)), 6);
+	Color *= 1 + HumStrength * Band;
+
+	// Static: a new random value per grain cell each field. Lit shapes flicker around their
+	//    brightness; on black, squaring the value keeps most cells dark with a few bright specks.
+	const float2 GrainGrid = float2(IJP_GRAIN_ROWS * ViewSize.x / ViewSize.y, IJP_GRAIN_ROWS);
+	const float Grain = IJPHash(float3(floor(Src * GrainGrid), floor(Time * IJP_GRAIN_RATE)));
+	Color = Color * (1 + (Grain - 0.5) * NoiseStrength) + Grain * Grain * NoiseStrength * 0.5;
 
 	// Flash: lift the whole tube (blacks included) and brighten what's lit, like a surge on the beam.
 	Color += Flash * (0.12 + 0.6 * Color);
