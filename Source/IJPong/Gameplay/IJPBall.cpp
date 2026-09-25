@@ -144,6 +144,20 @@ void AIJPBall::Curve(float DegreesPerSecond, float Duration, float BendUp)
 	}
 }
 
+void AIJPBall::Dampen(float CurveScale, float BoostScale)
+{
+	if (!bInPlay)
+	{
+		return;
+	}
+	CurveRate *= FMath::Clamp(CurveScale, 0.f, 1.f);
+	if (UnboostedSpeed > 0.f)
+	{
+		Speed = UnboostedSpeed + (Speed - UnboostedSpeed) * FMath::Clamp(BoostScale, 0.f, 1.f);
+		Velocity = Velocity.GetSafeNormal() * Speed;
+	}
+}
+
 void AIJPBall::Freeze(float Seconds)
 {
 	if (bInPlay)

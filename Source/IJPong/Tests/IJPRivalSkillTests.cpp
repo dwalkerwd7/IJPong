@@ -5,6 +5,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Abilities/IJPAbility_Breaker.h"
+#include "Abilities/IJPAbility_Magnet.h"
 #include "Abilities/IJPAbility_Snare.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Audio/IJPToneSet.h"
@@ -159,6 +160,66 @@ bool FIJPBreakerTest::RunTest(const FString& Parameters)
 	UTEST_FALSE("Not piercing", Ball->IsPiercing());
 	UTEST_TRUE("Bounced off the barrier", IJPRivalSkillTests::RunUntil(Test, 2.f, [Ball] { return Ball->GetPlaneVelocity().X > 0.f; }));
 	UTEST_TRUE("Still in play", Ball->IsInPlay());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPMagnetTest, "IJPong.RivalSkill.MagnetSoftensSmashesAndCurves", IJPRivalSkillTests::Flags)
+bool FIJPMagnetTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = IJPRivalSkillTests::GetMode(Test);
+	AIJPArena* Arena = Mode->GetArena();
+	UIJPRival* Rival = NewObject<UIJPRival>(GetTransientPackage());
+	UIJPAbility_Magnet* Magnet = NewObject<UIJPAbility_Magnet>(Rival);
+	Magnet->Telegraph = 0.1f;
+	Rival->RivalSkill = Magnet;
+	Mode->SetRival(Rival);
+	AIJPPaddle* RivalPaddle = Arena->GetPaddle(EIJPSide::Right);
+	RivalPaddle->GetController()->UnPossess();
+	UIJPAbilityComponent* Abilities = RivalPaddle->GetAbilities();
+
+	// A smashed, curving shot on its way to the rival.
+	AIJPBall* Ball = Arena->GetBall();
+	Ball->Serve(EIJPSide::Right, 0.f);
+	const float BaseSpeed = Ball->GetPlaneVelocity().Size();
+	Ball->Boost(2.f);
+	Ball->Curve(60.f, 2.f, 1.f);
+	const float SmashSpeed = Ball->GetPlaneVelocity().Size();
+
+	UTEST_TRUE("Triggered", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
+	UTEST_EQUAL("Nothing during the wind-up", Ball->GetCurveRate(), 60.f);
+	Test.RunFor(0.15f);
+	UTEST_EQUAL_TOLERANCE("Half the extra speed gone", static_cast<float>(Ball->GetPlaneVelocity().Size()), (BaseSpeed + SmashSpeed) * 0.5f, 1.f);
+	UTEST_EQUAL_TOLERANCE("The curve bends half as fast", Ball->GetCurveRate(), 30.f, 0.01f);
+	UTEST_TRUE("Still a smash, still a curve: softened, not cancelled", Ball->IsBoosted() && Ball->IsCurving());
+
+	// Once per ball: the rest of the window doesn't keep eating at it.
+	Test.RunFor(0.3f);
+	UTEST_EQUAL_TOLERANCE("Pulled only once", Ball->GetCurveRate(), 30.f, 0.01f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPMagnetAITest, "IJPong.RivalSkill.MagnetWaitsForATrickShot", IJPRivalSkillTests::Flags)
+bool FIJPMagnetAITest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = IJPRivalSkillTests::GetMode(Test);
+	AIJPArena* Arena = Mode->GetArena();
+	UIJPRival* Rival = NewObject<UIJPRival>(GetTransientPackage());
+	Rival->RivalSkill = NewObject<UIJPAbility_Magnet>(Rival);
+	Mode->SetRival(Rival);
+	UIJPAbilityComponent* Abilities = Arena->GetPaddle(EIJPSide::Right)->GetAbilities();
+	AIJPBall* Ball = Arena->GetBall();
+
+	// A plain ball: not worth it.
+	Ball->Serve(EIJPSide::Right, 0.f);
+	Test.RunFor(0.2f);
+	UTEST_EQUAL("Held back", Abilities->GetCooldownRemaining(EIJPAbilitySlot::ClassSkill), 0.f);
+
+	// A smash: pull it in.
+	Ball->Serve(EIJPSide::Right, 0.f);
+	Ball->Boost(1.6f);
+	UTEST_TRUE("Uses it", IJPRivalSkillTests::RunUntil(Test, 0.2f, [Abilities] { return Abilities->IsWindingUp(EIJPAbilitySlot::ClassSkill); }));
 	return true;
 }
 

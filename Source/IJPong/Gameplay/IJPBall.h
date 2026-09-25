@@ -82,6 +82,21 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ball")
 	bool IsCurving() const { return CurveTimeLeft > 0.f; }
 
+	/** How fast the current curve turns (degrees per second), 0 when not curving. */
+	UFUNCTION(BlueprintPure, Category = "Ball")
+	float GetCurveRate() const { return IsCurving() ? CurveRate : 0.f; }
+
+	/** Carries a Boost (a smash) that the next paddle hit hasn't spent yet. */
+	UFUNCTION(BlueprintPure, Category = "Ball")
+	bool IsBoosted() const { return UnboostedSpeed > 0.f; }
+
+	/**
+	 * Soften what abilities put on this shot: the curve turns CurveScale as fast, and a boost keeps
+	 * BoostScale of its extra speed (0..1 each; 1 = untouched). For rival abilities like Magnet.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Ball")
+	void Dampen(float CurveScale, float BoostScale);
+
 	/**
 	 * Pass through barriers (AIJPArena::SetBarrierUp) until the next paddle hit, serve or goal.
 	 * For rival abilities like Breaker: one shot cracks through, the barrier stays up for the rest.
