@@ -111,6 +111,29 @@ FIJPTreeBonuses UIJPMetaSubsystem::GetBonuses(const UIJPSkillTree* Tree) const
 	return Bonuses;
 }
 
+bool UIJPMetaSubsystem::IsSpellSlotUnlocked() const
+{
+	return SaveData && SaveData->bSpellSlotUnlocked;
+}
+
+bool UIJPMetaSubsystem::CanUnlockSpellSlot() const
+{
+	return SaveData && !SaveData->bSpellSlotUnlocked && SaveData->BossTokens >= SpellSlotCost;
+}
+
+bool UIJPMetaSubsystem::UnlockSpellSlot()
+{
+	if (!CanUnlockSpellSlot())
+	{
+		return false;
+	}
+	SaveData->BossTokens -= SpellSlotCost;
+	SaveData->bSpellSlotUnlocked = true;
+	Save();
+	OnMetaChanged.Broadcast();
+	return true;
+}
+
 void UIJPMetaSubsystem::ResetProgress()
 {
 	SaveData = Cast<UIJPMetaSave>(UGameplayStatics::CreateSaveGameObject(UIJPMetaSave::StaticClass()));

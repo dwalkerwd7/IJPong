@@ -147,6 +147,7 @@ void AIJPRunMapView::Init(AIJPArena* InArena)
 
 	InfoText = MakeText(CardTextSize);
 	StartText = MakeText(TextSize);
+	UnlockText = MakeText(TextSize);
 	CursorBlinker.Start(this, 0.25f, 0, true, [this](bool bShow)
 	{
 		const bool bHasPick = ShownTree ? !TreeOrder.IsEmpty() : bShowingCards ? NumCards > 0 : !Reachable.IsEmpty();
@@ -291,7 +292,7 @@ void AIJPRunMapView::ClearDrawing()
 	{
 		Text->SetVisibility(false);
 	}
-	for (UTextRenderComponent* Text : { InfoText.Get(), StartText.Get() })
+	for (UTextRenderComponent* Text : { InfoText.Get(), StartText.Get(), UnlockText.Get() })
 	{
 		if (Text)
 		{
@@ -326,6 +327,10 @@ void AIJPRunMapView::ShowTree(const UIJPSkillTree* Tree, bool bResetPick)
 		}
 		InBranch.Sort([Tree](int32 A, int32 B) { return Tree->GetDepth(A) < Tree->GetDepth(B); });
 		TreeOrder.Append(InBranch);
+	}
+	if (!Meta->IsSpellSlotUnlocked())
+	{
+		TreeOrder.Add(TreeUnlockSpells);
 	}
 	TreeOrder.Add(INDEX_NONE);
 	TreeSelected = bResetPick ? 0 : FMath::Clamp(TreeSelected, 0, TreeOrder.Num() - 1);
@@ -371,10 +376,27 @@ void AIJPRunMapView::ShowTree(const UIJPSkillTree* Tree, bool bResetPick)
 	StartText->SetRelativeLocation(FVector(Start.X, TextDepth, Start.Y));
 	StartText->SetVisibility(true);
 
+	// UNLOCK SPELLS beside it, until bought: mid when affordable, dim when not.
+	const FString SpellPrice = FString::Printf(TEXT("%d BOSS TOKENS"), Meta->GetSpellSlotCost());
+	if (!Meta->IsSpellSlotUnlocked())
+	{
+		const bool bAffordable = Meta->CanUnlockSpellSlot();
+		const FVector2D Unlock = TreeUnlockPosition();
+		AddFrame(bAffordable ? MidPieces : DimPieces, Unlock, 170.f, 36.f);
+		UnlockText->SetText(FText::FromString(TEXT("SPELLS")));
+		UnlockText->SetTextRenderColor(Scaled(Palette.Score, bAffordable ? MidScale : DimScale).ToFColor(true));
+		UnlockText->SetRelativeLocation(FVector(Unlock.X, TextDepth, Unlock.Y));
+		UnlockText->SetVisibility(true);
+	}
+
 	// About the pick, above START RUN.
 	const int32 Picked = GetSelectedTreeNode();
 	FString Info = TEXT("START THE NEXT RUN");
-	if (Picked != INDEX_NONE)
+	if (Picked == TreeUnlockSpells)
+	{
+		Info = FString::Printf(TEXT("UNLOCK SPELLS: A SPELL SLOT (X) FOR EVERY CLASS\n%s%s"), *SpellPrice, Meta->CanUnlockSpellSlot() ? TEXT("") : TEXT(" - NEED MORE"));
+	}
+	else if (Picked != INDEX_NONE)
 	{
 		const FIJPSkillNode& Node = Tree->Nodes[Picked];
 		const FString Price = Node.BossTokens > 0
@@ -413,6 +435,11 @@ FVector2D AIJPRunMapView::TreeNodePosition(int32 Node) const
 FVector2D AIJPRunMapView::TreeStartPosition() const
 {
 	return FVector2D(0.f, -HalfScreen.Y + 72.f);
+}
+
+FVector2D AIJPRunMapView::TreeUnlockPosition() const
+{
+	return TreeStartPosition() - FVector2D(220.f, 0.f);
 }
 
 FVector2D AIJPRunMapView::CardSize() const
@@ -538,9 +565,9 @@ void AIJPRunMapView::PlaceCursor()
 	{
 		bHasPick = !TreeOrder.IsEmpty();
 		const int32 Node = GetSelectedTreeNode();
-		if (Node == INDEX_NONE)
+		if (Node == INDEX_NONE || Node == TreeUnlockSpells)
 		{
-			AddFrame(Cursor, TreeStartPosition(), 182.f, 48.f);
+			AddFrame(Cursor, Node == INDEX_NONE ? TreeStartPosition() : TreeUnlockPosition(), 182.f, 48.f);
 		}
 		else
 		{

@@ -84,6 +84,20 @@ public:
 	virtual void Grant(UIJPRunSubsystem& Run) const override;
 };
 
+/** A spell for the Spell slot, replacing the one held. Only offered once the slot is unlocked (meta). */
+UCLASS()
+class IJPONG_API UIJPReward_Spell : public UIJPReward
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spell")
+	TObjectPtr<UIJPAbility> Spell;
+
+	virtual bool CanOffer(const UIJPRunSubsystem& Run) const override;
+	virtual void Grant(UIJPRunSubsystem& Run) const override;
+};
+
 /** An item to carry (the Item slot), replacing the one held (if any). */
 UCLASS()
 class IJPONG_API UIJPReward_Item : public UIJPReward

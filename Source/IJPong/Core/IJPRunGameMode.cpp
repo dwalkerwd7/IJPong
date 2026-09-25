@@ -124,7 +124,14 @@ bool AIJPRunGameMode::HandleUIConfirm()
 	case EIJPRunPhase::Tree:
 	{
 		const int32 Node = MapView->GetSelectedTreeNode();
-		if (Node == INDEX_NONE)
+		if (Node == AIJPRunMapView::TreeUnlockSpells)
+		{
+			if (UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(this); Meta && Meta->UnlockSpellSlot())
+			{
+				MapView->ShowTree(GetPlayerTree(), false);
+			}
+		}
+		else if (Node == INDEX_NONE)
 		{
 			// START RUN: same act and health as the run that just ended, on a fresh map.
 			StartNewRun(RunAct, INDEX_NONE, RunStartingHealth);
@@ -298,6 +305,8 @@ void AIJPRunGameMode::ApplyLoadout()
 	}
 	Abilities->Equip(EIJPAbilitySlot::RunAbility, Loadout.RunAbility);
 	Abilities->Equip(EIJPAbilitySlot::Item, Loadout.Item);
+	// Spells only once the slot has been bought (meta).
+	Abilities->Equip(EIJPAbilitySlot::Spell, Meta && Meta->IsSpellSlotUnlocked() ? Loadout.Spell.Get() : nullptr);
 	GetMatch()->SetExtraServedBalls(Loadout.ExtraServedBalls);
 }
 

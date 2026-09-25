@@ -52,6 +52,10 @@ struct FIJPRunLoadout
 	UPROPERTY(BlueprintReadOnly, Category = "Loadout")
 	TArray<TObjectPtr<const UIJPBallType>> ExtraServedBalls;
 
+	/** The spell for the Spell slot (once unlocked), or null. A new one replaces it. */
+	UPROPERTY(BlueprintReadOnly, Category = "Loadout")
+	TObjectPtr<const UIJPAbility> Spell;
+
 	/** The one item carried (Item slot), or null. A new one replaces it; using it clears it. */
 	UPROPERTY(BlueprintReadOnly, Category = "Loadout")
 	TObjectPtr<const UIJPAbility> Item;

@@ -58,6 +58,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Meta")
 	void ResetProgress();
 
+	/** The Spell slot is open for every class; runs can then find spells. */
+	UFUNCTION(BlueprintPure, Category = "Meta")
+	bool IsSpellSlotUnlocked() const;
+
+	UFUNCTION(BlueprintPure, Category = "Meta")
+	int32 GetSpellSlotCost() const { return SpellSlotCost; }
+
+	UFUNCTION(BlueprintPure, Category = "Meta")
+	bool CanUnlockSpellSlot() const;
+
+	/** Spend the boss tokens and open the Spell slot. */
+	UFUNCTION(BlueprintCallable, Category = "Meta")
+	bool UnlockSpellSlot();
+
 	UPROPERTY(BlueprintAssignable, Category = "Meta")
 	FIJPMetaChangedSignature OnMetaChanged;
 
@@ -65,6 +79,10 @@ protected:
 	/** Save slot for the player's progress. */
 	UPROPERTY(Config)
 	FString SaveSlot = TEXT("IJPongMeta");
+
+	/** Boss tokens to open the Spell slot. */
+	UPROPERTY(Config)
+	int32 SpellSlotCost = 2;
 
 	/** Save slot used while automation tests run. */
 	UPROPERTY(Config)

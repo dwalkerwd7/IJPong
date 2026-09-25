@@ -65,6 +65,9 @@ public:
 	/** The picked tree node (index into the tree), or INDEX_NONE when START RUN is picked. */
 	int32 GetSelectedTreeNode() const;
 
+	/** GetSelectedTreeNode's value for the UNLOCK SPELLS box (shown until the Spell slot is bought). */
+	static constexpr int32 TreeUnlockSpells = -2;
+
 	/** Move the pick one node (or card) left (-1) or right (+1). */
 	void Step(int32 Direction);
 
@@ -140,6 +143,7 @@ private:
 	FVector2D TreeNodePosition(int32 Node) const;
 	FVector2D TreeRootPosition() const;
 	FVector2D TreeStartPosition() const;
+	FVector2D TreeUnlockPosition() const;
 
 	TWeakObjectPtr<AIJPArena> Arena;
 	FVector2D HalfScreen = FVector2D(400.f, 300.f);
@@ -175,6 +179,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UTextRenderComponent> StartText;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextRenderComponent> UnlockText;
 
 	int32 NumCards = 0;
 	int32 SelectedCard = 0;

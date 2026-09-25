@@ -24,4 +24,8 @@ public:
 	/** Skill-tree nodes bought, as "<tree asset name>/<node id>". */
 	UPROPERTY()
 	TArray<FString> OwnedNodes;
+
+	/** The Spell slot is open, for every class (bought once with boss tokens). */
+	UPROPERTY()
+	bool bSpellSlotUnlocked = false;
 };

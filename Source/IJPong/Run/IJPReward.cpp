@@ -1,6 +1,7 @@
 // It's Just Pong
 
 #include "Run/IJPReward.h"
+#include "Meta/IJPMetaSubsystem.h"
 #include "Run/IJPRunSubsystem.h"
 
 void UIJPReward_Modifier::Grant(UIJPRunSubsystem& Run) const
@@ -36,4 +37,15 @@ void UIJPReward_Ball::Grant(UIJPRunSubsystem& Run) const
 void UIJPReward_Item::Grant(UIJPRunSubsystem& Run) const
 {
 	Run.EditLoadout().Item = Item;
+}
+
+bool UIJPReward_Spell::CanOffer(const UIJPRunSubsystem& Run) const
+{
+	const UIJPMetaSubsystem* Meta = Run.GetGameInstance()->GetSubsystem<UIJPMetaSubsystem>();
+	return Spell && Meta && Meta->IsSpellSlotUnlocked() && Run.GetLoadout().Spell != Spell;
+}
+
+void UIJPReward_Spell::Grant(UIJPRunSubsystem& Run) const
+{
+	Run.EditLoadout().Spell = Spell;
 }
