@@ -232,7 +232,7 @@ void AIJPTestGameMode::GetDebugLines(TArray<FString>& OutLines) const
 				: FString::Printf(TEXT("%.1fs"), Abilities->GetCooldownRemaining(Slot));
 			return FString::Printf(TEXT("%s %s: %s"), Key, *Ability->DisplayName.ToString(), *State);
 		};
-		OutLines.Add(Describe(EIJPAbilitySlot::ClassSkill, TEXT("[Space]")) + TEXT("   ") + Describe(EIJPAbilitySlot::RunAbility, TEXT("[E]")));
+		OutLines.Add(Describe(EIJPAbilitySlot::ClassSkill, TEXT("[Space]")) + TEXT("   ") + Describe(EIJPAbilitySlot::RunAbility, TEXT("[Z]")));
 	}
 
 	const UIJPMatchComponent* MatchPtr = GetMatch();
