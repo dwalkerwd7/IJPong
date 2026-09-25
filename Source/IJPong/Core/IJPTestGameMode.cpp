@@ -9,6 +9,8 @@
 #include "Era/IJPEra.h"
 #include "Era/IJPEraSubsystem.h"
 #include "Gameplay/IJPArena.h"
+#include "Gameplay/IJPBall.h"
+#include "Gameplay/IJPBallType.h"
 #include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPMatchRules.h"
 #include "Gameplay/IJPPaddle.h"
@@ -115,6 +117,15 @@ void AIJPTestGameMode::CycleEra(int32 Direction)
 	}
 }
 
+void AIJPTestGameMode::AddRandomBall()
+{
+	const UIJPBallType* Type = ExtraBallTypes.IsEmpty() ? nullptr : ExtraBallTypes[FMath::RandHelper(ExtraBallTypes.Num())].LoadSynchronous();
+	if (AIJPBall* Extra = GetMatch()->LaunchExtraBall(Type))
+	{
+		UE_LOG(LogIJPong, Log, TEXT("Extra ball: %s"), *Extra->GetType().DisplayName.ToString());
+	}
+}
+
 void AIJPTestGameMode::GetDebugLines(TArray<FString>& OutLines) const
 {
 	const AIJPArena* ArenaPtr = GetArena();
@@ -127,6 +138,8 @@ void AIJPTestGameMode::GetDebugLines(TArray<FString>& OutLines) const
 	OutLines.Add(Era
 		? FString::Printf(TEXT("Era: %s (%d/%d)"), *Era->DisplayName.ToString(), Eras->GetEraIndex() + 1, Eras->GetNumEras())
 		: FString(TEXT("Era: none")));
+
+	OutLines.Add(FString::Printf(TEXT("Balls in play: %d"), ArenaPtr ? ArenaPtr->GetNumBallsInPlay() : 0));
 
 	const UIJPMatchComponent* MatchPtr = GetMatch();
 	if (MatchPtr->IsOver())
@@ -142,6 +155,6 @@ void AIJPTestGameMode::GetDebugLines(TArray<FString>& OutLines) const
 		OutLines.Add(FString::Printf(TEXT("Match: first to %d"), MatchPtr->GetRules().WinTarget));
 	}
 
-	OutLines.Add(TEXT("R new match   F serve now   T AI vs AI"));
+	OutLines.Add(TEXT("R new match   F serve now   T AI vs AI   B add ball"));
 	OutLines.Add(TEXT("- / = opponent skill   [ / ] era   . (period) hide this"));
 }

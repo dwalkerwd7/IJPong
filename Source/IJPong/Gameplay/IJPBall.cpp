@@ -5,9 +5,11 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "Gameplay/IJPArena.h"
+#include "Gameplay/IJPBallType.h"
 #include "Gameplay/IJPGoalComponent.h"
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPPongMath.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "UObject/ConstructorHelpers.h"
 
 namespace
@@ -35,17 +37,58 @@ AIJPBall::AIJPBall()
 void AIJPBall::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
-
-	const float CubeSize = 100.f; // /Engine/BasicShapes/Cube is 100 units, centred.
-	Visual->SetRelativeScale3D(FVector(Size / CubeSize, VisualDepth / CubeSize, Size / CubeSize));
+	ApplySize();
 }
 
-void AIJPBall::InitBall(AIJPArena* InArena)
+void AIJPBall::InitBall(AIJPArena* InArena, const UIJPBallType* InType)
 {
 	check(InArena);
 	Arena = InArena;
-	Visual->SetMaterial(0, InArena->GetPaletteMaterial(EIJPPaletteRole::Ball));
+	if (UMaterialInterface* Base = InArena->GetBaseMaterial())
+	{
+		ColourMaterial = UMaterialInstanceDynamic::Create(Base, this);
+		Visual->SetMaterial(0, ColourMaterial);
+	}
+	SetType(InType);
 	ResetBall();
+}
+
+void AIJPBall::SetType(const UIJPBallType* InType)
+{
+	Type = InType;
+	ApplySize();
+	RefreshColour();
+}
+
+const UIJPBallType& AIJPBall::GetType() const
+{
+	return Type ? *Type : *GetDefault<UIJPBallType>();
+}
+
+void AIJPBall::RefreshColour()
+{
+	if (ColourMaterial && Arena.IsValid())
+	{
+		static const FName ColorParam(TEXT("Color"));
+		ColourMaterial->SetVectorParameterValue(ColorParam, Arena->GetBallColour(Type));
+	}
+}
+
+float AIJPBall::GetSize() const
+{
+	return GetType().Size;
+}
+
+float AIJPBall::GetMaxSpeed() const
+{
+	return GetType().MaxSpeed;
+}
+
+void AIJPBall::ApplySize()
+{
+	const float CubeSize = 100.f; // /Engine/BasicShapes/Cube is 100 units, centred.
+	const float Size = GetSize();
+	Visual->SetRelativeScale3D(FVector(Size / CubeSize, VisualDepth / CubeSize, Size / CubeSize));
 }
 
 void AIJPBall::BlinkAtCentre()
@@ -61,7 +104,7 @@ void AIJPBall::Serve(EIJPSide Toward, float AngleDeg)
 	const float AngleRad = FMath::DegreesToRadians(FMath::Clamp(AngleDeg, -MaxBounceAngleDeg, MaxBounceAngleDeg));
 
 	Position = PreviousPosition = FVector2D::ZeroVector;
-	Speed = BaseSpeed;
+	Speed = GetType().BaseSpeed;
 	Velocity = FVector2D(IJP::SideSign(Toward) * FMath::Cos(AngleRad), FMath::Sin(AngleRad)) * Speed;
 	Accumulator = 0.f;
 	RallyHits = 0;
@@ -143,7 +186,7 @@ void AIJPBall::Substep(float StepSeconds)
 bool AIJPBall::Sweep(const FVector2D& From, const FVector2D& To, FHitResult& OutHit) const
 {
 	const AIJPArena* ArenaPtr = Arena.Get();
-	const float Half = Size * 0.5f;
+	const float Half = GetSize() * 0.5f;
 	const FCollisionShape Box = FCollisionShape::MakeBox(FVector(Half, Half, Half));
 	const FCollisionQueryParams Params(SCENE_QUERY_STAT(IJPBallSweep), false, this);
 
@@ -159,7 +202,7 @@ void AIJPBall::HandleHit(const FHitResult& Hit)
 		bInPlay = false;
 		Velocity = FVector2D::ZeroVector;
 		SetActorHiddenInGame(true);
-		OnGoal.Broadcast(Goal->DefendingSide);
+		OnGoal.Broadcast(this, Goal->DefendingSide);
 		return;
 	}
 
@@ -196,10 +239,10 @@ bool AIJPBall::TryPaddleBounce(AIJPPaddle* Paddle, const FVector2D& Normal)
 	}
 
 	// Where on the paddle it hit: -1 bottom edge .. +1 top edge, counting the ball's own half-size.
-	const float Reach = Paddle->GetSize().Y * 0.5f + Size * 0.5f;
+	const float Reach = Paddle->GetSize().Y * 0.5f + GetSize() * 0.5f;
 	const float Offset = (Position.Y - Paddle->GetPlanePosition().Y) / Reach;
 
-	Speed = FMath::Min(Speed + SpeedPerHit, MaxSpeed);
+	Speed = FMath::Min(Speed + GetType().SpeedPerHit, GetType().MaxSpeed);
 	Velocity = FIJPPongMath::ComputePaddleBounce(Offset, Speed, MaxBounceAngleDeg, -GoalDir);
 	++RallyHits;
 	OnPaddleHit.Broadcast(Paddle);

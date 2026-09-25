@@ -9,15 +9,18 @@
 
 class AIJPArena;
 class AIJPBall;
+class UIJPBallType;
 class UIJPMatchRules;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FIJPMatchEndedSignature, EIJPSide, Winner);
 
 /**
  * Runs one match at a time on an arena: serve -> rally -> goal -> score -> serve, until a side
- * reaches the rules' win target. Then the ball stops, the winner's score blinks, and it waits
+ * reaches the rules' win target. Then the balls stop, the winner's score blinks, and it waits
  * for StartMatch() to begin the next one. Lives on the game mode, so one level can host many
  * matches in a row.
+ * With several balls in play, each goal scores that ball's points and takes it out; the rally
+ * goes on until the court is empty, then the next serve follows.
  */
 UCLASS(ClassGroup = (IJPong))
 class IJPONG_API UIJPMatchComponent : public UActorComponent
@@ -35,6 +38,14 @@ public:
 	/** Serve immediately toward a random side, abandoning any rally in progress. Does nothing once the match is over. */
 	UFUNCTION(BlueprintCallable, Category = "Match")
 	void ServeNow();
+
+	/**
+	 * Launch one more ball from the centre toward a random side, joining the rally (for abilities,
+	 * boss patterns, the test mode's debug key). Null Type = the arena's default. Returns the ball,
+	 * or null when no match is being played.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Match")
+	AIJPBall* LaunchExtraBall(const UIJPBallType* Type);
 
 	UFUNCTION(BlueprintPure, Category = "Match")
 	int32 GetScore(EIJPSide Side) const { return Side == EIJPSide::Left ? LeftScore : RightScore; }
@@ -61,7 +72,11 @@ protected:
 
 private:
 	UFUNCTION()
-	void HandleGoal(EIJPSide DefendingSide);
+	void HandleGoal(AIJPBall* ScoringBall, EIJPSide DefendingSide);
+
+	/** The type of the Index-th ball served (arena default when the list is shorter or the entry empty). */
+	const UIJPBallType* GetServedType(int32 Index) const;
+	float RandomServeAngle() const;
 
 	void ScheduleServe(EIJPSide Toward);
 	void ServeBall();
@@ -76,8 +91,8 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<const UIJPMatchRules> Rules;
 
-	/** The ball whose OnGoal we're bound to, so a new arena or ball rebinds cleanly. */
-	TWeakObjectPtr<AIJPBall> BoundBall;
+	/** The arena whose OnBallGoal we're bound to, so a new arena rebinds cleanly. */
+	TWeakObjectPtr<AIJPArena> BoundArena;
 
 	FTimerHandle ServeTimer;
 	EIJPMatchPhase Phase = EIJPMatchPhase::None;

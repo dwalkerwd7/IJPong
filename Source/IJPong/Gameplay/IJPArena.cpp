@@ -10,6 +10,7 @@
 #include "Era/IJPEra.h"
 #include "Era/IJPEraSubsystem.h"
 #include "Gameplay/IJPBall.h"
+#include "Gameplay/IJPBallType.h"
 #include "Gameplay/IJPGoalComponent.h"
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPPaddleProfile.h"
@@ -180,25 +181,8 @@ void AIJPArena::BeginPlay()
 	LeftPaddle = SpawnPaddle(EIJPSide::Left);
 	RightPaddle = SpawnPaddle(EIJPSide::Right);
 	LoadedToneSet = ToneSet.LoadSynchronous();
-
-	if (BallClass)
-	{
-		FActorSpawnParameters Params;
-		Params.Owner = this;
-		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		Ball = GetWorld()->SpawnActor<AIJPBall>(BallClass, GetActorTransform(), Params);
-		if (Ball)
-		{
-			Ball->InitBall(this);
-			Ball->OnPaddleHit.AddDynamic(this, &AIJPArena::HandleBallPaddleHit);
-			Ball->OnBounce.AddDynamic(this, &AIJPArena::HandleBallBounce);
-			Ball->OnGoal.AddDynamic(this, &AIJPArena::HandleBallGoal);
-		}
-	}
-	else
-	{
-		UE_LOG(LogIJPong, Error, TEXT("%s has no BallClass; no ball spawned."), *GetName());
-	}
+	DefaultBallType.LoadSynchronous();
+	SpawnBall(GetDefaultBallType());
 }
 
 void AIJPArena::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -208,17 +192,22 @@ void AIJPArena::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		Eras->OnEraChanged.RemoveAll(this);
 	}
 
-	// The arena spawned the paddles and ball, so it takes them with it.
-	for (AActor* Spawned : { static_cast<AActor*>(LeftPaddle.Get()), static_cast<AActor*>(RightPaddle.Get()), static_cast<AActor*>(Ball.Get()) })
+	// The arena spawned the paddles and balls, so it takes them with it.
+	TArray<AActor*> Spawned = { LeftPaddle.Get(), RightPaddle.Get() };
+	for (AIJPBall* Each : Balls)
 	{
-		if (IsValid(Spawned))
+		Spawned.Add(Each);
+	}
+	for (AActor* Actor : Spawned)
+	{
+		if (IsValid(Actor))
 		{
-			Spawned->Destroy();
+			Actor->Destroy();
 		}
 	}
 	LeftPaddle = nullptr;
 	RightPaddle = nullptr;
-	Ball = nullptr;
+	Balls.Reset();
 
 	Super::EndPlay(EndPlayReason);
 }
@@ -282,10 +271,17 @@ void AIJPArena::CreatePaletteMaterials()
 
 void AIJPArena::ApplyPalette(const FIJPPalette& Palette)
 {
+	CurrentPalette = Palette;
 	static const FName ColorParam(TEXT("Color"));
 	for (int32 i = 0; i < PaletteMaterials.Num(); ++i)
 	{
 		PaletteMaterials[i]->SetVectorParameterValue(ColorParam, Palette.Get(static_cast<EIJPPaletteRole>(i)));
+	}
+
+	// Each ball has its own material, since its colour can depend on its type.
+	for (AIJPBall* Each : Balls)
+	{
+		Each->RefreshColour();
 	}
 }
 
@@ -305,10 +301,82 @@ void AIJPArena::HandleBallBounce()
 	Tones->PlayTone(GetToneSet().Bounce);
 }
 
-void AIJPArena::HandleBallGoal(EIJPSide DefendingSide)
+void AIJPArena::HandleBallGoal(AIJPBall* ScoringBall, EIJPSide DefendingSide)
 {
 	Tones->PlayTone(GetToneSet().Goal);
 	CRT->Pulse();
+	OnBallGoal.Broadcast(ScoringBall, DefendingSide);
+}
+
+AIJPBall* AIJPArena::SpawnBall(const UIJPBallType* Type)
+{
+	if (!BallClass)
+	{
+		UE_LOG(LogIJPong, Error, TEXT("%s has no BallClass; no ball spawned."), *GetName());
+		return nullptr;
+	}
+
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	AIJPBall* NewBall = GetWorld()->SpawnActor<AIJPBall>(BallClass, GetActorTransform(), Params);
+	if (NewBall)
+	{
+		NewBall->InitBall(this, Type);
+		NewBall->OnPaddleHit.AddDynamic(this, &AIJPArena::HandleBallPaddleHit);
+		NewBall->OnBounce.AddDynamic(this, &AIJPArena::HandleBallBounce);
+		NewBall->OnGoal.AddDynamic(this, &AIJPArena::HandleBallGoal);
+		Balls.Add(NewBall);
+	}
+	return NewBall;
+}
+
+AIJPBall* AIJPArena::AddBall(const UIJPBallType* Type)
+{
+	if (!Type)
+	{
+		Type = GetDefaultBallType();
+	}
+
+	// Reuse a ball that's waiting (not in play, not blinking for a serve) before spawning another.
+	for (AIJPBall* Existing : Balls)
+	{
+		if (!Existing->IsInPlay() && !Existing->IsBlinking())
+		{
+			Existing->ResetBall();
+			Existing->SetType(Type);
+			return Existing;
+		}
+	}
+	return SpawnBall(Type);
+}
+
+int32 AIJPArena::GetNumBallsInPlay() const
+{
+	int32 Count = 0;
+	for (const AIJPBall* Each : Balls)
+	{
+		Count += Each->IsInPlay() ? 1 : 0;
+	}
+	return Count;
+}
+
+void AIJPArena::ResetBalls()
+{
+	for (AIJPBall* Each : Balls)
+	{
+		Each->ResetBall();
+	}
+}
+
+const UIJPBallType* AIJPArena::GetDefaultBallType() const
+{
+	return DefaultBallType.Get() ? DefaultBallType.Get() : GetDefault<UIJPBallType>();
+}
+
+FLinearColor AIJPArena::GetBallColour(const UIJPBallType* Type) const
+{
+	return CurrentPalette.bBallTypeColours && Type ? Type->Colour : CurrentPalette.Ball;
 }
 
 void AIJPArena::FlashScore(EIJPSide Side)

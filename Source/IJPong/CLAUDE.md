@@ -3,8 +3,9 @@
 ## Layout
 Includes are relative to the module root (`PublicIncludePaths.Add(ModuleDirectory)`), e.g. `#include "Gameplay/IJPArena.h"`.
 - `Core/`: shared types, game framework classes (GameMode, GameState, PlayerController)
-- `Gameplay/`: arena, ball, paddles, goals, maths
+- `Gameplay/`: arena, balls (`UIJPBallType` Data Assets), paddles, goals, match, maths
 - `Presentation/`: screen look. `UIJPCRTComponent` puts the CRT post-process on every camera of its owner. The HLSL is in the project's `Shaders/IJPCRT.ush` (mapped to `/IJPong` by the tiny `IJPongShaders` module).
+- `Era/`: `UIJPEra` Data Asset (CRT, tones, palette) and `UIJPEraSubsystem`, the current era, followed live by arenas and CRT components.
 - `AI/`: paddle AI controller and its `UIJPAIProfile` Data Asset. The AI drives paddles through the same `AddMoveInput` as the player.
 - `Tests/`: integration tests only
 
@@ -24,7 +25,7 @@ Only `AIJPArena` converts between plane and world space (`PlaneToWorld`, `WorldT
 - Keep collision and visuals as separate components. Ball blockers are deep along local Y (`BlockerDepth`) so small depth offsets can't miss.
 
 ## Rendering pieces
-Pong visuals are `/Engine/BasicShapes/Cube` instances (100 units, centred) scaled into boxes, using the arena's `PongMaterial` (default `/Engine/EngineMaterials/EmissiveMeshMaterial`, unlit). Layout is rebuilt in `OnConstruction`, so properties update live in the editor.
+Pong visuals are `/Engine/BasicShapes/Cube` instances (100 units, centred) scaled into boxes, using instances of the arena's `PongMaterial` (`M_PongUnlit` via config: unlit, `Color` parameter). The arena makes one instance per palette role (`GetPaletteMaterial`); each ball has its own, since its colour can depend on its type. Layout is rebuilt in `OnConstruction`, so properties update live in the editor.
 
 ## Maths
 Stateless Pong maths lives in `FIJPPongMath` (paddle bounce, reflect, angle clamp, wall-folding intercept prediction). Reuse it rather than re-deriving bounce logic.

@@ -47,8 +47,13 @@ struct FIJPPalette
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Palette")
 	FLinearColor RightPaddle = FLinearColor::White;
 
+	/** Every ball's colour, unless bBallTypeColours shows each type's own. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Palette")
 	FLinearColor Ball = FLinearColor::White;
+
+	/** Colour each ball by its type (UIJPBallType::Colour). Off = all balls are Ball, as on a black-and-white set. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Palette")
+	bool bBallTypeColours = false;
 
 	FLinearColor Get(EIJPPaletteRole Role) const
 	{

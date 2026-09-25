@@ -54,6 +54,7 @@ void AIJPTestPlayerController::SetupInputComponent()
 	Bind(Settings->DebugToggleOverlayAction, &AIJPTestPlayerController::HandleToggleOverlay);
 	Bind(Settings->DebugEraPrevAction, &AIJPTestPlayerController::HandleEraPrev);
 	Bind(Settings->DebugEraNextAction, &AIJPTestPlayerController::HandleEraNext);
+	Bind(Settings->DebugAddBallAction, &AIJPTestPlayerController::HandleAddBall);
 }
 
 AIJPTestGameMode* AIJPTestPlayerController::GetTestGameMode() const
@@ -114,6 +115,14 @@ void AIJPTestPlayerController::HandleEraNext()
 	if (AIJPTestGameMode* GameMode = GetTestGameMode())
 	{
 		GameMode->CycleEra(1);
+	}
+}
+
+void AIJPTestPlayerController::HandleAddBall()
+{
+	if (AIJPTestGameMode* GameMode = GetTestGameMode())
+	{
+		GameMode->AddRandomBall();
 	}
 }
 

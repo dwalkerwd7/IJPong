@@ -9,11 +9,14 @@
 #include "IJPBall.generated.h"
 
 class AIJPArena;
+class AIJPBall;
 class AIJPPaddle;
+class UIJPBallType;
+class UMaterialInstanceDynamic;
 class UStaticMeshComponent;
 struct FHitResult;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FIJPBallGoalSignature, EIJPSide, DefendingSide);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FIJPBallGoalSignature, AIJPBall*, Ball, EIJPSide, DefendingSide);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FIJPBallPaddleHitSignature, AIJPPaddle*, Paddle);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FIJPBallBounceSignature);
 
@@ -21,6 +24,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FIJPBallBounceSignature);
  * The square Pong ball: a kinematic mover simulated in arena plane space.
  * It advances in fixed substeps, sweeping a box on ECC_PongBall and bouncing off whatever it hits.
  * The visible position is interpolated between the last two substeps, so it's smooth at any frame rate.
+ * Its size, speeds and points come from its UIJPBallType; the arena may have several in play.
  */
 UCLASS()
 class IJPONG_API AIJPBall : public AActor
@@ -34,7 +38,17 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 
 	/** Called by the arena right after spawning. The ball waits, hidden, at the centre until served. */
-	void InitBall(AIJPArena* InArena);
+	void InitBall(AIJPArena* InArena, const UIJPBallType* InType);
+
+	/** Become another kind of ball. Takes effect at once; a ball in play keeps its current speed until its next hit. Null = UIJPBallType's defaults. */
+	UFUNCTION(BlueprintCallable, Category = "Ball")
+	void SetType(const UIJPBallType* InType);
+
+	/** The type in use: the one set, or UIJPBallType's defaults. */
+	const UIJPBallType& GetType() const;
+
+	/** Re-read this ball's colour from the arena (its era palette and this ball's type). */
+	void RefreshColour();
 
 	/**
 	 * Launch from the centre toward a side at BaseSpeed. Resets the rally.
@@ -69,10 +83,10 @@ public:
 	int32 GetRallyHits() const { return RallyHits; }
 
 	UFUNCTION(BlueprintPure, Category = "Ball")
-	float GetSize() const { return Size; }
+	float GetSize() const;
 
 	UFUNCTION(BlueprintPure, Category = "Ball")
-	float GetMaxSpeed() const { return MaxSpeed; }
+	float GetMaxSpeed() const;
 
 	UFUNCTION(BlueprintPure, Category = "Ball")
 	float GetMaxBounceAngle() const { return MaxBounceAngleDeg; }
@@ -89,22 +103,8 @@ public:
 	FIJPBallBounceSignature OnBounce;
 
 protected:
-	/** Edge length of the square ball. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Layout")
-	float Size = 10.f;
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Layout")
 	float VisualDepth = 10.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Movement", meta = (ClampMin = "0"))
-	float BaseSpeed = 400.f;
-
-	/** Added to the speed on every paddle hit, up to MaxSpeed. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Movement", meta = (ClampMin = "0"))
-	float SpeedPerHit = 25.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Movement", meta = (ClampMin = "0"))
-	float MaxSpeed = 1000.f;
 
 	/** Bounce angle from horizontal when the ball hits a paddle's very edge. Also the steepest the ball can ever travel. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Movement", meta = (ClampMin = "0", ClampMax = "85", Units = "deg"))
@@ -131,8 +131,17 @@ private:
 	void HandleHit(const FHitResult& Hit);
 	bool TryPaddleBounce(AIJPPaddle* Paddle, const FVector2D& Normal);
 	void UpdateDrawnTransform(float Alpha);
+	void ApplySize();
 
 	TWeakObjectPtr<AIJPArena> Arena;
+
+	UPROPERTY(Transient)
+	TObjectPtr<const UIJPBallType> Type;
+
+	/** This ball's own copy of the arena's material, so each ball can show its type's colour. */
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> ColourMaterial;
+
 	FIJPBlinker ServeBlinker;
 	FVector2D Position = FVector2D::ZeroVector;
 	FVector2D PreviousPosition = FVector2D::ZeroVector;

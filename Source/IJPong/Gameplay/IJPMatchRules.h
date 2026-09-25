@@ -6,6 +6,8 @@
 #include "Engine/DataAsset.h"
 #include "IJPMatchRules.generated.h"
 
+class UIJPBallType;
+
 /**
  * How one match is played and won. Different matches (a quick first-to-3, a long first-to-7)
  * are different assets, not code.
@@ -27,6 +29,13 @@ public:
 	/** Serves leave at a random angle within +-this from horizontal. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Match|Serve", meta = (ClampMin = "0", Units = "deg"))
 	float MaxServeAngleDeg = 30.f;
+
+	/**
+	 * The balls launched at every serve, alternating direction (the first goes to the side receiving).
+	 * Empty = one ball of the arena's default type. An empty entry also means the default type.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Match|Serve")
+	TArray<TObjectPtr<UIJPBallType>> ServedBalls;
 
 	bool IsEndless() const { return WinTarget <= 0; }
 };

@@ -51,43 +51,68 @@ void AIJPPaddleAIController::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 
 	AIJPPaddle* Paddle = GetPawn<AIJPPaddle>();
-	const AIJPArena* Arena = Paddle ? Paddle->GetArena() : nullptr;
-	const AIJPBall* Ball = Arena ? Arena->GetBall() : nullptr;
-	if (!Ball)
+	if (!Paddle || !Paddle->GetArena())
 	{
 		return;
 	}
 
-	// Only look at the ball every ReactionTime; steer toward the last decision every frame.
+	// Only look at the balls every ReactionTime; steer toward the last decision every frame.
 	DecisionTimer -= DeltaSeconds;
 	if (DecisionTimer <= 0.f)
 	{
-		Decide(*Paddle, *Ball);
+		Decide(*Paddle, PickIncomingBall(*Paddle));
 		DecisionTimer = FMath::Max(DecisionTimer + GetProfile().ReactionTime.At(Skill), 0.f);
 	}
 
 	Steer(*Paddle);
 }
 
-void AIJPPaddleAIController::Decide(const AIJPPaddle& Paddle, const AIJPBall& Ball)
+const AIJPBall* AIJPPaddleAIController::PickIncomingBall(const AIJPPaddle& Paddle) const
 {
-	const UIJPAIProfile& P = GetProfile();
 	const float GoalDir = IJP::SideSign(Paddle.GetSide());
-	const FVector2D BallVelocity = Ball.GetPlaneVelocity();
-
-	if (!Ball.IsInPlay() || BallVelocity.X * GoalDir <= 0.f)
+	const float LaneX = Paddle.GetPlanePosition().X;
+	const AIJPBall* Soonest = nullptr;
+	float SoonestTime = TNumericLimits<float>::Max();
+	for (const AIJPBall* Ball : Paddle.GetArena()->GetBalls())
 	{
-		// Heading away (or between points): drift back to the middle.
+		const FVector2D Velocity = Ball->GetPlaneVelocity();
+		if (!Ball->IsInPlay() || Velocity.X * GoalDir <= 0.f)
+		{
+			continue;
+		}
+		// Time to reach the paddle's lane, horizontally; walls don't change that.
+		const float Time = (LaneX - Ball->GetPlanePosition().X) / Velocity.X;
+		if (Time >= 0.f && Time < SoonestTime)
+		{
+			Soonest = Ball;
+			SoonestTime = Time;
+		}
+	}
+	return Soonest;
+}
+
+void AIJPPaddleAIController::Decide(const AIJPPaddle& Paddle, const AIJPBall* IncomingBall)
+{
+	if (!IncomingBall)
+	{
+		// Nothing heading this way (or between points): drift back to the middle.
 		bBallIncoming = false;
+		TrackedBall = nullptr;
 		TargetY = 0.f;
 		return;
 	}
 
-	if (!bBallIncoming)
+	const AIJPBall& Ball = *IncomingBall;
+	const UIJPAIProfile& P = GetProfile();
+	const float GoalDir = IJP::SideSign(Paddle.GetSide());
+	const FVector2D BallVelocity = Ball.GetPlaneVelocity();
+
+	if (!bBallIncoming || TrackedBall != IncomingBall)
 	{
-		// A new shot is coming. Commit to one misjudgement and one aim for the whole approach,
-		// so the paddle doesn't jitter between decisions.
+		// A new shot is coming (or a different ball became the most urgent). Commit to one
+		// misjudgement and one aim for its whole approach, so the paddle doesn't jitter between decisions.
 		bBallIncoming = true;
+		TrackedBall = IncomingBall;
 		const float SpeedFraction = Ball.GetMaxSpeed() > 0.f ? BallVelocity.Size() / Ball.GetMaxSpeed() : 1.f;
 		ShotError = Random.FRandRange(-1.f, 1.f) * P.ErrorSpread.At(Skill) * SpeedFraction;
 		ShotAim = Random.FRandRange(-1.f, 1.f) * P.AimSpread.At(Skill);

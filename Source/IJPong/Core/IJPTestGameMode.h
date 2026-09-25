@@ -6,13 +6,14 @@
 #include "Core/IJPGameModeBase.h"
 #include "IJPTestGameMode.generated.h"
 
+class UIJPBallType;
 class UIJPMatchRules;
 
 /**
  * Match after match for trying out a level, with the rules from config (MatchRules).
  * Also has test tools (bound to debug keys by AIJPTestPlayerController): start a new match,
  * serve now, hand the player's paddle to an AI to watch the level play itself, nudge the
- * opponent's skill up and down, and step through the eras.
+ * opponent's skill up and down, step through the eras, and throw extra balls into the rally.
  */
 UCLASS()
 class IJPONG_API AIJPTestGameMode : public AIJPGameModeBase
@@ -45,6 +46,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Test")
 	void CycleEra(int32 Direction);
 
+	/** Launch one extra ball of a random ExtraBallTypes type into the current rally. */
+	UFUNCTION(BlueprintCallable, Category = "Test")
+	void AddRandomBall();
+
 	/** The debug overlay's text: the test tools' current state and the key legend. */
 	void GetDebugLines(TArray<FString>& OutLines) const;
 
@@ -54,6 +59,10 @@ protected:
 	/** The matches played here. Set in DefaultGame.ini; empty uses UIJPMatchRules' defaults. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Test|Match")
 	TSoftObjectPtr<UIJPMatchRules> MatchRules;
+
+	/** Types the add-ball key picks from. Set in DefaultGame.ini; empty = the arena's default type. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Test|Balls")
+	TArray<TSoftObjectPtr<UIJPBallType>> ExtraBallTypes;
 
 private:
 	UPROPERTY(Transient)

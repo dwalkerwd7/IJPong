@@ -53,4 +53,7 @@ public:
 
 	UPROPERTY(Config, EditAnywhere, Category = "Debug")
 	TSoftObjectPtr<UInputAction> DebugEraNextAction;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Debug")
+	TSoftObjectPtr<UInputAction> DebugAddBallAction;
 };

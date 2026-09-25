@@ -15,6 +15,7 @@ class UMaterialInterface;
 class UMaterialInstanceDynamic;
 class UStaticMeshComponent;
 class AIJPBall;
+class UIJPBallType;
 class AIJPPaddle;
 class UIJPPaddleProfile;
 class UIJPCRTComponent;
@@ -23,6 +24,8 @@ class UIJPSevenSegmentComponent;
 class UIJPToneSet;
 class UIJPToneSynthComponent;
 class UIJPEra;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FIJPArenaBallGoalSignature, AIJPBall*, Ball, EIJPSide, DefendingSide);
 
 /**
  * The Pong playfield: walls, goals, net, score digits and the camera that frames it.
@@ -85,9 +88,39 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Arena")
 	float GetLaneX(EIJPSide Side) const;
 
-	/** The arena's ball. Null before BeginPlay. */
+	/** The main ball: the first one, which always exists and is the one blinking before a serve. Null before BeginPlay. */
 	UFUNCTION(BlueprintPure, Category = "Arena")
-	AIJPBall* GetBall() const { return Ball; }
+	AIJPBall* GetBall() const { return Balls.IsEmpty() ? nullptr : Balls[0].Get(); }
+
+	/** Every ball the arena has, in play or waiting out of play. */
+	const TArray<TObjectPtr<AIJPBall>>& GetBalls() const { return Balls; }
+
+	/**
+	 * A ball of Type, out of play at the centre, ready to Serve(). Reuses a waiting ball when there
+	 * is one, else spawns another. Null Type = the arena's default ball type.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Arena")
+	AIJPBall* AddBall(const UIJPBallType* Type);
+
+	UFUNCTION(BlueprintPure, Category = "Arena")
+	int32 GetNumBallsInPlay() const;
+
+	/** Take every ball out of play. */
+	UFUNCTION(BlueprintCallable, Category = "Arena")
+	void ResetBalls();
+
+	/** The ball type used when none is given: DefaultBallType, or UIJPBallType's defaults. */
+	const UIJPBallType* GetDefaultBallType() const;
+
+	/** The colour a ball of Type is drawn in the current era. */
+	FLinearColor GetBallColour(const UIJPBallType* Type) const;
+
+	/** The plain material every piece is made from (before palette colours). */
+	UMaterialInterface* GetBaseMaterial() const { return PongMaterial.Get(); }
+
+	/** Any ball went into a goal. DefendingSide concedes; Ball says what it was worth. */
+	UPROPERTY(BlueprintAssignable, Category = "Arena")
+	FIJPArenaBallGoalSignature OnBallGoal;
 
 	UIJPToneSynthComponent* GetTones() const { return Tones; }
 	UIJPCRTComponent* GetCRT() const { return CRT; }
@@ -178,9 +211,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|AI", meta = (ClampMin = "0", ClampMax = "1", UIMin = "0", UIMax = "1"))
 	float OpponentSkill = 0.5f;
 
-	/** Spawned at BeginPlay, waiting at the centre until served. */
+	/** Class of every ball. The main ball spawns at BeginPlay, waiting at the centre until served. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Spawning")
 	TSubclassOf<AIJPBall> BallClass;
+
+	/** Type of the main ball, and of any ball added without a type. From DefaultGame.ini; empty = UIJPBallType's defaults. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Arena|Spawning")
+	TSoftObjectPtr<UIJPBallType> DefaultBallType;
 
 	/** Flat unlit material for every piece, with a "Color" vector parameter the era's palette sets. From DefaultGame.ini. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Arena|Look")
@@ -244,7 +281,9 @@ private:
 	void HandleBallBounce();
 
 	UFUNCTION()
-	void HandleBallGoal(EIJPSide DefendingSide);
+	void HandleBallGoal(AIJPBall* ScoringBall, EIJPSide DefendingSide);
+
+	AIJPBall* SpawnBall(const UIJPBallType* Type);
 
 	UFUNCTION()
 	void HandleEraChanged(const UIJPEra* NewEra);
@@ -262,8 +301,12 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<AIJPPaddle> RightPaddle;
 
+	/** Balls[0] is the main ball. */
 	UPROPERTY(Transient)
-	TObjectPtr<AIJPBall> Ball;
+	TArray<TObjectPtr<AIJPBall>> Balls;
+
+	/** The palette on screen now, for colouring balls as they appear. */
+	FIJPPalette CurrentPalette;
 
 	UPROPERTY(Transient)
 	TObjectPtr<const UIJPToneSet> LoadedToneSet;
