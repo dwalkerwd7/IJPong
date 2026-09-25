@@ -7,6 +7,7 @@
 #include "Abilities/IJPAbility_Breaker.h"
 #include "Abilities/IJPAbility_Glutton.h"
 #include "Abilities/IJPAbility_Grow.h"
+#include "Abilities/IJPAbility_Jammer.h"
 #include "Abilities/IJPAbility_Mirror.h"
 #include "Abilities/IJPAbility_Smash.h"
 #include "Abilities/IJPAbility_Magnet.h"
@@ -23,6 +24,7 @@
 #include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPRival.h"
+#include "Presentation/IJPCRTComponent.h"
 #include "Tests/IJPTestWorld.h"
 
 namespace IJPRivalSkillTests
@@ -334,6 +336,65 @@ bool FIJPMirrorTest::RunTest(const FString& Parameters)
 	Test.RunFor(0.15f);
 	UTEST_EQUAL_TOLERANCE("The rival grew", static_cast<float>(RivalPaddle->GetSize().Y), static_cast<float>(NormalLength) * 2.f, 0.01f);
 	UTEST_EQUAL_TOLERANCE("The player too, from their own", static_cast<float>(Player->GetSize().Y), static_cast<float>(NormalLength) * 2.f, 0.01f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPJammerTest, "IJPong.RivalSkill.JammerLocksYourSkillBehindStatic", IJPRivalSkillTests::Flags)
+bool FIJPJammerTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = IJPRivalSkillTests::GetMode(Test);
+	AIJPArena* Arena = Mode->GetArena();
+	AIJPPaddle* Player = Arena->GetPaddle(EIJPSide::Left);
+	AIJPPaddle* RivalPaddle = Arena->GetPaddle(EIJPSide::Right);
+	UIJPRival* Rival = NewObject<UIJPRival>(GetTransientPackage());
+	UIJPAbility_Jammer* Jammer = NewObject<UIJPAbility_Jammer>(Rival);
+	Jammer->Telegraph = 0.1f;
+	Jammer->Duration = 1.f;
+	Rival->RivalSkill = Jammer;
+	Mode->SetRival(Rival);
+	RivalPaddle->GetController()->UnPossess();
+	UIJPAbilityComponent* PlayerAbilities = Player->GetAbilities();
+	PlayerAbilities->Equip(EIJPAbilitySlot::RunAbility, NewObject<UIJPAbility_Grow>(GetTransientPackage()));
+	UIJPCRTComponent* CRT = Arena->GetCRT();
+
+	UTEST_TRUE("Jams", RivalPaddle->GetAbilities()->TryActivate(EIJPAbilitySlot::ClassSkill));
+	Test.RunFor(0.15f);
+	UTEST_TRUE("Your class skill is locked", PlayerAbilities->IsLocked(EIJPAbilitySlot::ClassSkill));
+	UTEST_FALSE("Pressing it does nothing", PlayerAbilities->TryActivate(EIJPAbilitySlot::ClassSkill));
+	UTEST_TRUE("Static on the screen", CRT->GetJam() > 0.f);
+	UTEST_TRUE("Your run ability still works", PlayerAbilities->TryActivate(EIJPAbilitySlot::RunAbility));
+
+	// It clears.
+	Test.RunFor(1.f);
+	UTEST_FALSE("Unlocked", PlayerAbilities->IsLocked(EIJPAbilitySlot::ClassSkill));
+	UTEST_EQUAL("The static's gone", CRT->GetJam(), 0.f);
+	UTEST_TRUE("Your skill is back", PlayerAbilities->TryActivate(EIJPAbilitySlot::ClassSkill));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPJammerAITest, "IJPong.RivalSkill.JammerWaitsUntilYourSkillIsReady", IJPRivalSkillTests::Flags)
+bool FIJPJammerAITest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = IJPRivalSkillTests::GetMode(Test);
+	AIJPArena* Arena = Mode->GetArena();
+	UIJPRival* Rival = NewObject<UIJPRival>(GetTransientPackage());
+	Rival->RivalSkill = NewObject<UIJPAbility_Jammer>(Rival);
+	Mode->SetRival(Rival);
+	UIJPAbilityComponent* Abilities = Arena->GetPaddle(EIJPSide::Right)->GetAbilities();
+	UIJPAbilityComponent* PlayerAbilities = Arena->GetPaddle(EIJPSide::Left)->GetAbilities();
+	AIJPBall* Ball = Arena->GetBall();
+
+	// Your skill already spent: nothing to jam.
+	PlayerAbilities->TryActivate(EIJPAbilitySlot::ClassSkill);
+	Ball->Serve(EIJPSide::Left, 0.f);
+	Test.RunFor(0.2f);
+	UTEST_EQUAL("Held back", Abilities->GetCooldownRemaining(EIJPAbilitySlot::ClassSkill), 0.f);
+
+	// Ready again, ball coming at you: jammed.
+	PlayerAbilities->Equip(EIJPAbilitySlot::ClassSkill, NewObject<UIJPAbility_Grow>(GetTransientPackage()));
+	UTEST_TRUE("Jams", IJPRivalSkillTests::RunUntil(Test, 0.2f, [Abilities] { return Abilities->IsWindingUp(EIJPAbilitySlot::ClassSkill); }));
 	return true;
 }
 

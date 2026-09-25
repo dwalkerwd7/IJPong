@@ -19,6 +19,7 @@ UIJPAbilityComponent::UIJPAbilityComponent()
 	Abilities.SetNum(NumSlots);
 	Cooldowns.SetNumZeroed(NumSlots);
 	WindUps.SetNumZeroed(NumSlots);
+	Locks.SetNumZeroed(NumSlots);
 	CooldownScales.Init(1.f, NumSlots);
 }
 
@@ -29,6 +30,7 @@ void UIJPAbilityComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 	for (int32 i = 0; i < NumSlots; ++i)
 	{
 		Cooldowns[i] = FMath::Max(Cooldowns[i] - DeltaTime, 0.f);
+		Locks[i] = FMath::Max(Locks[i] - DeltaTime, 0.f);
 		if (WindUps[i] > 0.f)
 		{
 			WindUps[i] -= DeltaTime;
@@ -121,6 +123,12 @@ void UIJPAbilityComponent::PlayWarning()
 	}
 }
 
+void UIJPAbilityComponent::LockSlot(EIJPAbilitySlot Slot, float Seconds)
+{
+	float& Lock = Locks[static_cast<int32>(Slot)];
+	Lock = FMath::Max(Lock, Seconds);
+}
+
 void UIJPAbilityComponent::SetCooldownScale(EIJPAbilitySlot Slot, float Scale)
 {
 	CooldownScales[static_cast<int32>(Slot)] = FMath::Max(Scale, 0.f);
@@ -139,7 +147,7 @@ float UIJPAbilityComponent::GetCooldownRemaining(EIJPAbilitySlot Slot) const
 bool UIJPAbilityComponent::IsReady(EIJPAbilitySlot Slot) const
 {
 	const UIJPAbility* Ability = GetAbility(Slot);
-	return Ability && GetCooldownRemaining(Slot) <= 0.f && !IsWindingUp(Slot) && Ability->CanActivate();
+	return Ability && GetCooldownRemaining(Slot) <= 0.f && !IsWindingUp(Slot) && !IsLocked(Slot) && Ability->CanActivate();
 }
 
 bool UIJPAbilityComponent::IsArmed() const

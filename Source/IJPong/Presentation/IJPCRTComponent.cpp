@@ -11,6 +11,7 @@
 namespace
 {
 	const FName FlashParam(TEXT("Flash"));
+	const FName NoiseParam(TEXT("NoiseStrength"));
 }
 
 UIJPCRTComponent::UIJPCRTComponent()
@@ -33,13 +34,44 @@ void UIJPCRTComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	PulseElapsed += DeltaTime;
-	const float Remaining = 1.f - FMath::Clamp(PulseElapsed / PulseDuration, 0.f, 1.f);
-	// Squared falloff: a sharp flash that dies away quickly, like a tube's afterglow.
-	SetFlash(PulseStrength * Remaining * Remaining);
-	if (Remaining <= 0.f)
+	bool bBusy = false;
+	if (PulseElapsed < PulseDuration)
+	{
+		PulseElapsed += DeltaTime;
+		const float Remaining = 1.f - FMath::Clamp(PulseElapsed / PulseDuration, 0.f, 1.f);
+		// Squared falloff: a sharp flash that dies away quickly, like a tube's afterglow.
+		SetFlash(PulseStrength * Remaining * Remaining);
+		bBusy |= Remaining > 0.f;
+	}
+	if (JamElapsed < JamDuration)
+	{
+		JamElapsed += DeltaTime;
+		const float Remaining = 1.f - FMath::Clamp(JamElapsed / JamDuration, 0.f, 1.f);
+		// Full static for most of it, fading out over the last quarter.
+		SetJam(JamStrength * FMath::Min(Remaining * 4.f, 1.f));
+		bBusy |= Remaining > 0.f;
+	}
+	if (!bBusy)
 	{
 		SetComponentTickEnabled(false);
+	}
+}
+
+void UIJPCRTComponent::Jam(float Strength, float Duration)
+{
+	JamStrength = Strength;
+	JamDuration = FMath::Max(Duration, UE_KINDA_SMALL_NUMBER);
+	JamElapsed = 0.f;
+	SetJam(JamStrength);
+	SetComponentTickEnabled(true);
+}
+
+void UIJPCRTComponent::SetJam(float Value)
+{
+	CurrentJam = Value;
+	if (MaterialInstance)
+	{
+		MaterialInstance->SetScalarParameterValue(NoiseParam, BaseNoise + Value);
 	}
 }
 
@@ -98,6 +130,12 @@ void UIJPCRTComponent::SetBaseMaterial(UMaterialInterface* Base)
 	// material instance into the level.
 	MaterialInstance = UMaterialInstanceDynamic::Create(Base, this);
 	MaterialInstance->SetScalarParameterValue(FlashParam, CurrentFlash); // a pulse in progress carries over
+	BaseNoise = 0.f;
+	MaterialInstance->GetScalarParameterValue(FMaterialParameterInfo(NoiseParam), BaseNoise);
+	if (CurrentJam > 0.f)
+	{
+		MaterialInstance->SetScalarParameterValue(NoiseParam, BaseNoise + CurrentJam);
+	}
 	TArray<UCameraComponent*> Cameras;
 	GetCameras(Cameras);
 	for (UCameraComponent* Camera : Cameras)

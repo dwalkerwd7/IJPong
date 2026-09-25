@@ -54,6 +54,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Abilities")
 	bool IsArmed() const;
 
+	/** Block the slot for Seconds: it can't be used, though anything already running carries on. For rival abilities like Jammer. */
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+	void LockSlot(EIJPAbilitySlot Slot, float Seconds);
+
+	UFUNCTION(BlueprintPure, Category = "Abilities")
+	bool IsLocked(EIJPAbilitySlot Slot) const { return Locks[static_cast<int32>(Slot)] > 0.f; }
+
 	/** The slot's ability was triggered and is winding up (its Telegraph) before it takes effect. */
 	UFUNCTION(BlueprintPure, Category = "Abilities")
 	bool IsWindingUp(EIJPAbilitySlot Slot) const;
@@ -86,6 +93,9 @@ private:
 	TArray<float> Cooldowns;
 	/** Time left in each slot's wind-up (0 = none). */
 	TArray<float> WindUps;
+
+	/** Time left in each slot's lock (0 = free). */
+	TArray<float> Locks;
 	TArray<float> CooldownScales;
 	FTimerHandle ChirpTimer;
 };

@@ -32,6 +32,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "CRT")
 	void Pulse(float Strength = 1.f, float Duration = 0.35f);
 
+	/**
+	 * A burst of static: the tube's noise rises by Strength over the era's own, holds, and fades back
+	 * by the end of Duration. For rival abilities like Jammer. No CRT (later eras) = no static.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "CRT")
+	void Jam(float Strength, float Duration);
+
+	/** The static currently added on top of the era's noise (0 when not jammed). */
+	UFUNCTION(BlueprintPure, Category = "CRT")
+	float GetJam() const { return CurrentJam; }
+
 	/** Current value of the material's Flash parameter (0 when not pulsing). */
 	UFUNCTION(BlueprintPure, Category = "CRT")
 	float GetFlash() const { return CurrentFlash; }
@@ -66,6 +77,7 @@ private:
 	void SetBaseMaterial(UMaterialInterface* Base);
 	void RemoveFromCameras();
 	void SetFlash(float Value);
+	void SetJam(float Value);
 	void ApplyWeight(float Weight);
 	void GetCameras(TArray<UCameraComponent*>& OutCameras) const;
 
@@ -76,4 +88,10 @@ private:
 	float PulseDuration = 0.f;
 	float PulseElapsed = 0.f;
 	float CurrentFlash = 0.f;
+	float JamStrength = 0.f;
+	float JamDuration = 0.f;
+	float JamElapsed = 0.f;
+	float CurrentJam = 0.f;
+	/** The era material's own noise, which a jam adds to. */
+	float BaseNoise = 0.f;
 };
