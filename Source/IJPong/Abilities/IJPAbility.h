@@ -51,8 +51,14 @@ public:
 
 	// --- Runtime, on the equipped copy ---
 
-	/** Called once when equipped. */
-	void Init(UIJPAbilityComponent* InOwner);
+	/** Called once when equipped. InDefinition = the asset this is a copy of (null = itself). */
+	void Init(UIJPAbilityComponent* InOwner, const UIJPAbility* InDefinition = nullptr);
+
+	/** The asset this equipped copy was made from, so others can make copies of their own (Mirror). */
+	const UIJPAbility* GetDefinition() const { return Definition ? Definition.Get() : this; }
+
+	/** The ability component this copy is equipped in. */
+	UIJPAbilityComponent* GetOwnerComponent() const { return Owner.Get(); }
 
 	/** Whether pressing the button now would do anything (the cooldown is checked separately). */
 	virtual bool CanActivate() const { return !IsActive(); }
@@ -70,6 +76,9 @@ public:
 	 * Abilities written for rivals answer it; the rest never get used by the AI.
 	 */
 	virtual bool WantsAIUse() const { return false; }
+
+	/** Just equipped (Init done). */
+	virtual void OnEquipped() {}
 
 	/** Every frame while equipped. */
 	virtual void TickAbility(float DeltaSeconds) {}
@@ -95,4 +104,7 @@ private:
 	TMap<FName, float> Upgrades;
 
 	TWeakObjectPtr<UIJPAbilityComponent> Owner;
+
+	UPROPERTY(Transient)
+	TObjectPtr<const UIJPAbility> Definition;
 };

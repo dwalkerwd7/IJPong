@@ -6,6 +6,9 @@
 
 #include "Abilities/IJPAbility_Breaker.h"
 #include "Abilities/IJPAbility_Glutton.h"
+#include "Abilities/IJPAbility_Grow.h"
+#include "Abilities/IJPAbility_Mirror.h"
+#include "Abilities/IJPAbility_Smash.h"
 #include "Abilities/IJPAbility_Magnet.h"
 #include "Abilities/IJPAbility_Snare.h"
 #include "Abilities/IJPAbilityComponent.h"
@@ -285,6 +288,52 @@ bool FIJPGluttonAITest::RunTest(const FString& Parameters)
 
 	Arena->AddBall(nullptr)->Serve(EIJPSide::Right, 20.f);
 	UTEST_TRUE("Two: opens up", IJPRivalSkillTests::RunUntil(Test, 0.2f, [Abilities] { return Abilities->IsWindingUp(EIJPAbilitySlot::ClassSkill); }));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPMirrorTest, "IJPong.RivalSkill.MirrorFiresYourLastSkillBack", IJPRivalSkillTests::Flags)
+bool FIJPMirrorTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = IJPRivalSkillTests::GetMode(Test);
+	AIJPArena* Arena = Mode->GetArena();
+	AIJPPaddle* Player = Arena->GetPaddle(EIJPSide::Left);
+	AIJPPaddle* RivalPaddle = Arena->GetPaddle(EIJPSide::Right);
+	UIJPRival* Rival = NewObject<UIJPRival>(GetTransientPackage());
+	UIJPAbility_Mirror* Mirror = NewObject<UIJPAbility_Mirror>(Rival);
+	Mirror->Telegraph = 0.1f;
+	Mirror->Cooldown = 0.5f;
+	Rival->RivalSkill = Mirror;
+	Mode->SetRival(Rival);
+	RivalPaddle->GetController()->UnPossess(); // stays in the middle, returns straight
+	UIJPAbilityComponent* Abilities = RivalPaddle->GetAbilities();
+	const UIJPAbility_Mirror* Equipped = Cast<UIJPAbility_Mirror>(Abilities->GetAbility(EIJPAbilitySlot::ClassSkill));
+	UIJPAbilityComponent* PlayerAbilities = Player->GetAbilities();
+	PlayerAbilities->Equip(EIJPAbilitySlot::RunAbility, NewObject<UIJPAbility_Grow>(GetTransientPackage()));
+
+	UTEST_FALSE("Nothing to copy yet", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
+
+	// The player smashes (Classic's class skill): the rival copies it and smashes back.
+	UTEST_TRUE("Player smashes", PlayerAbilities->TryActivate(EIJPAbilitySlot::ClassSkill));
+	UTEST_TRUE("Seen", Equipped->GetLastSeen() && Equipped->GetLastSeen()->IsA<UIJPAbility_Smash>());
+	UTEST_TRUE("Mirrors it", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
+	Test.RunFor(0.15f);
+	UTEST_TRUE("Its own smash, armed", Equipped->GetMirrored() && Equipped->GetMirrored()->IsA<UIJPAbility_Smash>() && Abilities->IsArmed());
+	UTEST_TRUE("With the armed glow", RivalPaddle->IsArmedCueShown());
+	AIJPBall* Ball = Arena->GetBall();
+	Ball->Serve(EIJPSide::Right, 0.f);
+	UTEST_TRUE("Returned", IJPRivalSkillTests::RunUntil(Test, 2.f, [Ball] { return Ball->GetPlaneVelocity().X < 0.f; }));
+	UTEST_TRUE("Smashed back at you", Ball->IsBoosted());
+	UTEST_FALSE("Spent", Abilities->IsArmed());
+
+	// The latest skill wins: the player grows, so the rival grows.
+	UTEST_TRUE("Player grows", PlayerAbilities->TryActivate(EIJPAbilitySlot::RunAbility));
+	const float NormalLength = RivalPaddle->GetSize().Y;
+	Test.RunFor(0.6f); // the mirror's cooldown
+	UTEST_TRUE("Mirrors again", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
+	Test.RunFor(0.15f);
+	UTEST_EQUAL_TOLERANCE("The rival grew", static_cast<float>(RivalPaddle->GetSize().Y), static_cast<float>(NormalLength) * 2.f, 0.01f);
+	UTEST_EQUAL_TOLERANCE("The player too, from their own", static_cast<float>(Player->GetSize().Y), static_cast<float>(NormalLength) * 2.f, 0.01f);
 	return true;
 }
 

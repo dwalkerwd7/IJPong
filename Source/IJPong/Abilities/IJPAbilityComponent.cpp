@@ -57,7 +57,7 @@ void UIJPAbilityComponent::Equip(EIJPAbilitySlot Slot, const UIJPAbility* Defini
 	UIJPAbility* Copy = Definition ? DuplicateObject<UIJPAbility>(Definition, this) : nullptr;
 	if (Copy)
 	{
-		Copy->Init(this);
+		Copy->Init(this, Definition);
 	}
 	Abilities[Index] = Copy;
 	Cooldowns[Index] = 0.f;

@@ -3,9 +3,11 @@
 #include "Abilities/IJPAbility.h"
 #include "Abilities/IJPAbilityComponent.h"
 
-void UIJPAbility::Init(UIJPAbilityComponent* InOwner)
+void UIJPAbility::Init(UIJPAbilityComponent* InOwner, const UIJPAbility* InDefinition)
 {
 	Owner = InOwner;
+	Definition = InDefinition;
+	OnEquipped();
 }
 
 AIJPPaddle* UIJPAbility::GetPaddle() const
