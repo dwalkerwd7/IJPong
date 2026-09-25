@@ -200,6 +200,10 @@ void AIJPTestGameMode::GetDebugLines(TArray<FString>& OutLines) const
 		const UIJPAbilityComponent* PlayerAbilities = PlayerPaddle ? PlayerPaddle->GetAbilities() : nullptr;
 		const UIJPAbility* Item = PlayerAbilities ? PlayerAbilities->GetAbility(EIJPAbilitySlot::Item) : nullptr;
 		OutLines.Add(FString::Printf(TEXT("Item (C): %s"), Item && PlayerAbilities->HasItem() ? *Item->DisplayName.ToString() : TEXT("none (R refills)")));
+		const UIJPAbility* Spell = PlayerAbilities ? PlayerAbilities->GetAbility(EIJPAbilitySlot::Spell) : nullptr;
+		OutLines.Add(Spell
+			? FString::Printf(TEXT("Spell (X): %s  %d/%d"), *Spell->DisplayName.ToString(), PlayerAbilities->GetCharge(EIJPAbilitySlot::Spell), Spell->ChargeCost)
+			: FString(TEXT("Spell (X): none")));
 	}
 
 	auto ClassName = [ArenaPtr](EIJPSide Side) -> FString
@@ -245,6 +249,7 @@ void AIJPTestGameMode::GetDebugLines(TArray<FString>& OutLines) const
 		OutLines.Add(FString::Printf(TEXT("Match: health %g each, %g per goal"), MatchPtr->GetRules().StartingHealth, MatchPtr->GetRules().GoalDamage));
 	}
 
+	OutLines.Add(TEXT("ARROWS move   W/S aim   SPACE skill   Z run ability   X spell   C item"));
 	OutLines.Add(TEXT("R new match   F serve now   T AI vs AI   B add ball"));
 	OutLines.Add(TEXT("- / = opponent skill   [ / ] era   N class   V rival   . (period) hide this"));
 }

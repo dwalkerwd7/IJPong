@@ -12,13 +12,13 @@
 
 namespace
 {
-	constexpr float CubeSize = 100.f; // /Engine/BasicShapes/Cube is 100 units, centred.
-	constexpr float Depth = 4.f;       // just in front of play
-	constexpr float LineThickness = 3.f;
-	constexpr float MarkerWidth = 36.f;
-	constexpr float ShotSize = 14.f;
-	constexpr float BoltWidth = 4.f;
-	constexpr float LingerTime = 0.15f;
+	constexpr float StrikeCubeSize = 100.f; // /Engine/BasicShapes/Cube is 100 units, centred.
+	constexpr float StrikeDepth = 4.f;       // just in front of play
+	constexpr float StrikeLineThickness = 3.f;
+	constexpr float StrikeMarkerWidth = 36.f;
+	constexpr float StrikeShotSize = 14.f;
+	constexpr float StrikeBoltWidth = 4.f;
+	constexpr float StrikeLingerTime = 0.15f;
 }
 
 AIJPSpellStrike::AIJPSpellStrike()
@@ -64,11 +64,11 @@ void AIJPSpellStrike::Launch(AIJPArena* InArena, EIJPSide InCasterSide, EIJPSide
 	{
 		Piece->SetMaterial(0, Colour);
 	}
-	Place(MarkerTop, FVector2D(LaneX, TargetY + Spec.HalfHeight), FVector2D(MarkerWidth, LineThickness));
-	Place(MarkerBottom, FVector2D(LaneX, TargetY - Spec.HalfHeight), FVector2D(MarkerWidth, LineThickness));
+	Place(MarkerTop, FVector2D(LaneX, TargetY + Spec.HalfHeight), FVector2D(StrikeMarkerWidth, StrikeLineThickness));
+	Place(MarkerBottom, FVector2D(LaneX, TargetY - Spec.HalfHeight), FVector2D(StrikeMarkerWidth, StrikeLineThickness));
 	if (Spec.bTravels)
 	{
-		Place(Shot, FVector2D(StartX, TargetY), FVector2D(ShotSize, ShotSize));
+		Place(Shot, FVector2D(StartX, TargetY), FVector2D(StrikeShotSize, StrikeShotSize));
 		Shot->SetVisibility(true);
 	}
 	InArena->RegisterStrike(this);
@@ -103,7 +103,7 @@ void AIJPSpellStrike::Tick(float DeltaSeconds)
 	MarkerBottom->SetVisibility(bMarkerOn);
 	if (Spec.bTravels)
 	{
-		Place(Shot, FVector2D(FMath::Lerp(StartX, LaneX, Progress), TargetY), FVector2D(ShotSize, ShotSize));
+		Place(Shot, FVector2D(FMath::Lerp(StartX, LaneX, Progress), TargetY), FVector2D(StrikeShotSize, StrikeShotSize));
 	}
 
 	if (Progress >= 1.f)
@@ -115,7 +115,7 @@ void AIJPSpellStrike::Tick(float DeltaSeconds)
 void AIJPSpellStrike::Land()
 {
 	bLanded = true;
-	Linger = LingerTime;
+	Linger = StrikeLingerTime;
 	MarkerTop->SetVisibility(false);
 	MarkerBottom->SetVisibility(false);
 
@@ -123,7 +123,7 @@ void AIJPSpellStrike::Land()
 	if (!Spec.bTravels)
 	{
 		const float Top = Arena->GetHalfExtents().Y;
-		Place(Shot, FVector2D(LaneX, (Top + TargetY) * 0.5f), FVector2D(BoltWidth, FMath::Max(Top - TargetY, 1.f)));
+		Place(Shot, FVector2D(LaneX, (Top + TargetY) * 0.5f), FVector2D(StrikeBoltWidth, FMath::Max(Top - TargetY, 1.f)));
 		Shot->SetVisibility(true);
 	}
 
@@ -144,8 +144,8 @@ void AIJPSpellStrike::Land()
 void AIJPSpellStrike::Place(UStaticMeshComponent* Piece, const FVector2D& Centre, const FVector2D& Size) const
 {
 	// Arena local axes: X = plane X, Z = plane Y, Y = depth toward the camera.
-	Piece->SetRelativeLocation(FVector(Centre.X, Depth, Centre.Y));
-	Piece->SetRelativeScale3D(FVector(Size.X / CubeSize, 1.f / CubeSize, Size.Y / CubeSize));
+	Piece->SetRelativeLocation(FVector(Centre.X, StrikeDepth, Centre.Y));
+	Piece->SetRelativeScale3D(FVector(Size.X / StrikeCubeSize, 1.f / StrikeCubeSize, Size.Y / StrikeCubeSize));
 }
 
 void AIJPSpellStrike::EndPlay(const EEndPlayReason::Type EndPlayReason)

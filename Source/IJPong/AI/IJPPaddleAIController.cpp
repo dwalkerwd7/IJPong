@@ -201,14 +201,15 @@ void AIJPPaddleAIController::Steer(AIJPPaddle& Paddle) const
 	const UIJPAIProfile& P = GetProfile();
 	const float Target = AvoidStrikes(Paddle, TargetY);
 	const float Delta = Target - Paddle.GetPlanePosition().Y;
-	if (FMath::Abs(Delta) <= P.ArrivalTolerance)
+
+	// Dodging a spell is urgent: full purpose, not the idle drift, only a short ease-in, and "close enough"
+	// isn't (stopping short of the edge of the zone is still a hit).
+	const bool bDodging = Target != TargetY;
+	if (FMath::Abs(Delta) <= (bDodging ? 1.f : P.ArrivalTolerance))
 	{
 		return;
 	}
-
-	// Dodging a spell is urgent: full purpose, not the idle drift, and no easing in (it'd arrive short).
-	const bool bDodging = Target != TargetY;
 	const float Scale = (bBallIncoming || bDodging ? P.SpeedScale : P.IdleSpeedScale).At(Skill);
-	const float Push = bDodging ? FMath::Sign(Delta) : FMath::Clamp(Delta / P.SlowRadius, -1.f, 1.f);
+	const float Push = FMath::Clamp(Delta / (bDodging ? 8.f : P.SlowRadius), -1.f, 1.f);
 	Paddle.AddMoveInput(Push * Scale);
 }
