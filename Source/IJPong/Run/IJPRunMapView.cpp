@@ -1,6 +1,7 @@
 // It's Just Pong
 
 #include "Run/IJPRunMapView.h"
+#include "Abilities/IJPAbility.h"
 #include "Engine/Texture2D.h"
 #include "Algo/Count.h"
 #include "Audio/IJPToneSynthComponent.h"
@@ -152,6 +153,8 @@ void AIJPRunMapView::Init(AIJPArena* InArena)
 	Footer->SetRelativeLocation(FVector(0.f, TextDepth, -HalfScreen.Y + 24.f));
 
 	InfoText = MakeText(CardTextSize);
+	LoadoutText = MakeText(CardTextSize);
+	LoadoutText->SetVisibility(false);
 	StartText = MakeText(TextSize);
 	UnlockText = MakeText(TextSize);
 	EraTitleText = MakeText(TextSize * 2.f);
@@ -235,6 +238,7 @@ void AIJPRunMapView::Refresh()
 
 	FString ActName = Run->GetAct() ? Run->GetAct()->DisplayName.ToString().ToUpper() : FString();
 	Header->SetText(FText::FromString(FString::Printf(TEXT("%s    HP %d/%d    COINS %d"), *ActName, FMath::CeilToInt(Run->GetHealth()), FMath::CeilToInt(Run->GetMaxHealth()), Run->GetCoins())));
+	ShowLoadout();
 	PlaceCursor();
 }
 
@@ -277,7 +281,46 @@ void AIJPRunMapView::ShowCards(const FString& Heading, const TArray<FCard>& Card
 		}
 	}
 	Header->SetText(FText::FromString(Heading));
+	ShowLoadout();
 	PlaceCursor();
+}
+
+FString AIJPRunMapView::GetLoadoutLine() const
+{
+	const UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
+	if (!Run)
+	{
+		return FString();
+	}
+	const FIJPRunLoadout& Loadout = Run->GetLoadout();
+	auto NameOf = [](const UIJPAbility* Ability)
+	{
+		return Ability ? Ability->DisplayName.ToString().ToUpper() : FString(TEXT("NONE"));
+	};
+	FString Line = FString::Printf(TEXT("YOU HAVE:   ITEM %s    ABILITY %s"), *NameOf(Loadout.Item), *NameOf(Loadout.RunAbility));
+	const UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(this);
+	if (Meta && Meta->IsSpellSlotUnlocked())
+	{
+		Line += FString::Printf(TEXT("    SPELL %s"), *NameOf(Loadout.Spell));
+	}
+	return Line;
+}
+
+bool AIJPRunMapView::IsShowingLoadout() const
+{
+	return LoadoutText && LoadoutText->IsVisible();
+}
+
+void AIJPRunMapView::ShowLoadout()
+{
+	if (!LoadoutText || !Arena.IsValid())
+	{
+		return;
+	}
+	LoadoutText->SetText(FText::FromString(GetLoadoutLine()));
+	LoadoutText->SetTextRenderColor(Arena->GetPalette().Score.ToFColor(true));
+	LoadoutText->SetRelativeLocation(FVector(0.f, TextDepth, -HalfScreen.Y + 56.f));
+	LoadoutText->SetVisibility(true);
 }
 
 void AIJPRunMapView::PlayEraChange(const FString& Title, float Duration)
@@ -545,7 +588,7 @@ void AIJPRunMapView::ClearDrawing()
 		Text->SetVisibility(false);
 	}
 	StopRunEnd();
-	for (UTextRenderComponent* Text : { InfoText.Get(), StartText.Get(), UnlockText.Get(), EraTitleText.Get() })
+	for (UTextRenderComponent* Text : { InfoText.Get(), StartText.Get(), UnlockText.Get(), EraTitleText.Get(), LoadoutText.Get() })
 	{
 		if (Text)
 		{
@@ -724,7 +767,7 @@ FVector2D AIJPRunMapView::NodePosition(int32 Node) const
 
 	// Rows from just under the header down to just above the footer; lanes spread around the middle.
 	const float Top = HalfScreen.Y - 80.f;
-	const float Bottom = -HalfScreen.Y + 72.f;
+	const float Bottom = -HalfScreen.Y + 104.f; // room for the loadout line and the footer
 	const float RowStep = Map.Rows > 1 ? (Top - Bottom) / (Map.Rows - 1) : 0.f;
 	const float LaneStep = Map.Lanes > 1 ? FMath::Min(150.f, (HalfScreen.X * 2.f - 200.f) / (Map.Lanes - 1)) : 0.f;
 	const float X = Node == Map.BossIndex ? 0.f : (MapNode.Lane - (Map.Lanes - 1) * 0.5f) * LaneStep;

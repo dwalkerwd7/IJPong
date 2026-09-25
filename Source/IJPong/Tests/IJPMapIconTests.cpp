@@ -11,7 +11,10 @@
 #include "Gameplay/IJPMatchRules.h"
 #include "Meta/IJPMetaSubsystem.h"
 #include "Meta/IJPSkillTree.h"
+#include "Abilities/IJPItem_Shield.h"
 #include "Run/IJPActConfig.h"
+#include "Run/IJPReward.h"
+#include "Run/IJPRunSubsystem.h"
 #include "Run/IJPRunMapView.h"
 #include "Tests/IJPTestWorld.h"
 
@@ -72,6 +75,35 @@ bool FIJPMapIconTest::RunTest(const FString& Parameters)
 	UTEST_EQUAL("Tree: root + two nodes", View->GetShownIconCount(), 3);
 
 	UIJPMetaSubsystem::Get(Test.GetWorld())->ResetProgress();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPLoadoutLineTest, "IJPong.Run.TheMapAndCardsShowWhatYouCarry", IJPMapIconTests::Flags)
+bool FIJPLoadoutLineTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test(FTransform::Identity, nullptr, AIJPRunGameMode::StaticClass());
+	AIJPRunGameMode* Mode = Cast<AIJPRunGameMode>(Test.GetWorld()->GetAuthGameMode());
+	UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(Test.GetWorld());
+	Meta->ResetProgress();
+	Mode->StartNewRun(IJPMapIconTests::MakeStraightAct(), 1, 5);
+	AIJPRunMapView* View = Mode->GetMapView();
+	UTEST_TRUE("On the map", View->IsShowingLoadout());
+	UTEST_TRUE("Empty-handed", View->GetLoadoutLine().Contains(TEXT("ITEM NONE")));
+	UTEST_FALSE("No spell slot yet, so no spell", View->GetLoadoutLine().Contains(TEXT("SPELL")));
+
+	// Pick up a shield: the line names it.
+	UIJPItem_Shield* Shield = NewObject<UIJPItem_Shield>(GetTransientPackage());
+	Shield->DisplayName = FText::FromString(TEXT("Shield"));
+	UIJPReward_Item* Reward = NewObject<UIJPReward_Item>(GetTransientPackage());
+	Reward->Item = Shield;
+	Reward->Grant(*UIJPRunSubsystem::Get(Test.GetWorld()));
+	View->Refresh();
+	UTEST_TRUE("Names the item", View->GetLoadoutLine().Contains(TEXT("ITEM SHIELD")));
+
+	// The card screens show it too.
+	View->ShowCards(TEXT("SHOP"), {}, 0);
+	UTEST_TRUE("On the cards", View->IsShowingLoadout());
+	Meta->ResetProgress();
 	return true;
 }
 

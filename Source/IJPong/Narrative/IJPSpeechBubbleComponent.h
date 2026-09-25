@@ -82,7 +82,7 @@ public:
 
 	/** Height of the letters, in arena units. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Speech Bubble", meta = (ClampMin = "1"))
-	float TextSize = 18.f;
+	float TextSize = 22.f;
 
 	/** Space between the text and the box's edge. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Speech Bubble", meta = (ClampMin = "0"))

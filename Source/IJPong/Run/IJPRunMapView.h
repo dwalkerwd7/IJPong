@@ -157,6 +157,12 @@ public:
 	/** Node letters showing now. */
 	int32 GetShownGlyphCount() const;
 
+	/** What the run is carrying (item, run ability, spell), as the map and card screens show it. */
+	FString GetLoadoutLine() const;
+
+	/** The loadout line is on screen. */
+	bool IsShowingLoadout() const;
+
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "Map|Components")
 	TObjectPtr<USceneComponent> Root;
@@ -197,13 +203,13 @@ protected:
 	float LineThickness = 2.f;
 
 	UPROPERTY(EditAnywhere, Category = "Map|Layout")
-	float GlyphSize = 22.f;
+	float GlyphSize = 26.f;
 
 	UPROPERTY(EditAnywhere, Category = "Map|Layout")
-	float TextSize = 18.f;
+	float TextSize = 22.f;
 
 	UPROPERTY(EditAnywhere, Category = "Map|Layout")
-	float CardTextSize = 13.f;
+	float CardTextSize = 16.f;
 
 	/** An icon's size, as a fraction of its node's frame. */
 	UPROPERTY(EditAnywhere, Category = "Map|Layout", meta = (ClampMin = "0.1", ClampMax = "1"))
@@ -270,6 +276,12 @@ private:
 	/** The picked node's name, text and price; and START RUN's label. */
 	UPROPERTY(Transient)
 	TObjectPtr<UTextRenderComponent> InfoText;
+
+	/** "YOU HAVE ...": the run's item, ability and spell, above the footer on the map and card screens. */
+	UPROPERTY(Transient)
+	TObjectPtr<UTextRenderComponent> LoadoutText;
+
+	void ShowLoadout();
 
 	UPROPERTY(Transient)
 	TObjectPtr<UTextRenderComponent> StartText;
