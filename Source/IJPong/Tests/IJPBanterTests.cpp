@@ -107,7 +107,7 @@ bool FIJPBanterMatchPointTest::RunTest(const FString& Parameters)
 	IJPBanterTests::AddBanter(Rival, EIJPBanterEvent::PlayerMatchPoint, TEXT("CAREFUL"));
 	Mode->SetRival(Rival);
 	UIJPMatchRules* FirstToTwo = NewObject<UIJPMatchRules>(GetTransientPackage());
-	FirstToTwo->WinTarget = 2;
+	FirstToTwo->StartingHealth = 2.f;
 	Mode->RestartMatch(FirstToTwo);
 
 	// The player scores once: first goal AND match point; match point wins.

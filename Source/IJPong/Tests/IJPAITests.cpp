@@ -40,7 +40,7 @@ namespace IJPAITests
 	UIJPMatchRules* EndlessRules()
 	{
 		UIJPMatchRules* Rules = NewObject<UIJPMatchRules>();
-		Rules->WinTarget = 0;
+		Rules->StartingHealth = 0.f;
 		return Rules;
 	}
 
@@ -157,9 +157,9 @@ bool FIJPAIMatchTest::RunTest(const FString& Parameters)
 		LastHits = Hits;
 	});
 
-	const int32 Goals = GameMode->GetMatch()->GetScore(EIJPSide::Left) + GameMode->GetMatch()->GetScore(EIJPSide::Right);
+	const int32 Goals = GameMode->GetMatch()->GetGoals(EIJPSide::Left) + GameMode->GetMatch()->GetGoals(EIJPSide::Right);
 	AddInfo(FString::Printf(TEXT("AI vs AI, 120s: %d goals (L %d - R %d), %d paddle hits, longest rally %d"),
-		Goals, GameMode->GetMatch()->GetScore(EIJPSide::Left), GameMode->GetMatch()->GetScore(EIJPSide::Right), TotalHits, LongestRally));
+		Goals, GameMode->GetMatch()->GetGoals(EIJPSide::Left), GameMode->GetMatch()->GetGoals(EIJPSide::Right), TotalHits, LongestRally));
 
 	UTEST_TRUE("Beatable: goals get scored", Goals >= 3);
 	UTEST_TRUE("Competent: plenty of returns", TotalHits >= 2 * Goals);
@@ -201,8 +201,8 @@ bool FIJPAISpectrumTest::RunTest(const FString& Parameters)
 
 	Test.RunFor(120.f);
 
-	const int32 StrongScore = GameMode->GetMatch()->GetScore(EIJPSide::Right);
-	const int32 WeakScore = GameMode->GetMatch()->GetScore(EIJPSide::Left);
+	const int32 StrongScore = GameMode->GetMatch()->GetGoals(EIJPSide::Right);
+	const int32 WeakScore = GameMode->GetMatch()->GetGoals(EIJPSide::Left);
 	AddInfo(FString::Printf(TEXT("Skill 0.85 vs 0.15 over 120s: %d - %d"), StrongScore, WeakScore));
 	UTEST_TRUE("Stronger AI outscores the weaker one clearly", StrongScore >= WeakScore + 3);
 	return true;

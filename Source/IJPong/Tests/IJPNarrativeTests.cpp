@@ -144,7 +144,7 @@ bool FIJPResultTest::RunTest(const FString& Parameters)
 	Rival->Loss.Add(IJPNarrativeTests::MakeConversation({ { EIJPSpeaker::Opponent, TEXT("NEXT TIME") } }, 1.f));
 	Mode->SetRival(Rival);
 	UIJPMatchRules* OnePoint = NewObject<UIJPMatchRules>(GetTransientPackage());
-	OnePoint->WinTarget = 1;
+	OnePoint->StartingHealth = 1.f;
 	Mode->RestartMatch(OnePoint);
 
 	// The player's paddle steps aside and the ball goes straight into their goal: the rival wins.

@@ -14,7 +14,7 @@ UIJPRunSubsystem* UIJPRunSubsystem::Get(const UObject* WorldContext)
 	return GameInstance ? GameInstance->GetSubsystem<UIJPRunSubsystem>() : nullptr;
 }
 
-void UIJPRunSubsystem::StartRun(const UIJPActConfig* InAct, int32 Seed, int32 StartingHealth)
+void UIJPRunSubsystem::StartRun(const UIJPActConfig* InAct, int32 Seed, float StartingHealth)
 {
 	Act = InAct;
 	Random.Initialize(Seed);
@@ -24,7 +24,7 @@ void UIJPRunSubsystem::StartRun(const UIJPActConfig* InAct, int32 Seed, int32 St
 	Visited.Init(false, Map.Nodes.Num());
 	CurrentNode = INDEX_NONE;
 	bInNode = false;
-	MaxHealth = Health = FMath::Max(StartingHealth, 1);
+	MaxHealth = Health = FMath::Max(StartingHealth, 1.f);
 	Coins = 0;
 	EarnedSkillPoints = 0;
 	EarnedBossTokens = 0;
@@ -96,14 +96,14 @@ void UIJPRunSubsystem::CompleteNode(bool bWon)
 	OnRunChanged.Broadcast();
 }
 
-void UIJPRunSubsystem::LoseHealth(int32 Amount)
+void UIJPRunSubsystem::LoseHealth(float Amount)
 {
-	if (State != EIJPRunState::Running || Amount <= 0)
+	if (State != EIJPRunState::Running || Amount <= 0.f)
 	{
 		return;
 	}
-	Health = FMath::Max(Health - Amount, 0);
-	if (Health == 0)
+	Health = FMath::Max(Health - Amount, 0.f);
+	if (Health <= 0.f)
 	{
 		State = EIJPRunState::Lost;
 		PayOut();
@@ -173,13 +173,13 @@ void UIJPRunSubsystem::PayOut()
 	}
 }
 
-void UIJPRunSubsystem::AddMaxHealth(int32 Amount)
+void UIJPRunSubsystem::AddMaxHealth(float Amount)
 {
-	MaxHealth += FMath::Max(Amount, 0);
+	MaxHealth += FMath::Max(Amount, 0.f);
 	Heal(Amount);
 }
 
-void UIJPRunSubsystem::Heal(int32 Amount)
+void UIJPRunSubsystem::Heal(float Amount)
 {
-	Health = FMath::Min(Health + FMath::Max(Amount, 0), MaxHealth);
+	Health = FMath::Min(Health + FMath::Max(Amount, 0.f), MaxHealth);
 }

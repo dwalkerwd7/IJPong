@@ -68,22 +68,23 @@ bool FIJPServeBlinkTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPScoreFlashTest, "IJPong.Presentation.ScorerDigitsFlash", IJPPresentationTests::Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPScoreFlashTest, "IJPong.Presentation.HurtSideHealthFlashes", IJPPresentationTests::Flags)
 bool FIJPScoreFlashTest::RunTest(const FString& Parameters)
 {
 	FIJPTestWorld Test;
 	AIJPArena* Arena = Test.GetArena();
-	UIJPSevenSegmentComponent* Scorer = Arena->GetScoreDisplay(EIJPSide::Right);
-	UIJPSevenSegmentComponent* Other = Arena->GetScoreDisplay(EIJPSide::Left);
+	UIJPSevenSegmentComponent* Hurt = Arena->GetScoreDisplay(EIJPSide::Left);
+	UIJPSevenSegmentComponent* Other = Arena->GetScoreDisplay(EIJPSide::Right);
+	UTEST_EQUAL("Starts at full health (the configured rules' 5)", Hurt->GetValue(), 5);
 
 	UTEST_TRUE("Goal", IJPPresentationTests::ScoreOnLeft(Test));
-	UTEST_EQUAL("Scorer shows the new score", Scorer->GetValue(), 1);
-	UTEST_TRUE("Scorer's digits flash", Scorer->IsFlashing());
-	UTEST_FALSE("Starts with the digits off", Scorer->IsVisible());
+	UTEST_EQUAL("The side that conceded shows its health drop", Hurt->GetValue(), 4);
+	UTEST_TRUE("Its digits flash", Hurt->IsFlashing());
+	UTEST_FALSE("Starts with the digits off", Hurt->IsVisible());
 	UTEST_FALSE("The other side's digits don't flash", Other->IsFlashing());
 
-	UTEST_TRUE("Flash finishes", IJPPresentationTests::RunUntil(Test, 2.f, [Scorer] { return !Scorer->IsFlashing(); }));
-	UTEST_TRUE("Ends with the digits shown", Scorer->IsVisible());
+	UTEST_TRUE("Flash finishes", IJPPresentationTests::RunUntil(Test, 2.f, [Hurt] { return !Hurt->IsFlashing(); }));
+	UTEST_TRUE("Ends with the digits shown", Hurt->IsVisible());
 	return true;
 }
 

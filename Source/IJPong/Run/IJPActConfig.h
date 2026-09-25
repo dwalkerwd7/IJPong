@@ -122,7 +122,7 @@ public:
 
 	/** Health restored at a Rest node (never above the run's maximum). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Nodes", meta = (ClampMin = "0"))
-	int32 RestHeal = 3;
+	float RestHeal = 3.f;
 
 	/** The encounter for a fight node type, or null for Rest (and the unbuilt Shop / Event). */
 	const FIJPEncounter* GetEncounter(EIJPNodeType Type) const

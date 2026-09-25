@@ -80,14 +80,14 @@ bool FIJPBarrierTest::RunTest(const FString& Parameters)
 	Test.RunFor(1.1f, HoldUp);
 
 	// Paddle out of the way at the top, ball straight at the open goal, barrier up.
-	const int32 RightBefore = Mode->GetMatch()->GetScore(EIJPSide::Right);
+	const int32 RightBefore = Mode->GetMatch()->GetGoals(EIJPSide::Right);
 	Ball->Serve(EIJPSide::Left, 0.f);
 	UTEST_TRUE("Raises it", Left->GetAbilities()->TryActivate(EIJPAbilitySlot::ClassSkill));
 	UTEST_TRUE("Barrier up", Arena->IsBarrierUp(EIJPSide::Left));
 
 	UTEST_TRUE("Ball bounces back off it", IJPClassSkillTests::RunUntil(Test, 1.5f, [Ball] { return Ball->GetPlaneVelocity().X > 0.f; }, HoldUp));
 	UTEST_TRUE("Still in play", Ball->IsInPlay());
-	UTEST_EQUAL("No goal", Mode->GetMatch()->GetScore(EIJPSide::Right), RightBefore);
+	UTEST_EQUAL("No goal", Mode->GetMatch()->GetGoals(EIJPSide::Right), RightBefore);
 	UTEST_EQUAL("Not a paddle return", Ball->GetRallyHits(), 0);
 
 	Test.RunFor(1.2f, HoldUp); // the bounce came about 1 s in; the barrier lasts 2 s

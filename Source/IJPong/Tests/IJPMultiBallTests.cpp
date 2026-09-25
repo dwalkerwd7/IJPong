@@ -78,12 +78,12 @@ bool FIJPBallTypeTest::RunTest(const FString& Parameters)
 	UTEST_EQUAL_TOLERANCE("Size from the type", Ball->GetSize(), 16.f, KINDA_SMALL_NUMBER);
 
 	// Left paddle held out of the way; straight at its goal.
-	const int32 RightBefore = Mode->GetMatch()->GetScore(EIJPSide::Right);
+	const float LeftBefore = Mode->GetMatch()->GetHealth(EIJPSide::Left);
 	Ball->Serve(EIJPSide::Left, 0.f);
 	UTEST_EQUAL_TOLERANCE("Served at the type's speed", Ball->GetPlaneVelocity().Size(), 250.0, 0.01);
 	const bool bScored = IJPMultiBallTests::RunUntil(Test, 4.f, [Ball] { return !Ball->IsInPlay(); }, [Left] { Left->AddMoveInput(1.f); });
 	UTEST_TRUE("Goal", bScored);
-	UTEST_EQUAL("Worth the type's points", Mode->GetMatch()->GetScore(EIJPSide::Right), RightBefore + 2);
+	UTEST_EQUAL("Its points in damage", Mode->GetMatch()->GetHealth(EIJPSide::Left), LeftBefore - 2.f);
 	return true;
 }
 
@@ -100,7 +100,7 @@ bool FIJPEachBallScoresTest::RunTest(const FString& Parameters)
 	Test.RunFor(1.1f);
 
 	// Two balls at the left goal (paddle held at the top): one straight, one later and lower.
-	const int32 RightBefore = Match->GetScore(EIJPSide::Right);
+	const int32 RightBefore = Match->GetGoals(EIJPSide::Right);
 	Main->Serve(EIJPSide::Left, 0.f);
 	AIJPBall* Extra = Arena->AddBall(nullptr);
 	UTEST_TRUE("A second ball", Extra && Extra != Main);
@@ -109,13 +109,13 @@ bool FIJPEachBallScoresTest::RunTest(const FString& Parameters)
 	UTEST_EQUAL("Two in play", Arena->GetNumBallsInPlay(), 2);
 
 	UTEST_TRUE("First goal", IJPMultiBallTests::RunUntil(Test, 3.f, [Main] { return !Main->IsInPlay(); }, HoldUp));
-	UTEST_EQUAL("Scored alone", Match->GetScore(EIJPSide::Right), RightBefore + 1);
+	UTEST_EQUAL("Scored alone", Match->GetGoals(EIJPSide::Right), RightBefore + 1);
 	UTEST_TRUE("The other ball plays on", Extra->IsInPlay());
 	UTEST_EQUAL("Still a rally", Match->GetPhase(), EIJPMatchPhase::Rally);
 	UTEST_FALSE("No serve while a ball is live", Main->IsBlinking());
 
 	UTEST_TRUE("Second goal", IJPMultiBallTests::RunUntil(Test, 3.f, [Extra] { return !Extra->IsInPlay(); }, HoldUp));
-	UTEST_EQUAL("Scored too", Match->GetScore(EIJPSide::Right), RightBefore + 2);
+	UTEST_EQUAL("Scored too", Match->GetGoals(EIJPSide::Right), RightBefore + 2);
 	UTEST_EQUAL("Court empty: serve", Match->GetPhase(), EIJPMatchPhase::Serve);
 	UTEST_TRUE("Main ball blinks for it", Main->IsBlinking());
 	return true;

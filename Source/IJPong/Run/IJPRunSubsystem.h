@@ -69,7 +69,7 @@ public:
 
 	/** Begin a fresh run of Act from its top row. Seed makes the map reproducible. */
 	UFUNCTION(BlueprintCallable, Category = "Run")
-	void StartRun(const UIJPActConfig* Act, int32 Seed, int32 StartingHealth);
+	void StartRun(const UIJPActConfig* Act, int32 Seed, float StartingHealth);
 
 	UFUNCTION(BlueprintPure, Category = "Run")
 	EIJPRunState GetState() const { return State; }
@@ -106,15 +106,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Run")
 	void CompleteNode(bool bWon);
 
-	/** Lose health (a goal against the player). At 0 the run is lost. */
+	/** Lose health (damage the player took in a match). At 0 the run is lost. */
 	UFUNCTION(BlueprintCallable, Category = "Run")
-	void LoseHealth(int32 Amount = 1);
+	void LoseHealth(float Amount);
 
 	UFUNCTION(BlueprintPure, Category = "Run")
-	int32 GetHealth() const { return Health; }
+	float GetHealth() const { return Health; }
 
 	UFUNCTION(BlueprintPure, Category = "Run")
-	int32 GetMaxHealth() const { return MaxHealth; }
+	float GetMaxHealth() const { return MaxHealth; }
 
 	UFUNCTION(BlueprintPure, Category = "Run")
 	int32 GetCoins() const { return Coins; }
@@ -137,7 +137,7 @@ public:
 	FIJPRunLoadout& EditLoadout() { return Loadout; }
 
 	/** Raise the maximum and heal the same amount. */
-	void AddMaxHealth(int32 Amount);
+	void AddMaxHealth(float Amount);
 
 	// --- Meta currencies earned by this run (already added to UIJPMetaSubsystem) ---
 
@@ -156,7 +156,7 @@ public:
 	FIJPRunChangedSignature OnRunChanged;
 
 private:
-	void Heal(int32 Amount);
+	void Heal(float Amount);
 	void RollOffer(const TArray<TObjectPtr<UIJPReward>>& Pool);
 	/** The run just ended (won or lost): pay its skill points into the meta currencies. */
 	void PayOut();
@@ -176,8 +176,8 @@ private:
 	EIJPRunState State = EIJPRunState::None;
 	int32 CurrentNode = INDEX_NONE;
 	bool bInNode = false;
-	int32 Health = 0;
-	int32 MaxHealth = 0;
+	float Health = 0.f;
+	float MaxHealth = 0.f;
 	int32 Coins = 0;
 	int32 EarnedSkillPoints = 0;
 	int32 EarnedBossTokens = 0;

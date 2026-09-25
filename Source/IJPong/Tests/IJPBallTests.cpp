@@ -137,8 +137,8 @@ bool FIJPBallGoalTest::RunTest(const FString& Parameters)
 
 	UTEST_TRUE("Ball went into the goal", IJPBallTests::RunUntil(Test, 2.f, [Ball] { return !Ball->IsInPlay(); }));
 	UTEST_EQUAL("No rally hits", Ball->GetRallyHits(), 0);
-	UTEST_EQUAL("Right scored", GameMode->GetMatch()->GetScore(EIJPSide::Right), 1);
-	UTEST_EQUAL("Left didn't", GameMode->GetMatch()->GetScore(EIJPSide::Left), 0);
+	UTEST_EQUAL("Right scored", GameMode->GetMatch()->GetGoals(EIJPSide::Right), 1);
+	UTEST_EQUAL("Left didn't", GameMode->GetMatch()->GetGoals(EIJPSide::Left), 0);
 	UTEST_TRUE("Ball hidden between points", Ball->IsHidden());
 
 	// After the serve delay, the side that conceded receives the next serve.

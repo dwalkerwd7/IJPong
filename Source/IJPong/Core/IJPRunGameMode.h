@@ -46,7 +46,7 @@ public:
 	 * @param InStartingHealth 0 = StartingHealth from config.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Run")
-	void StartNewRun(const UIJPActConfig* Act = nullptr, int32 Seed = -1, int32 InStartingHealth = 0);
+	void StartNewRun(const UIJPActConfig* Act = nullptr, int32 Seed = -1, float InStartingHealth = 0.f);
 
 	UFUNCTION(BlueprintPure, Category = "Run")
 	EIJPRunPhase GetPhase() const { return Phase; }
@@ -68,7 +68,7 @@ protected:
 	TSoftObjectPtr<UIJPActConfig> FirstAct;
 
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Run", meta = (ClampMin = "1"))
-	int32 StartingHealth = 10;
+	float StartingHealth = 10.f;
 
 private:
 	void EnterSelectedNode();
@@ -82,8 +82,9 @@ private:
 	void ShowArena();
 	void SetViewTarget(AActor* Target) const;
 
+	/** Damage the player takes in a match comes off the run's health. */
 	UFUNCTION()
-	void HandleBallGoal(AIJPBall* ScoringBall, EIJPSide DefendingSide);
+	void HandleHealthChanged(EIJPSide Side, float Health, float Damage);
 
 	UFUNCTION()
 	void HandleRunMatchEnded(EIJPSide Winner);
@@ -95,7 +96,7 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<const UIJPActConfig> RunAct;
 
-	int32 RunStartingHealth = 0;
+	float RunStartingHealth = 0.f;
 
 	FTimerHandle AfterMatchTimer;
 	EIJPRunPhase Phase = EIJPRunPhase::Map;

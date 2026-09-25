@@ -123,7 +123,7 @@ bool FIJPRunMovesTest::RunTest(const FString& Parameters)
 	Act->RestHeal = 2;
 	Run->StartRun(Act, 7, 5);
 	UTEST_EQUAL("Running", Run->GetState(), EIJPRunState::Running);
-	UTEST_EQUAL("Full health", Run->GetHealth(), 5);
+	UTEST_EQUAL("Full health", Run->GetHealth(), 5.f);
 
 	const TArray<int32> Start = Run->GetReachableNodes();
 	UTEST_EQUAL("One way in", Start.Num(), 1);
@@ -135,13 +135,13 @@ bool FIJPRunMovesTest::RunTest(const FString& Parameters)
 	Run->LoseHealth(3);
 	Run->CompleteNode(true);
 	UTEST_EQUAL("Paid for the win", Run->GetCoins(), 10);
-	UTEST_EQUAL("Goals against cost health", Run->GetHealth(), 2);
+	UTEST_EQUAL("Goals against cost health", Run->GetHealth(), 2.f);
 
 	const int32 RestNode = Run->GetReachableNodes()[0];
 	UTEST_EQUAL("Then the rest", Run->GetMap().Nodes[RestNode].Type, EIJPNodeType::Rest);
 	UTEST_TRUE("Rest", Run->EnterNode(RestNode));
 	UTEST_FALSE("Resting is instant", Run->IsInNode());
-	UTEST_EQUAL("Healed", Run->GetHealth(), 4);
+	UTEST_EQUAL("Healed", Run->GetHealth(), 4.f);
 
 	UTEST_TRUE("On to the boss", Run->EnterNode(Run->GetMap().BossIndex));
 	Run->CompleteNode(false);

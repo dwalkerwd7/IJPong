@@ -7,6 +7,7 @@
 #include "Core/IJPRunGameMode.h"
 #include "Core/IJPTypes.h"
 #include "Engine/World.h"
+#include "GameFramework/Controller.h"
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPBall.h"
 #include "Gameplay/IJPMatchComponent.h"
@@ -26,7 +27,7 @@ namespace IJPRunModeTests
 		return Cast<AIJPRunGameMode>(Test.GetWorld()->GetAuthGameMode());
 	}
 
-	/** A straight act (Match, Rest, Boss) where every fight is first to 1. */
+	/** A straight act (Match, Rest, Boss) where every rival has 1 health. */
 	UIJPActConfig* MakeStraightAct()
 	{
 		UIJPActConfig* Act = NewObject<UIJPActConfig>(GetTransientPackage());
@@ -34,7 +35,7 @@ namespace IJPRunModeTests
 		Act->Lanes = 1;
 		Act->Paths = 1;
 		UIJPMatchRules* OnePoint = NewObject<UIJPMatchRules>(Act);
-		OnePoint->WinTarget = 1;
+		OnePoint->StartingHealth = 1.f;
 		OnePoint->ServeDelay = 0.2f;
 		for (FIJPEncounter* Encounter : { &Act->Match, &Act->Elite, &Act->Boss })
 		{
@@ -64,6 +65,21 @@ namespace IJPRunModeTests
 		Ball->Serve(EIJPSide::Left, 0.f);
 		return RunUntil(Test, 3.f, [Ball] { return !Ball->IsInPlay(); }, HoldUp);
 	}
+
+	/** The rival's paddle let go and held at the top, the ball straight into their goal. */
+	bool ScoreOnRival(FIJPTestWorld& Test, AIJPArena* Arena)
+	{
+		AIJPPaddle* Right = Arena->GetPaddle(EIJPSide::Right);
+		if (AController* AI = Right->GetController())
+		{
+			AI->UnPossess();
+		}
+		const auto HoldUp = [Right] { Right->AddMoveInput(1.f); };
+		Test.RunFor(0.5f, HoldUp);
+		AIJPBall* Ball = Arena->GetBall();
+		Ball->Serve(EIJPSide::Right, 0.f);
+		return RunUntil(Test, 3.f, [Ball] { return !Ball->IsInPlay(); }, HoldUp);
+	}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPRunNodeTest, "IJPong.Run.FightNodePlaysThenReturnsToTheMap", IJPRunModeTests::Flags)
@@ -83,20 +99,31 @@ bool FIJPRunNodeTest::RunTest(const FString& Parameters)
 	UTEST_TRUE("In a fight", Run->IsInNode());
 	UTEST_FALSE("Confirm is the class skill again mid-match", Mode->HandleUIConfirm());
 
-	// Lose the first-to-1 match by conceding.
+	// The player fights on the run's health; the rival starts full (1).
+	UIJPMatchComponent* Match = Mode->GetMatch();
+	UTEST_EQUAL("Player's match health is the run's", Match->GetHealth(EIJPSide::Left), 5.f);
+	UTEST_EQUAL("Rival's from the rules", Match->GetHealth(EIJPSide::Right), 1.f);
+
+	// Conceding comes off the run's health, and the match goes on.
 	UTEST_TRUE("Conceded", IJPRunModeTests::Concede(Test, Mode->GetArena()));
-	UTEST_EQUAL("It cost health", Run->GetHealth(), 4);
-	UTEST_TRUE("Match over", Mode->GetMatch()->IsOver());
+	UTEST_EQUAL("It cost run health", Run->GetHealth(), 4.f);
+	UTEST_EQUAL("The match agrees", Match->GetHealth(EIJPSide::Left), 4.f);
+	UTEST_FALSE("Match goes on", Match->IsOver());
+
+	// One goal drains the rival.
+	UTEST_TRUE("Scored", IJPRunModeTests::ScoreOnRival(Test, Mode->GetArena()));
+	UTEST_TRUE("Match over", Match->IsOver());
+	UTEST_EQUAL("Won", Match->GetWinner(), EIJPSide::Left);
 
 	UTEST_TRUE("Back to the map", IJPRunModeTests::RunUntil(Test, 2.f, [Mode] { return Mode->GetPhase() == EIJPRunPhase::Map; }));
-	UTEST_EQUAL("A loss pays nothing", Run->GetCoins(), 0);
+	UTEST_EQUAL("The win paid", Run->GetCoins(), 10);
 	UTEST_EQUAL("Run carries on", Run->GetState(), EIJPRunState::Running);
 	UTEST_EQUAL("Next pick is the rest", Run->GetMap().Nodes[Mode->GetMapView()->GetSelectedNode()].Type, EIJPNodeType::Rest);
 
 	// Rest heals on the spot and stays on the map.
 	UTEST_TRUE("Rest", Mode->HandleUIConfirm());
 	UTEST_EQUAL("Still on the map", Mode->GetPhase(), EIJPRunPhase::Map);
-	UTEST_EQUAL("Healed back to full", Run->GetHealth(), 5);
+	UTEST_EQUAL("Healed back to full", Run->GetHealth(), 5.f);
 	return true;
 }
 
@@ -107,7 +134,7 @@ bool FIJPRunOverTest::RunTest(const FString& Parameters)
 	AIJPRunGameMode* Mode = IJPRunModeTests::GetMode(Test);
 	UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(Test.GetWorld());
 	UIJPActConfig* Act = IJPRunModeTests::MakeStraightAct();
-	Act->Match.Rules->WinTarget = 5; // so it's the health that ends things, not the match
+	Act->Match.Rules->StartingHealth = 5.f; // the rival outlasts the player's 1
 	Mode->StartNewRun(Act, 1, 1);
 
 	Mode->HandleUIConfirm();

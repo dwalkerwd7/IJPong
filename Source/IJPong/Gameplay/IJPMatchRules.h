@@ -9,8 +9,9 @@
 class UIJPBallType;
 
 /**
- * How one match is played and won. Different matches (a quick first-to-3, a long first-to-7)
- * are different assets, not code.
+ * How one match is played and won. Both sides start with health; a goal takes some away (as do
+ * spells, later), and the side left with none loses. Different matches (a quick fight, a long
+ * one) are different assets, not code.
  */
 UCLASS(BlueprintType)
 class IJPONG_API UIJPMatchRules : public UDataAsset
@@ -18,9 +19,16 @@ class IJPONG_API UIJPMatchRules : public UDataAsset
 	GENERATED_BODY()
 
 public:
-	/** Points needed to win the match. 0 = endless: nobody ever wins. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Match|Scoring", meta = (ClampMin = "0"))
-	int32 WinTarget = 5;
+	/**
+	 * Each side's health at the start (a run sets the player's from the run's instead).
+	 * 0 = endless: no health, nobody ever wins, and the numbers show goals like 1972.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Match|Health", meta = (ClampMin = "0"))
+	float StartingHealth = 5.f;
+
+	/** Health a goal takes, per point the ball is worth (a Heavy ball's 2 points = twice this). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Match|Health", meta = (ClampMin = "0"))
+	float GoalDamage = 1.f;
 
 	/** Pause before each serve, including the first. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Match|Serve", meta = (ClampMin = "0", Units = "s"))
@@ -37,5 +45,5 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Match|Serve")
 	TArray<TObjectPtr<UIJPBallType>> ServedBalls;
 
-	bool IsEndless() const { return WinTarget <= 0; }
+	bool IsEndless() const { return StartingHealth <= 0.f; }
 };

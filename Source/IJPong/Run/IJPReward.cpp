@@ -11,7 +11,7 @@ void UIJPReward_Modifier::Grant(UIJPRunSubsystem& Run) const
 	case EIJPRunStat::PaddleLength:       Loadout.PaddleLengthBonus += Amount; break;
 	case EIJPRunStat::PaddleSpeed:        Loadout.PaddleSpeedBonus += Amount; break;
 	case EIJPRunStat::ClassSkillCooldown: Loadout.ClassSkillCooldownCut += Amount; break;
-	case EIJPRunStat::MaxHealth:          Run.AddMaxHealth(FMath::RoundToInt(Amount)); break;
+	case EIJPRunStat::MaxHealth:          Run.AddMaxHealth(Amount); break;
 	}
 }
 

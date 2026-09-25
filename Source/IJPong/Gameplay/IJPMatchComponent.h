@@ -14,13 +14,16 @@ class UIJPMatchRules;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FIJPMatchEndedSignature, EIJPSide, Winner);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FIJPPointScoredSignature, EIJPSide, Scorer, int32, Points);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FIJPHealthChangedSignature, EIJPSide, Side, float, Health, float, Damage);
 
 /**
- * Runs one match at a time on an arena: serve -> rally -> goal -> score -> serve, until a side
- * reaches the rules' win target. Then the balls stop, the winner's score blinks, and it waits
- * for StartMatch() to begin the next one. Lives on the game mode, so one level can host many
- * matches in a row.
- * With several balls in play, each goal scores that ball's points and takes it out; the rally
+ * Runs one match at a time on an arena: serve -> rally -> goal -> damage -> serve, until a side's
+ * health runs out. Then the balls stop, the winner's number blinks, and it waits for StartMatch()
+ * to begin the next one. Lives on the game mode, so one level can host many matches in a row.
+ * Health is the only thing that decides a match: goals take it (the ball's points times the rules'
+ * GoalDamage) and anything else can through ApplyDamage (spells). The number over each half shows
+ * that side's health, rounded up, so a side is never shown at 0 while it still stands.
+ * With several balls in play, each goal counts on its own and takes that ball out; the rally
  * goes on until the court is empty, then the next serve follows.
  */
 UCLASS(ClassGroup = (IJPong))
@@ -63,8 +66,26 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Match")
 	AIJPBall* LaunchExtraBall(const UIJPBallType* Type);
 
+	/**
+	 * Take health from Side (a goal against it, a spell that landed). At 0 the other side wins.
+	 * Ignored when no match is being played or the rules are endless.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Match")
+	void ApplyDamage(EIJPSide Side, float Amount);
+
+	/** Override a side's health for this match, e.g. the player's from the run. Call after StartMatch. */
+	UFUNCTION(BlueprintCallable, Category = "Match")
+	void SetHealth(EIJPSide Side, float InHealth, float InMaxHealth);
+
 	UFUNCTION(BlueprintPure, Category = "Match")
-	int32 GetScore(EIJPSide Side) const { return Side == EIJPSide::Left ? LeftScore : RightScore; }
+	float GetHealth(EIJPSide Side) const { return Health[SideIndex(Side)]; }
+
+	UFUNCTION(BlueprintPure, Category = "Match")
+	float GetMaxHealth(EIJPSide Side) const { return MaxHealth[SideIndex(Side)]; }
+
+	/** Goals Side has scored this match (one per ball, whatever it was worth). */
+	UFUNCTION(BlueprintPure, Category = "Match")
+	int32 GetGoals(EIJPSide Side) const { return Goals[SideIndex(Side)]; }
 
 	UFUNCTION(BlueprintPure, Category = "Match")
 	EIJPMatchPhase GetPhase() const { return Phase; }
@@ -79,11 +100,15 @@ public:
 	/** The rules in play: the ones passed to StartMatch, or UIJPMatchRules' defaults. */
 	const UIJPMatchRules& GetRules() const;
 
-	/** A goal was counted and the match goes on (the scores are already updated). A match-winning goal sends OnMatchEnded instead. */
+	/** A goal was counted and the match goes on (health already taken). A match-winning goal sends OnMatchEnded instead. */
 	UPROPERTY(BlueprintAssignable, Category = "Match")
 	FIJPPointScoredSignature OnPointScored;
 
-	/** A side reached the win target. */
+	/** A side took damage; Health is what it has left. Sent before any match end the damage causes. */
+	UPROPERTY(BlueprintAssignable, Category = "Match")
+	FIJPHealthChangedSignature OnHealthChanged;
+
+	/** A side's health ran out. */
 	UPROPERTY(BlueprintAssignable, Category = "Match")
 	FIJPMatchEndedSignature OnMatchEnded;
 
@@ -103,6 +128,8 @@ private:
 	void Serve(EIJPSide Toward);
 	void EndMatch(EIJPSide InWinner);
 	void UpdateScoreDisplay() const;
+	bool IsPlaying() const { return Phase == EIJPMatchPhase::Serve || Phase == EIJPMatchPhase::Rally; }
+	static int32 SideIndex(EIJPSide Side) { return Side == EIJPSide::Left ? 0 : 1; }
 	AIJPBall* GetBall() const;
 
 	UPROPERTY(Transient)
@@ -122,6 +149,7 @@ private:
 	EIJPSide NextServeSide = EIJPSide::Left;
 	EIJPSide Winner = EIJPSide::Left;
 	bool bServeHeld = false;
-	int32 LeftScore = 0;
-	int32 RightScore = 0;
+	float Health[2] = { 0.f, 0.f };
+	float MaxHealth[2] = { 0.f, 0.f };
+	int32 Goals[2] = { 0, 0 };
 };

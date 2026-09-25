@@ -212,7 +212,7 @@ void AIJPRunMapView::Refresh()
 	}
 
 	FString ActName = Run->GetAct() ? Run->GetAct()->DisplayName.ToString().ToUpper() : FString();
-	Header->SetText(FText::FromString(FString::Printf(TEXT("%s    HP %d/%d    COINS %d"), *ActName, Run->GetHealth(), Run->GetMaxHealth(), Run->GetCoins())));
+	Header->SetText(FText::FromString(FString::Printf(TEXT("%s    HP %d/%d    COINS %d"), *ActName, FMath::CeilToInt(Run->GetHealth()), FMath::CeilToInt(Run->GetMaxHealth()), Run->GetCoins())));
 	PlaceCursor();
 }
 

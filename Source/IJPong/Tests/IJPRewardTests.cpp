@@ -36,7 +36,7 @@ namespace IJPRewardTests
 		Act->Paths = 1;
 		Act->SkipCoins = 7;
 		UIJPMatchRules* OnePoint = NewObject<UIJPMatchRules>(Act);
-		OnePoint->WinTarget = 1;
+		OnePoint->StartingHealth = 1.f;
 		OnePoint->ServeDelay = 0.2f;
 		for (FIJPEncounter* Encounter : { &Act->Match, &Act->Elite, &Act->Boss })
 		{
@@ -100,8 +100,8 @@ bool FIJPRewardOfferTest::RunTest(const FString& Parameters)
 	IJPRewardTests::WinFirstMatch(Run, Act, 5);
 	Run->LoseHealth(1);
 	Run->TakeReward(0);
-	UTEST_EQUAL("Tougher: max health up", Run->GetMaxHealth(), 7);
-	UTEST_EQUAL("And healed the same", Run->GetHealth(), 6);
+	UTEST_EQUAL("Tougher: max health up", Run->GetMaxHealth(), 7.f);
+	UTEST_EQUAL("And healed the same", Run->GetHealth(), 6.f);
 
 	// A loss offers nothing.
 	Run->StartRun(Act, 1, 5);

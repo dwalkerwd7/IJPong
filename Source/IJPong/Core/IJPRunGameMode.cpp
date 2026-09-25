@@ -31,13 +31,13 @@ void AIJPRunGameMode::OnArenaReady()
 	MapView = GetWorld()->SpawnActor<AIJPRunMapView>(AIJPRunMapView::StaticClass(), MapLocation, ArenaPtr->GetActorRotation(), Params);
 	MapView->Init(ArenaPtr);
 
-	ArenaPtr->OnBallGoal.AddDynamic(this, &AIJPRunGameMode::HandleBallGoal);
+	GetMatch()->OnHealthChanged.AddDynamic(this, &AIJPRunGameMode::HandleHealthChanged);
 	GetMatch()->OnMatchEnded.AddDynamic(this, &AIJPRunGameMode::HandleRunMatchEnded);
 
 	StartNewRun();
 }
 
-void AIJPRunGameMode::StartNewRun(const UIJPActConfig* Act, int32 Seed, int32 InStartingHealth)
+void AIJPRunGameMode::StartNewRun(const UIJPActConfig* Act, int32 Seed, float InStartingHealth)
 {
 	UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
 	if (!Run)
@@ -51,7 +51,7 @@ void AIJPRunGameMode::StartNewRun(const UIJPActConfig* Act, int32 Seed, int32 In
 	SetRival(nullptr);
 
 	RunAct = Act ? Act : FirstAct.LoadSynchronous();
-	RunStartingHealth = InStartingHealth > 0 ? InStartingHealth : StartingHealth;
+	RunStartingHealth = InStartingHealth > 0.f ? InStartingHealth : StartingHealth;
 	Run->StartRun(RunAct, Seed == INDEX_NONE ? FMath::Rand() : Seed, RunStartingHealth);
 	ApplyLoadout(); // a fresh run: nothing gathered yet
 	Phase = EIJPRunPhase::Map;
@@ -143,22 +143,23 @@ void AIJPRunGameMode::EnterSelectedNode()
 	SetOpponentSkill(Encounter->Skill);
 	ApplyLoadout();
 	BeginMatch(Encounter->Rules);
+	// The rival starts full (the rules' health); the player fights on what's left of the run's.
+	GetMatch()->SetHealth(PlayerSide, Run->GetHealth(), Run->GetMaxHealth());
 	Phase = EIJPRunPhase::Playing;
 	ShowArena();
 }
 
-void AIJPRunGameMode::HandleBallGoal(AIJPBall* ScoringBall, EIJPSide DefendingSide)
+void AIJPRunGameMode::HandleHealthChanged(EIJPSide Side, float Health, float Damage)
 {
-	// AfterMatch too: a match-winning goal may reach the match (which ends it) before it reaches us.
-	const bool bFighting = Phase == EIJPRunPhase::Playing || Phase == EIJPRunPhase::AfterMatch;
-	if (!bFighting || DefendingSide != PlayerSide)
+	if (Phase != EIJPRunPhase::Playing || Side != PlayerSide)
 	{
 		return;
 	}
 
-	// Every goal against the player costs a point of run health, even in a match they go on to win.
+	// The match started from the run's health, so the same damage keeps the two in step, even in
+	// a match the player goes on to win. Running out ends the run, not just the match.
 	UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
-	Run->LoseHealth(1);
+	Run->LoseHealth(Damage);
 	if (Run->GetState() == EIJPRunState::Lost)
 	{
 		EndRun();
@@ -272,7 +273,7 @@ void AIJPRunGameMode::ShowRewards()
 	}
 	Cards.Add({ TEXT("SKIP"), FString::Printf(TEXT("+%d COINS"), Run->GetAct()->SkipCoins) });
 
-	MapView->ShowCards(FString::Printf(TEXT("PICK A REWARD    HP %d/%d    COINS %d"), Run->GetHealth(), Run->GetMaxHealth(), Run->GetCoins()), Cards);
+	MapView->ShowCards(FString::Printf(TEXT("PICK A REWARD    HP %d/%d    COINS %d"), FMath::CeilToInt(Run->GetHealth()), FMath::CeilToInt(Run->GetMaxHealth()), Run->GetCoins()), Cards);
 	MapView->SetFooter(TEXT("A / D  CHOOSE    SPACE  TAKE"));
 	SetViewTarget(MapView);
 }

@@ -231,7 +231,7 @@ void AIJPTestGameMode::GetDebugLines(TArray<FString>& OutLines) const
 	}
 	else
 	{
-		OutLines.Add(FString::Printf(TEXT("Match: first to %d"), MatchPtr->GetRules().WinTarget));
+		OutLines.Add(FString::Printf(TEXT("Match: health %g each, %g per goal"), MatchPtr->GetRules().StartingHealth, MatchPtr->GetRules().GoalDamage));
 	}
 
 	OutLines.Add(TEXT("R new match   F serve now   T AI vs AI   B add ball"));

@@ -34,7 +34,11 @@ void UIJPMatchComponent::StartMatch(AIJPArena* InArena, const UIJPMatchRules* In
 		BoundArena = Arena;
 	}
 
-	LeftScore = RightScore = 0;
+	for (int32 i = 0; i < 2; ++i)
+	{
+		Health[i] = MaxHealth[i] = GetRules().StartingHealth;
+		Goals[i] = 0;
+	}
 	UpdateScoreDisplay();
 	Arena->ClearWinner();
 
@@ -106,26 +110,64 @@ void UIJPMatchComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
+void UIJPMatchComponent::ApplyDamage(EIJPSide Side, float Amount)
+{
+	if (!IsPlaying() || GetRules().IsEndless() || Amount <= 0.f)
+	{
+		return;
+	}
+
+	float& SideHealth = Health[SideIndex(Side)];
+	SideHealth = FMath::Max(SideHealth - Amount, 0.f);
+	UpdateScoreDisplay();
+	OnHealthChanged.Broadcast(Side, SideHealth, Amount);
+
+	// A listener may have stopped the match (e.g. the run ending with the player's health).
+	if (!IsPlaying())
+	{
+		return;
+	}
+	if (SideHealth <= 0.f)
+	{
+		EndMatch(IJP::Opposite(Side));
+		return;
+	}
+	Arena->FlashScore(Side);
+}
+
+void UIJPMatchComponent::SetHealth(EIJPSide Side, float InHealth, float InMaxHealth)
+{
+	const int32 Index = SideIndex(Side);
+	MaxHealth[Index] = FMath::Max(InMaxHealth, 0.f);
+	Health[Index] = FMath::Clamp(InHealth, 0.f, MaxHealth[Index]);
+	UpdateScoreDisplay();
+}
+
 void UIJPMatchComponent::HandleGoal(AIJPBall* ScoringBall, EIJPSide DefendingSide)
 {
-	if (Phase != EIJPMatchPhase::Serve && Phase != EIJPMatchPhase::Rally)
+	if (!IsPlaying())
 	{
 		return;
 	}
 
 	const EIJPSide Scorer = IJP::Opposite(DefendingSide);
-	int32& ScorerScore = Scorer == EIJPSide::Left ? LeftScore : RightScore;
 	const int32 Points = ScoringBall ? ScoringBall->GetType().Points : 1;
-	ScorerScore += Points;
-	UpdateScoreDisplay();
+	++Goals[SideIndex(Scorer)];
 
-	if (!GetRules().IsEndless() && ScorerScore >= GetRules().WinTarget)
+	if (GetRules().IsEndless())
 	{
-		EndMatch(Scorer);
-		return;
+		// No health: the numbers count goals, 1972 style.
+		UpdateScoreDisplay();
+		Arena->FlashScore(Scorer);
 	}
-
-	Arena->FlashScore(Scorer);
+	else
+	{
+		ApplyDamage(DefendingSide, Points * GetRules().GoalDamage);
+		if (!IsPlaying())
+		{
+			return;
+		}
+	}
 	OnPointScored.Broadcast(Scorer, Points);
 
 	// Serve again only once the court is empty, and only if a serve isn't already on its way
@@ -210,14 +252,19 @@ void UIJPMatchComponent::EndMatch(EIJPSide InWinner)
 	Arena->ResetBalls();
 	Arena->ShowWinner(Winner);
 
-	UE_LOG(LogIJPong, Log, TEXT("Match over: %s wins %d-%d."), Winner == EIJPSide::Left ? TEXT("left") : TEXT("right"), LeftScore, RightScore);
+	UE_LOG(LogIJPong, Log, TEXT("Match over: %s wins, health %.1f-%.1f."), Winner == EIJPSide::Left ? TEXT("left") : TEXT("right"), Health[0], Health[1]);
 	OnMatchEnded.Broadcast(Winner);
 }
 
 void UIJPMatchComponent::UpdateScoreDisplay() const
 {
-	Arena->SetScore(EIJPSide::Left, LeftScore);
-	Arena->SetScore(EIJPSide::Right, RightScore);
+	// Health rounded up (a side with any left never reads 0), or goals when there's no health.
+	const bool bEndless = GetRules().IsEndless();
+	for (EIJPSide Side : { EIJPSide::Left, EIJPSide::Right })
+	{
+		const int32 Index = SideIndex(Side);
+		Arena->SetScore(Side, bEndless ? Goals[Index] : FMath::CeilToInt(Health[Index]));
+	}
 }
 
 AIJPBall* UIJPMatchComponent::GetBall() const

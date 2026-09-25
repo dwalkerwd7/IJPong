@@ -39,14 +39,14 @@ void UIJPBanterComponent::HandlePointScored(EIJPSide Scorer, int32 Points)
 	const bool bPlayerScored = Scorer == AIJPGameModeBase::PlayerSide;
 	TArray<EIJPBanterEvent> Events;
 
-	// The scorer is one point from winning.
+	// Match point: one more goal from the scorer ends it.
 	const UIJPMatchRules& Rules = MatchPtr->GetRules();
-	if (!Rules.IsEndless() && MatchPtr->GetScore(Scorer) == Rules.WinTarget - 1)
+	if (!Rules.IsEndless() && MatchPtr->GetHealth(IJP::Opposite(Scorer)) <= Rules.GoalDamage)
 	{
 		Events.Add(bPlayerScored ? EIJPBanterEvent::PlayerMatchPoint : EIJPBanterEvent::RivalMatchPoint);
 	}
 	// This was the match's first goal.
-	if (MatchPtr->GetScore(EIJPSide::Left) + MatchPtr->GetScore(EIJPSide::Right) == Points)
+	if (MatchPtr->GetGoals(EIJPSide::Left) + MatchPtr->GetGoals(EIJPSide::Right) == 1)
 	{
 		Events.Add(bPlayerScored ? EIJPBanterEvent::PlayerScoredFirst : EIJPBanterEvent::RivalScoredFirst);
 	}
