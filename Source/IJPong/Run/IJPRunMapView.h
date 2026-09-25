@@ -263,6 +263,14 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> DimMaterial;
 
+	/** The era name beside each skill tree level, one per level. */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UTextRenderComponent>> LevelTexts;
+
+	/** A skill tree level's row, and a node's column (the three branches, then keystones). */
+	float TreeLevelY(int32 Level) const;
+	int32 TreeColumn(int32 Node) const;
+
 	/** Title and text components for the cards, two per card. */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UTextRenderComponent>> CardTexts;

@@ -62,6 +62,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Meta")
 	int32 GetErasUnlocked() const;
 
+	/** A skill tree level is open once its era has been reached (level 0 = the first era, always open). */
+	UFUNCTION(BlueprintPure, Category = "Meta")
+	bool IsTreeLevelOpen(int32 Level) const { return Level < GetErasUnlocked(); }
+
 	/** Unlock eras up to Count (never locks any). True if that unlocked a new one. */
 	UFUNCTION(BlueprintCallable, Category = "Meta")
 	bool UnlockErasUpTo(int32 Count);

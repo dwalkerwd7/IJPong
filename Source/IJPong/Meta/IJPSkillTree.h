@@ -38,9 +38,13 @@ struct FIJPSkillNode
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Node", meta = (MultiLine = "true"))
 	FText Description;
 
-	/** Which of the tree's branches it hangs in, 0 = left. */
+	/** Which of the tree's branches it hangs in, 0 = left. Keystones get a column of their own. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Node", meta = (ClampMin = "0", ClampMax = "2"))
 	int32 Branch = 0;
+
+	/** Its level: one per era, 0 = the first. It can't be bought until the player has reached that era. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Node", meta = (ClampMin = "0"))
+	int32 Level = 0;
 
 	/** Id of the node that must be owned first. None = hangs from the root (the class skill). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Node")
@@ -89,10 +93,11 @@ struct FIJPTreeBonuses
 };
 
 /**
- * A class's skill tree: three branches hanging from the class skill, each a chain of stat nodes
- * (paid in skill points) ending in keystones that change how the skill works (paid in boss
- * tokens). A node can be bought once its parent is owned. What's owned is kept by
- * UIJPMetaSubsystem and applies to every run with that class.
+ * A class's skill tree: three branches hanging from the class skill, each running down through
+ * the levels (one per era) as a chain of stat nodes paid in skill points, plus keystones that
+ * change how the skill works (paid in boss tokens). A node can be bought once its parent is owned
+ * and its level's era has been reached. What's owned is kept by UIJPMetaSubsystem and applies to
+ * every run with that class.
  */
 UCLASS(BlueprintType)
 class IJPONG_API UIJPSkillTree : public UDataAsset
@@ -110,6 +115,17 @@ public:
 	int32 FindNode(FName Id) const
 	{
 		return Nodes.IndexOfByPredicate([Id](const FIJPSkillNode& Node) { return Node.Id == Id; });
+	}
+
+	/** How many levels it has (the deepest node's level + 1). */
+	int32 GetNumLevels() const
+	{
+		int32 Levels = 0;
+		for (const FIJPSkillNode& Node : Nodes)
+		{
+			Levels = FMath::Max(Levels, Node.Level + 1);
+		}
+		return Levels;
 	}
 
 	/** How far down its branch a node sits: 0 = hangs from the root. */

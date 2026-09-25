@@ -67,7 +67,7 @@ bool UIJPMetaSubsystem::CanBuy(const UIJPSkillTree* Tree, int32 Node) const
 	const FIJPSkillNode& Data = Tree->Nodes[Node];
 	const int32 Parent = Tree->FindNode(Data.Parent);
 	const bool bParentOwned = Data.Parent.IsNone() || IsOwned(Tree, Parent);
-	return bParentOwned && SaveData->SkillPoints >= Data.SkillPoints && SaveData->BossTokens >= Data.BossTokens;
+	return bParentOwned && IsTreeLevelOpen(Data.Level) && SaveData->SkillPoints >= Data.SkillPoints && SaveData->BossTokens >= Data.BossTokens;
 }
 
 bool UIJPMetaSubsystem::Buy(const UIJPSkillTree* Tree, int32 Node)

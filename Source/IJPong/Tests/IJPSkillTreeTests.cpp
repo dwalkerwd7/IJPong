@@ -99,6 +99,30 @@ bool FIJPTreeBuyTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPTreeLevelTest, "IJPong.Meta.ALevelOpensWhenItsEraIsReached", IJPSkillTreeTests::Flags)
+bool FIJPTreeLevelTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(Test.GetWorld());
+	Meta->ResetProgress();
+	UIJPSkillTree* Tree = IJPSkillTreeTests::MakeTree();
+	FIJPSkillNode& Later = Tree->Nodes.Add_GetRef(IJPSkillTreeTests::MakeNode(TEXT("Later"), NAME_None, 1, 0, EIJPTreeEffect::PaddleSpeed, 0.1f));
+	Later.Level = 1;
+	const int32 LaterIndex = Tree->Nodes.Num() - 1;
+	Meta->AddCurrency(5, 0);
+
+	UTEST_TRUE("The first era's level is open", Meta->IsTreeLevelOpen(0));
+	UTEST_FALSE("The second era's isn't yet", Meta->IsTreeLevelOpen(1));
+	UTEST_FALSE("So its node can't be bought, even affordable", Meta->CanBuy(Tree, LaterIndex));
+	UTEST_EQUAL("Two levels", Tree->GetNumLevels(), 2);
+
+	Meta->UnlockErasUpTo(2);
+	UTEST_TRUE("Reaching the second era opens it", Meta->IsTreeLevelOpen(1));
+	UTEST_TRUE("Now buyable", Meta->Buy(Tree, LaterIndex));
+	Meta->ResetProgress();
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPTreeRunTest, "IJPong.Meta.TreeBonusesApplyToEveryRun", IJPSkillTreeTests::Flags)
 bool FIJPTreeRunTest::RunTest(const FString& Parameters)
 {

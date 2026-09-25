@@ -1,6 +1,8 @@
 // It's Just Pong
 
 #include "Run/IJPRunMapView.h"
+#include "Era/IJPEraSubsystem.h"
+#include "Era/IJPEra.h"
 #include "Abilities/IJPAbility.h"
 #include "Engine/Texture2D.h"
 #include "Algo/Count.h"
@@ -623,6 +625,10 @@ void AIJPRunMapView::ClearDrawing()
 	{
 		Text->SetVisibility(false);
 	}
+	for (UTextRenderComponent* Text : LevelTexts)
+	{
+		Text->SetVisibility(false);
+	}
 	StopRunEnd();
 	for (UTextRenderComponent* Text : { InfoText.Get(), StartText.Get(), UnlockText.Get(), EraTitleText.Get(), LoadoutText.Get() })
 	{
@@ -645,21 +651,18 @@ void AIJPRunMapView::ShowTree(const UIJPSkillTree* Tree, bool bResetPick)
 	bShowingCards = false;
 	ShownTree = Tree;
 
-	// Pick order: branch by branch, top down, then START RUN.
+	// Pick order: level by level from the top, left to right along each, then START RUN.
 	TreeOrder.Reset();
-	for (int32 Branch = 0; Branch < 3; ++Branch)
+	for (int32 i = 0; i < Tree->Nodes.Num(); ++i)
 	{
-		TArray<int32> InBranch;
-		for (int32 i = 0; i < Tree->Nodes.Num(); ++i)
-		{
-			if (Tree->Nodes[i].Branch == Branch)
-			{
-				InBranch.Add(i);
-			}
-		}
-		InBranch.Sort([Tree](int32 A, int32 B) { return Tree->GetDepth(A) < Tree->GetDepth(B); });
-		TreeOrder.Append(InBranch);
+		TreeOrder.Add(i);
 	}
+	TreeOrder.StableSort([this, Tree](int32 A, int32 B)
+	{
+		const int32 LevelA = Tree->Nodes[A].Level;
+		const int32 LevelB = Tree->Nodes[B].Level;
+		return LevelA != LevelB ? LevelA < LevelB : TreeNodePosition(A).X < TreeNodePosition(B).X;
+	});
 	if (!Meta->IsSpellSlotUnlocked())
 	{
 		TreeOrder.Add(TreeUnlockSpells);
@@ -676,6 +679,28 @@ void AIJPRunMapView::ShowTree(const UIJPSkillTree* Tree, bool bResetPick)
 	const FVector2D RootAt = TreeRootPosition();
 	AddFrame(BrightPieces, RootAt, NodeSize * 1.2f, NodeSize * 1.2f);
 	DrawMark(0, TEXT("S"), Icons.ClassSkill, RootAt, NodeSize * 1.2f, Palette.Score);
+
+	// Each level's era beside its row; an era not reached yet is dim, and one not in the game yet is "???".
+	const UIJPEraSubsystem* Eras = UIJPEraSubsystem::Get(this);
+	const int32 NumLevels = Tree->GetNumLevels();
+	while (LevelTexts.Num() < NumLevels)
+	{
+		LevelTexts.Add(MakeText(CardTextSize));
+	}
+	for (int32 Level = 0; Level < LevelTexts.Num(); ++Level)
+	{
+		UTextRenderComponent* Label = LevelTexts[Level];
+		if (Level >= NumLevels)
+		{
+			Label->SetVisibility(false);
+			continue;
+		}
+		const UIJPEra* Era = Eras ? Eras->GetEraAt(Level) : nullptr;
+		Label->SetText(FText::FromString(Era ? Era->DisplayName.ToString().ToUpper() : FString(TEXT("???"))));
+		Label->SetTextRenderColor(Scaled(Palette.Score, Meta->IsTreeLevelOpen(Level) ? MidScale : DimScale).ToFColor(true));
+		Label->SetRelativeLocation(FVector(-HalfScreen.X + 60.f, TextDepth, TreeLevelY(Level)));
+		Label->SetVisibility(true);
+	}
 
 	// Bright: owned. Mid: can buy now. Dim: not yet.
 	for (int32 i = 0; i < Tree->Nodes.Num(); ++i)
@@ -727,7 +752,12 @@ void AIJPRunMapView::ShowTree(const UIJPSkillTree* Tree, bool bResetPick)
 		const FString Price = Node.BossTokens > 0
 			? FString::Printf(TEXT("%d BOSS TOKEN%s"), Node.BossTokens, Node.BossTokens == 1 ? TEXT("") : TEXT("S"))
 			: FString::Printf(TEXT("%d SKILL PT%s"), Node.SkillPoints, Node.SkillPoints == 1 ? TEXT("") : TEXT("S"));
-		const FString Status = Meta->IsOwned(Tree, Picked) ? FString(TEXT("OWNED")) : Meta->CanBuy(Tree, Picked) ? Price : Price + TEXT(" - LOCKED");
+		const UIJPEra* LevelEra = UIJPEraSubsystem::Get(this) ? UIJPEraSubsystem::Get(this)->GetEraAt(Node.Level) : nullptr;
+		const FString Reach = LevelEra ? FString::Printf(TEXT(" - REACH %s"), *LevelEra->DisplayName.ToString().ToUpper()) : FString(TEXT(" - A LATER ERA"));
+		const FString Status = Meta->IsOwned(Tree, Picked) ? FString(TEXT("OWNED"))
+			: Meta->CanBuy(Tree, Picked) ? Price
+			: !Meta->IsTreeLevelOpen(Node.Level) ? Price + Reach
+			: Price + TEXT(" - LOCKED");
 		Info = FString::Printf(TEXT("%s: %s\n%s"), *Node.DisplayName.ToString().ToUpper(), *Node.Description.ToString(), *Status);
 	}
 	InfoText->SetText(FText::FromString(Info));
@@ -750,11 +780,39 @@ FVector2D AIJPRunMapView::TreeRootPosition() const
 	return FVector2D(0.f, HalfScreen.Y - 80.f);
 }
 
+float AIJPRunMapView::TreeLevelY(int32 Level) const
+{
+	// Rows from under the root down to above the info line, closer together when there are many.
+	const float Top = TreeRootPosition().Y - 58.f;
+	const float Bottom = TreeStartPosition().Y + 110.f;
+	const int32 NumLevels = ShownTree ? FMath::Max(ShownTree->GetNumLevels(), 1) : 1;
+	const float Step = NumLevels > 1 ? FMath::Min(58.f, (Top - Bottom) / (NumLevels - 1)) : 0.f;
+	return Top - Level * Step;
+}
+
+int32 AIJPRunMapView::TreeColumn(int32 Node) const
+{
+	const FIJPSkillNode& Data = ShownTree->Nodes[Node];
+	return Data.IsKeystone() ? 3 : FMath::Clamp(Data.Branch, 0, 2);
+}
+
 FVector2D AIJPRunMapView::TreeNodePosition(int32 Node) const
 {
-	// Branches as three columns under the root; each step down the branch a row lower.
+	// Levels as rows, the three branches and the keystones as columns. Nodes sharing a cell sit side by side.
 	const FIJPSkillNode& Data = ShownTree->Nodes[Node];
-	return FVector2D((Data.Branch - 1) * 220.f, TreeRootPosition().Y - (ShownTree->GetDepth(Node) + 1) * 58.f);
+	const int32 Column = TreeColumn(Node);
+	int32 Shared = 0;
+	int32 Before = 0;
+	for (int32 i = 0; i < ShownTree->Nodes.Num(); ++i)
+	{
+		if (ShownTree->Nodes[i].Level == Data.Level && TreeColumn(i) == Column)
+		{
+			Before += i < Node ? 1 : 0;
+			++Shared;
+		}
+	}
+	const float CellOffset = (Before - (Shared - 1) * 0.5f) * (NodeSize + 8.f);
+	return FVector2D(-195.f + Column * 150.f + CellOffset, TreeLevelY(Data.Level));
 }
 
 FVector2D AIJPRunMapView::TreeStartPosition() const

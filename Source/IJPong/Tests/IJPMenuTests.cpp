@@ -15,12 +15,13 @@ namespace IJPMenuTests
 {
 	constexpr EAutomationTestFlags Flags = EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter;
 
-	FIJPSkillNode MakeNode(const TCHAR* Id, const TCHAR* Parent, int32 Branch)
+	FIJPSkillNode MakeNode(const TCHAR* Id, const TCHAR* Parent, int32 Branch, int32 Level = 0)
 	{
 		FIJPSkillNode Node;
 		Node.Id = Id;
 		Node.Parent = Parent;
 		Node.Branch = Branch;
+		Node.Level = Level;
 		return Node;
 	}
 }
@@ -38,7 +39,7 @@ bool FIJPTreeUpDownTest::RunTest(const FString& Parameters)
 	Tree->Nodes.Add(IJPMenuTests::MakeNode(TEXT("Left"), TEXT(""), 0));
 	Tree->Nodes.Add(IJPMenuTests::MakeNode(TEXT("Mid"), TEXT(""), 1));
 	Tree->Nodes.Add(IJPMenuTests::MakeNode(TEXT("Right"), TEXT(""), 2));
-	Tree->Nodes.Add(IJPMenuTests::MakeNode(TEXT("MidDeep"), TEXT("Mid"), 1));
+	Tree->Nodes.Add(IJPMenuTests::MakeNode(TEXT("MidDeep"), TEXT("Mid"), 1, 1));
 	View->ShowTree(Tree, true);
 
 	for (int32 i = 0; i < 10 && View->GetSelectedTreeNode() != 1; ++i)
