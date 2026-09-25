@@ -110,6 +110,16 @@ public:
 		return Type == EIJPNodeType::Match ? &MatchRewards : Type == EIJPNodeType::Elite ? &EliteRewards : nullptr;
 	}
 
+	// --- Meta currencies (kept between runs) ---
+
+	/** Skill points a run earns for each row it got down to (paid when the run ends, won or lost). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Meta", meta = (ClampMin = "0"))
+	int32 SkillPointsPerRow = 1;
+
+	/** Boss tokens for beating this act's boss. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Meta", meta = (ClampMin = "0"))
+	int32 BossTokens = 1;
+
 	/** Health restored at a Rest node (never above the run's maximum). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Nodes", meta = (ClampMin = "0"))
 	int32 RestHeal = 3;

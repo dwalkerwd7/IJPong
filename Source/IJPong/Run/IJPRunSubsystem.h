@@ -139,6 +139,18 @@ public:
 	/** Raise the maximum and heal the same amount. */
 	void AddMaxHealth(int32 Amount);
 
+	// --- Meta currencies earned by this run (already added to UIJPMetaSubsystem) ---
+
+	UFUNCTION(BlueprintPure, Category = "Run")
+	int32 GetEarnedSkillPoints() const { return EarnedSkillPoints; }
+
+	UFUNCTION(BlueprintPure, Category = "Run")
+	int32 GetEarnedBossTokens() const { return EarnedBossTokens; }
+
+	/** How many rows down the run got: the deepest node entered, counting from 1. */
+	UFUNCTION(BlueprintPure, Category = "Run")
+	int32 GetDepthReached() const;
+
 	/** Anything about the run changed (moved, health, coins, state). */
 	UPROPERTY(BlueprintAssignable, Category = "Run")
 	FIJPRunChangedSignature OnRunChanged;
@@ -146,6 +158,8 @@ public:
 private:
 	void Heal(int32 Amount);
 	void RollOffer(const TArray<TObjectPtr<UIJPReward>>& Pool);
+	/** The run just ended (won or lost): pay its skill points into the meta currencies. */
+	void PayOut();
 
 	UPROPERTY(Transient)
 	TObjectPtr<const UIJPActConfig> Act;
@@ -165,4 +179,6 @@ private:
 	int32 Health = 0;
 	int32 MaxHealth = 0;
 	int32 Coins = 0;
+	int32 EarnedSkillPoints = 0;
+	int32 EarnedBossTokens = 0;
 };

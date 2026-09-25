@@ -12,6 +12,7 @@
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPPaddleClass.h"
 #include "Gameplay/IJPPaddleProfile.h"
+#include "GameFramework/Controller.h"
 #include "Tests/IJPTestWorld.h"
 
 namespace IJPPaddleTests
@@ -86,6 +87,13 @@ bool FIJPPaddleClampTest::RunTest(const FString& Parameters)
 	AIJPPaddle* Paddle = Arena->GetPaddle(EIJPSide::Right);
 	UTEST_NOT_NULL("Paddle", Paddle);
 	const float Limit = Arena->GetHalfExtents().Y - Paddle->GetSize().Y * 0.5f;
+
+	// Only this test steers the paddle: its AI would add its own input (full speed toward a ball
+	// served its way) and could cancel ours out.
+	if (AController* AI = Paddle->GetController())
+	{
+		AI->UnPossess();
+	}
 
 	// Hold well past the time needed to cross the whole field, in both directions.
 	for (const float Dir : { 1.f, -1.f })

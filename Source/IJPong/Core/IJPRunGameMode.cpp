@@ -8,6 +8,7 @@
 #include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPRival.h"
+#include "Meta/IJPMetaSubsystem.h"
 #include "GameFramework/PlayerController.h"
 #include "Narrative/IJPConversationPlayer.h"
 #include "Run/IJPActConfig.h"
@@ -187,9 +188,13 @@ void AIJPRunGameMode::ShowMap()
 	MapView->Refresh();
 	if (Phase == EIJPRunPhase::Ended)
 	{
-		MapView->SetFooter(Run->GetState() == EIJPRunState::Won
-			? TEXT("ACT CLEARED!    SPACE: NEW RUN")
-			: TEXT("RUN OVER    SPACE: NEW RUN"));
+		// What this run earned for the skill trees, and the totals so far.
+		const UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(this);
+		MapView->SetHeader(FString::Printf(TEXT("%s    +%d SKILL PTS    +%d BOSS TOKENS"),
+			Run->GetState() == EIJPRunState::Won ? TEXT("ACT CLEARED!") : TEXT("RUN OVER"),
+			Run->GetEarnedSkillPoints(), Run->GetEarnedBossTokens()));
+		MapView->SetFooter(FString::Printf(TEXT("SKILL PTS %d    BOSS TOKENS %d    SPACE: NEW RUN"),
+			Meta ? Meta->GetSkillPoints() : 0, Meta ? Meta->GetBossTokens() : 0));
 	}
 	else
 	{

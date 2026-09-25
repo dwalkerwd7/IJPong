@@ -60,6 +60,9 @@ public:
 	/** The line along the bottom (controls, or how the run ended). */
 	void SetFooter(const FString& Text);
 
+	/** Replace the line along the top (until the next Refresh). */
+	void SetHeader(const FString& Text);
+
 	UCameraComponent* GetCamera() const { return Camera; }
 
 protected:

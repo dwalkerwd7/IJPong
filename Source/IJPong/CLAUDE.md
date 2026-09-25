@@ -8,6 +8,7 @@ Includes are relative to the module root (`PublicIncludePaths.Add(ModuleDirector
 - `Era/`: `UIJPEra` Data Asset (CRT, tones, palette) and `UIJPEraSubsystem`, the current era, followed live by arenas and CRT components.
 - `Abilities/`: `UIJPAbility` (one subclass per behaviour, Data Assets for tuning, a runtime copy per slot) and `UIJPAbilityComponent` (the paddle's slots and cooldowns).
 - `Run/`: the roguelite run: `UIJPActConfig`, `FIJPRunMap` (generation), `UIJPRunSubsystem` (run state) and `AIJPRunMapView` (the map screen). `Core/IJPRunGameMode` plays it.
+- `Meta/`: progress kept between runs: `UIJPMetaSubsystem` and its `UIJPMetaSave` (currencies; later trees, eras, unlocks).
 - `Narrative/`: `UIJPConversation` Data Asset, `UIJPSpeechBubbleComponent` (on each paddle) and `UIJPConversationPlayer` (on the game mode).
 - `AI/`: paddle AI controller and its `UIJPAIProfile` Data Asset. The AI drives paddles through the same `AddMoveInput` as the player.
 - `Tests/`: integration tests only

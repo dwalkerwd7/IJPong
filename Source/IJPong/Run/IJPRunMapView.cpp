@@ -291,6 +291,11 @@ FVector2D AIJPRunMapView::CardCentre(int32 Card) const
 	return FVector2D((Card - (NumCards - 1) * 0.5f) * Step, 10.f);
 }
 
+void AIJPRunMapView::SetHeader(const FString& Text)
+{
+	Header->SetText(FText::FromString(Text));
+}
+
 int32 AIJPRunMapView::GetSelectedNode() const
 {
 	return Reachable.IsValidIndex(Selected) ? Reachable[Selected] : INDEX_NONE;
