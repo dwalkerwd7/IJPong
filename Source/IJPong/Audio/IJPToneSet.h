@@ -62,6 +62,20 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones")
 	FIJPTone Talk = { 440.f, 0.045f, 0.1f };
 
+	/** The win screen's victory tune, played note by note (each for its Duration). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones")
+	TArray<FIJPTone> Fanfare = {
+		{ 523.f, 0.12f, 0.22f }, { 659.f, 0.12f, 0.22f }, { 784.f, 0.12f, 0.22f }, { 1047.f, 0.3f, 0.25f },
+		{ 784.f, 0.12f, 0.22f }, { 1047.f, 0.6f, 0.25f } };
+
+	/** A firework bursting on the win screen (pitch varies a little per burst). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones")
+	FIJPTone Pop = { 1400.f, 0.03f, 0.12f };
+
+	/** Each letter of the deadpan "game over" typing out. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones")
+	FIJPTone Deadpan = { 110.f, 0.07f, 0.15f };
+
 	/** How far babble wanders from the voice's pitch, in semitones either way. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones", meta = (ClampMin = "0", ClampMax = "12"))
 	float TalkRange = 4.f;

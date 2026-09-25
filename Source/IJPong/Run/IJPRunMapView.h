@@ -77,6 +77,24 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Map")
 	bool IsPlayingEraChange() const { return EraChangeLeft > 0.f; }
 
+	/**
+	 * The run's end. A loss: "IT'S JUST PONG..." types out slowly (a low beep per letter), then
+	 * Details. A win: "CONGRATULATIONS! YOU WON!", a fanfare, then fireworks until the screen
+	 * changes. Refresh() / ShowTree() leave it.
+	 */
+	void ShowRunEnd(bool bWon, const FString& Details);
+
+	UFUNCTION(BlueprintPure, Category = "Map")
+	bool IsShowingRunEnd() const { return EndMode != EEndMode::None; }
+
+	bool IsWinScreen() const { return EndMode == EEndMode::Win; }
+
+	/** The big line as it's shown right now (it types out on a loss). */
+	FString GetEndTitle() const;
+
+	/** Firework sparks in the air right now. */
+	int32 GetSparkCount() const { return Sparks.Num(); }
+
 	/** A bright flash that fades, like a tube warming up. */
 	void WarmUp();
 
@@ -196,6 +214,44 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UTextRenderComponent> UnlockText;
+
+	enum class EEndMode : uint8 { None, Loss, Win };
+
+	struct FSpark
+	{
+		FVector2D Position;
+		FVector2D Velocity;
+		float Age = 0.f;
+		float Life = 1.f;
+		int32 Colour = 0;
+	};
+
+	void TickRunEnd(float DeltaSeconds);
+	void Burst();
+	void StopRunEnd();
+
+	/** Firework sparks, one piece set per palette colour (left paddle, right paddle, ball). */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UInstancedStaticMeshComponent>> SparkPieces;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextRenderComponent> EndTitleText;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextRenderComponent> EndSubText;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextRenderComponent> EndDetailsText;
+
+	TArray<FSpark> Sparks;
+	FString EndTitle;
+	FString EndDetails;
+	EEndMode EndMode = EEndMode::None;
+	float EndTime = 0.f;
+	int32 EndLettersShown = 0;
+	int32 FanfareNote = 0;
+	float NextFanfareAt = 0.f;
+	float NextBurstAt = 0.f;
 
 	/** The era change's title card. */
 	UPROPERTY(Transient)

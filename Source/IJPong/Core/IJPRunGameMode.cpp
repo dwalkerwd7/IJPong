@@ -377,19 +377,22 @@ void AIJPRunGameMode::EndRun()
 void AIJPRunGameMode::ShowMap()
 {
 	const UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
-	MapView->Refresh();
+	if (Phase != EIJPRunPhase::Ended)
+	{
+		MapView->Refresh();
+	}
 	if (Phase == EIJPRunPhase::Ended)
 	{
-		// What this run earned for the skill trees, and the totals so far.
+		// The end screen (a deadpan loss, a party of a win), what the run earned under it, and the totals.
 		const UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(this);
-		FString Result = Run->GetState() == EIJPRunState::Won ? TEXT("RUN WON!") : TEXT("RUN OVER");
 		const UIJPEraSubsystem* Eras = UIJPEraSubsystem::Get(this);
+		FString Details = FString::Printf(TEXT("+%d SKILL PTS    +%d BOSS TOKENS"), Run->GetEarnedSkillPoints(), Run->GetEarnedBossTokens());
 		if (const UIJPEra* Unlocked = Run->DidUnlockEra() && Eras ? Eras->GetEraAt(Run->GetUnlocksErasTo() - 1) : nullptr)
 		{
-			Result += FString::Printf(TEXT(" %s UNLOCKED"), *Unlocked->DisplayName.ToString().ToUpper());
+			Details += FString::Printf(TEXT("\n%s UNLOCKED"), *Unlocked->DisplayName.ToString().ToUpper());
 		}
-		MapView->SetHeader(FString::Printf(TEXT("%s    +%d SKILL PTS    +%d BOSS TOKENS"), *Result, Run->GetEarnedSkillPoints(), Run->GetEarnedBossTokens()));
-		MapView->SetFooter(FString::Printf(TEXT("SKILL PTS %d    BOSS TOKENS %d    SPACE: NEW RUN"),
+		MapView->ShowRunEnd(Run->GetState() == EIJPRunState::Won, Details);
+		MapView->SetFooter(FString::Printf(TEXT("SKILL PTS %d    BOSS TOKENS %d    SPACE: CONTINUE"),
 			Meta ? Meta->GetSkillPoints() : 0, Meta ? Meta->GetBossTokens() : 0));
 	}
 	else

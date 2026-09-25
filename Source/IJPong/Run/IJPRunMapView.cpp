@@ -1,6 +1,8 @@
 // It's Just Pong
 
 #include "Run/IJPRunMapView.h"
+#include "Audio/IJPToneSynthComponent.h"
+#include "Audio/IJPToneSet.h"
 #include "Camera/CameraComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -151,6 +153,23 @@ void AIJPRunMapView::Init(AIJPArena* InArena)
 	StartText = MakeText(TextSize);
 	UnlockText = MakeText(TextSize);
 	EraTitleText = MakeText(TextSize * 2.f);
+	EndTitleText = MakeText(TextSize * 2.4f);
+	EndSubText = MakeText(TextSize * 2.4f);
+	EndDetailsText = MakeText(TextSize);
+
+	// Firework sparks, in the palette's paddle and ball colours.
+	static const EIJPPaletteRole SparkRoles[] = { EIJPPaletteRole::LeftPaddle, EIJPPaletteRole::RightPaddle, EIJPPaletteRole::Ball };
+	for (const EIJPPaletteRole SparkRole : SparkRoles)
+	{
+		UInstancedStaticMeshComponent* Pieces = NewObject<UInstancedStaticMeshComponent>(this);
+		Pieces->SetupAttachment(Root);
+		Pieces->SetStaticMesh(BrightPieces->GetStaticMesh());
+		Pieces->CastShadow = false;
+		IJP::ConfigureAsVisualOnly(Pieces);
+		Pieces->RegisterComponent();
+		Pieces->SetMaterial(0, InArena->GetPaletteMaterial(SparkRole));
+		SparkPieces.Add(Pieces);
+	}
 	CursorBlinker.Start(this, 0.25f, 0, true, [this](bool bShow)
 	{
 		const bool bHasPick = ShownTree ? !TreeOrder.IsEmpty() : bShowingCards ? NumCards > 0 : !Reachable.IsEmpty();
@@ -280,9 +299,173 @@ void AIJPRunMapView::PlayEraChange(const FString& Title, float Duration)
 	Tick(0.f);
 }
 
+void AIJPRunMapView::ShowRunEnd(bool bWon, const FString& Details)
+{
+	ApplyColours();
+	ClearDrawing();
+	Cursor->ClearInstances();
+	CursorBlinker.Stop();
+	Header->SetText(FText::GetEmpty());
+
+	EndMode = bWon ? EEndMode::Win : EEndMode::Loss;
+	EndTitle = bWon ? TEXT("CONGRATULATIONS!") : TEXT("IT'S JUST PONG...");
+	EndDetails = Details;
+	EndTime = 0.f;
+	EndLettersShown = 0;
+	FanfareNote = 0;
+	NextFanfareAt = 0.f;
+	NextBurstAt = 0.f;
+	Sparks.Reset();
+
+	const FColor Ink = Arena->GetPalette().Score.ToFColor(true);
+	for (UTextRenderComponent* Text : { EndTitleText.Get(), EndSubText.Get(), EndDetailsText.Get() })
+	{
+		Text->SetTextRenderColor(Ink);
+		Text->SetVisibility(false);
+	}
+	EndTitleText->SetRelativeLocation(FVector(0.f, 2.f, bWon ? 60.f : 20.f));
+	EndSubText->SetRelativeLocation(FVector(0.f, 2.f, 0.f));
+	EndSubText->SetText(FText::FromString(TEXT("YOU WON!")));
+	EndDetailsText->SetRelativeLocation(FVector(0.f, 2.f, -HalfScreen.Y * 0.45f));
+	EndDetailsText->SetText(FText::FromString(Details));
+	if (bWon)
+	{
+		// The whole message at once: this one's a party.
+		EndTitleText->SetText(FText::FromString(EndTitle));
+		EndLettersShown = EndTitle.Len();
+		EndTitleText->SetVisibility(true);
+		EndSubText->SetVisibility(true);
+		EndDetailsText->SetVisibility(true);
+		CRT->Pulse(1.5f, 0.6f);
+	}
+	else
+	{
+		EndTitleText->SetText(FText::GetEmpty());
+		EndTitleText->SetVisibility(true);
+	}
+	SetActorTickEnabled(true);
+}
+
+FString AIJPRunMapView::GetEndTitle() const
+{
+	return EndTitle.Left(EndLettersShown);
+}
+
+void AIJPRunMapView::StopRunEnd()
+{
+	EndMode = EEndMode::None;
+	Sparks.Reset();
+	for (UInstancedStaticMeshComponent* Pieces : SparkPieces)
+	{
+		Pieces->ClearInstances();
+	}
+	for (UTextRenderComponent* Text : { EndTitleText.Get(), EndSubText.Get(), EndDetailsText.Get() })
+	{
+		if (Text)
+		{
+			Text->SetVisibility(false);
+		}
+	}
+}
+
+void AIJPRunMapView::TickRunEnd(float DeltaSeconds)
+{
+	EndTime += DeltaSeconds;
+	UIJPToneSynthComponent* Tones = Arena.IsValid() ? Arena->GetTones() : nullptr;
+	const UIJPToneSet* ToneSet = Arena.IsValid() ? &Arena->GetToneSet() : nullptr;
+
+	if (EndMode == EEndMode::Loss)
+	{
+		// Deadpan: a letter every 0.16 s with a low beep (the dots are silent), then the earnings.
+		const int32 Letters = FMath::Min(FMath::FloorToInt(EndTime / 0.16f), EndTitle.Len());
+		if (Letters > EndLettersShown)
+		{
+			EndLettersShown = Letters;
+			EndTitleText->SetText(FText::FromString(GetEndTitle()));
+			const TCHAR Letter = EndTitle[Letters - 1];
+			if (Tones && ToneSet && FChar::IsAlpha(Letter))
+			{
+				Tones->PlayTone(ToneSet->Deadpan);
+			}
+		}
+		EndDetailsText->SetVisibility(EndTime > EndTitle.Len() * 0.16f + 0.6f);
+		return;
+	}
+
+	// The fanfare, note by note; then fireworks with pops (one voice: the pops wait their turn).
+	const bool bFanfareDone = !ToneSet || FanfareNote >= ToneSet->Fanfare.Num();
+	if (!bFanfareDone && EndTime >= NextFanfareAt)
+	{
+		const FIJPTone& Note = ToneSet->Fanfare[FanfareNote++];
+		if (Tones)
+		{
+			Tones->PlayTone(Note);
+		}
+		NextFanfareAt = EndTime + Note.Duration + 0.02f;
+	}
+	if (EndTime >= NextBurstAt)
+	{
+		Burst();
+		if (bFanfareDone && Tones && ToneSet)
+		{
+			FIJPTone Pop = ToneSet->Pop;
+			Pop.Frequency *= FMath::FRandRange(0.8f, 1.25f);
+			Tones->PlayTone(Pop);
+		}
+		NextBurstAt = EndTime + FMath::FRandRange(0.25f, 0.55f);
+	}
+
+	// Sparks fly out, fall a little and shrink away.
+	for (int32 i = Sparks.Num() - 1; i >= 0; --i)
+	{
+		FSpark& Spark = Sparks[i];
+		Spark.Age += DeltaSeconds;
+		if (Spark.Age >= Spark.Life)
+		{
+			Sparks.RemoveAtSwap(i);
+			continue;
+		}
+		Spark.Velocity *= FMath::Pow(0.35f, DeltaSeconds);
+		Spark.Velocity.Y -= 90.f * DeltaSeconds;
+		Spark.Position += Spark.Velocity * DeltaSeconds;
+	}
+	for (UInstancedStaticMeshComponent* Pieces : SparkPieces)
+	{
+		Pieces->ClearInstances();
+	}
+	for (const FSpark& Spark : Sparks)
+	{
+		const float Size = FMath::Lerp(7.f, 1.f, Spark.Age / Spark.Life);
+		SparkPieces[Spark.Colour]->AddInstance(FTransform(FQuat::Identity, FVector(Spark.Position.X, 1.f, Spark.Position.Y), FVector(Size / CubeSize, 1.f / CubeSize, Size / CubeSize)));
+	}
+}
+
+void AIJPRunMapView::Burst()
+{
+	// A ring of sparks somewhere on the screen, all one colour.
+	const FVector2D Centre(FMath::FRandRange(-HalfScreen.X * 0.8f, HalfScreen.X * 0.8f), FMath::FRandRange(-HalfScreen.Y * 0.6f, HalfScreen.Y * 0.8f));
+	const int32 Colour = FMath::RandHelper(FMath::Max(SparkPieces.Num(), 1));
+	const int32 Count = 16;
+	const float Speed = FMath::FRandRange(160.f, 260.f);
+	for (int32 i = 0; i < Count; ++i)
+	{
+		const float Angle = (i + FMath::FRand() * 0.5f) * UE_TWO_PI / Count;
+		FSpark& Spark = Sparks.AddDefaulted_GetRef();
+		Spark.Position = Centre;
+		Spark.Velocity = FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * Speed * FMath::FRandRange(0.8f, 1.1f);
+		Spark.Life = FMath::FRandRange(0.8f, 1.2f);
+		Spark.Colour = Colour;
+	}
+}
+
 void AIJPRunMapView::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	if (EndMode != EEndMode::None)
+	{
+		TickRunEnd(DeltaSeconds);
+		return;
+	}
 	if (EraChangeLeft <= 0.f)
 	{
 		SetActorTickEnabled(false);
@@ -358,6 +541,7 @@ void AIJPRunMapView::ClearDrawing()
 	{
 		Text->SetVisibility(false);
 	}
+	StopRunEnd();
 	for (UTextRenderComponent* Text : { InfoText.Get(), StartText.Get(), UnlockText.Get(), EraTitleText.Get() })
 	{
 		if (Text)
