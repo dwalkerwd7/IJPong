@@ -25,6 +25,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spell")
 	FIJPStrikeSpec Strike;
 
+	/** Strikes cast at once, centred on the target and spaced along the lane (e.g. Brickfall's three, with gaps to slip through). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spell", meta = (ClampMin = "1", ClampMax = "7"))
+	int32 Strikes = 1;
+
+	/** Distance between neighbouring strikes' centres. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spell", meta = (ClampMin = "0"))
+	float StrikeSpacing = 140.f;
+
 	virtual void Activate() override;
 	virtual bool WantsAIUse() const override;
 

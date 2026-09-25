@@ -103,6 +103,22 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	bool IsDashing() const { return DashTimeLeft > 0.f; }
 
+	/**
+	 * Break into two halves with a Gap between them (0 = whole again). Each half blocks the ball;
+	 * the gap lets it through. For bosses (Bulkhead crumbling in two).
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Paddle")
+	void SetSplitGap(float Gap);
+
+	UFUNCTION(BlueprintPure, Category = "Paddle")
+	float GetSplitGap() const { return SplitGap; }
+
+	/** How far each half's centre sits from the paddle's centre while split (0 when whole). */
+	float GetSplitHalfOffset() const;
+
+	/** The stretch of paddle a ball at plane height Y meets: its centre height and half-length (one half while split). */
+	void GetHitSpan(float Y, float& OutCentreY, float& OutHalfLength) const;
+
 	/** Frozen in place for Seconds: input is ignored and any dash stops. For balls like the Bomb. */
 	UFUNCTION(BlueprintCallable, Category = "Paddle")
 	void Stun(float Seconds);
@@ -195,6 +211,16 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
 	TObjectPtr<UStaticMeshComponent> Visual;
 
+	/** While split: the two ball-blocking halves (the whole box stops blocking), and the lower half's look. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
+	TObjectPtr<UBoxComponent> HalfTop;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
+	TObjectPtr<UBoxComponent> HalfBottom;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
+	TObjectPtr<UStaticMeshComponent> VisualBottom;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
 	TObjectPtr<UIJPAbilityComponent> Abilities;
 
@@ -241,6 +267,7 @@ private:
 	float DashVelocity = 0.f;
 	float DashTimeLeft = 0.f;
 	float StunLeft = 0.f;
+	float SplitGap = 0.f;
 	float ArmedTime = 0.f;
 	float ArmedCueStrength = 0.f;
 

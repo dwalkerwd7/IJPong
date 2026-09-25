@@ -172,7 +172,7 @@ void AIJPPaddleAIController::Decide(const AIJPPaddle& Paddle, const AIJPBall* In
 
 float AIJPPaddleAIController::AvoidStrikes(const AIJPPaddle& Paddle, float Target) const
 {
-	// Stand just outside any zone about to land here (the nearer edge, or the other one at a wall).
+	// Stand just outside any zone about to land here (the edge on the side it's on, or the other one at a wall).
 	const float Half = Paddle.GetSize().Y * 0.5f;
 	const float Limit = Paddle.GetArena()->GetHalfExtents().Y - Half;
 	for (const TWeakObjectPtr<AIJPSpellStrike>& Weak : Paddle.GetArena()->GetStrikes())
@@ -183,14 +183,32 @@ float AIJPPaddleAIController::AvoidStrikes(const AIJPPaddle& Paddle, float Targe
 			continue;
 		}
 		const float Clear = Strike->GetHalfHeight() + Half + 6.f;
+		const float Above = Strike->GetTargetY() + Clear;
+		const float Below = Strike->GetTargetY() - Clear;
 		if (FMath::Abs(Target - Strike->GetTargetY()) < Clear)
 		{
-			const float Above = Strike->GetTargetY() + Clear;
-			const float Below = Strike->GetTargetY() - Clear;
 			const bool bAboveFits = Above <= Limit;
 			const bool bBelowFits = Below >= -Limit;
-			const bool bGoAbove = bAboveFits && (!bBelowFits || Target >= Strike->GetTargetY());
+			// Out on the side it's already on (crossing the zone to the other edge could take too long).
+			const bool bGoAbove = bAboveFits && (!bBelowFits || Paddle.GetPlanePosition().Y >= Strike->GetTargetY());
 			Target = bGoAbove ? Above : Below;
+			continue;
+		}
+
+		// Heading for the far side: only cross if it can get all the way over before it lands;
+		// otherwise wait at the near edge.
+		const float Current = Paddle.GetPlanePosition().Y;
+		const bool bCrossesUp = Current < Above && Target >= Above;
+		const bool bCrossesDown = Current > Below && Target <= Below;
+		if (bCrossesUp || bCrossesDown)
+		{
+			const float Distance = FMath::Abs((bCrossesUp ? Above : Below) - Current);
+			const float TimeToCross = Distance / FMath::Max(Paddle.GetMaxSpeed(), 1.f) + 0.1f;
+			if (TimeToCross > Strike->GetTimeLeft())
+			{
+				Target = Current >= Strike->GetTargetY() ? Above : Below;
+				Target = FMath::Clamp(Target, -Limit, Limit);
+			}
 		}
 	}
 	return Target;
@@ -199,12 +217,22 @@ float AIJPPaddleAIController::AvoidStrikes(const AIJPPaddle& Paddle, float Targe
 void AIJPPaddleAIController::Steer(AIJPPaddle& Paddle) const
 {
 	const UIJPAIProfile& P = GetProfile();
-	const float Target = AvoidStrikes(Paddle, TargetY);
+	// Split in two: put the nearer half, not the gap, where the ball will be.
+	float Aim = TargetY;
+	if (const float HalfOffset = Paddle.GetSplitHalfOffset(); HalfOffset > 0.f)
+	{
+		const float Current = Paddle.GetPlanePosition().Y;
+		const float Limit = Paddle.GetArena()->GetHalfExtents().Y - Paddle.GetSize().Y * 0.5f;
+		const float Below = FMath::Clamp(TargetY - HalfOffset, -Limit, Limit); // top half on the ball
+		const float Above = FMath::Clamp(TargetY + HalfOffset, -Limit, Limit); // bottom half on the ball
+		Aim = FMath::Abs(Below - Current) <= FMath::Abs(Above - Current) ? Below : Above;
+	}
+	const float Target = AvoidStrikes(Paddle, Aim);
 	const float Delta = Target - Paddle.GetPlanePosition().Y;
 
 	// Dodging a spell is urgent: full purpose, not the idle drift, only a short ease-in, and "close enough"
 	// isn't (stopping short of the edge of the zone is still a hit).
-	const bool bDodging = Target != TargetY;
+	const bool bDodging = Target != Aim;
 	if (FMath::Abs(Delta) <= (bDodging ? 1.f : P.ArrivalTolerance))
 	{
 		return;

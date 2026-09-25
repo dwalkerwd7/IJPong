@@ -28,6 +28,22 @@ AIJPPaddle::AIJPPaddle()
 	Visual->CastShadow = false;
 	IJP::ConfigureAsVisualOnly(Visual);
 
+	// The halves exist from the start but block nothing and show nothing until the paddle splits.
+	for (const bool bTop : { true, false })
+	{
+		UBoxComponent* Half = CreateDefaultSubobject<UBoxComponent>(bTop ? TEXT("HalfTop") : TEXT("HalfBottom"));
+		Half->SetupAttachment(Collision);
+		IJP::ConfigureAsBallBlocker(Half);
+		Half->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		(bTop ? HalfTop : HalfBottom) = Half;
+	}
+	VisualBottom = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("VisualBottom"));
+	VisualBottom->SetupAttachment(Collision);
+	VisualBottom->SetStaticMesh(CubeMesh.Object);
+	VisualBottom->CastShadow = false;
+	VisualBottom->SetVisibility(false);
+	IJP::ConfigureAsVisualOnly(VisualBottom);
+
 	// Just behind the paddle (which fills -VisualDepth/2..+VisualDepth/2 in depth), hidden until armed.
 	ArmedHalo = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ArmedHalo"));
 	ArmedHalo->SetupAttachment(Collision);
@@ -72,6 +88,7 @@ void AIJPPaddle::InitPaddle(AIJPArena* InArena, EIJPSide InSide, float InLaneX, 
 
 	Visual->SetMaterial(0, InArena->GetPaletteMaterial(InSide == EIJPSide::Left ? EIJPPaletteRole::LeftPaddle : EIJPPaletteRole::RightPaddle));
 	AimLine->SetMaterial(0, Visual->GetMaterial(0));
+	VisualBottom->SetMaterial(0, Visual->GetMaterial(0));
 	// The halo has its own instance: it pulses without touching the paddle's shared colour.
 	if (UMaterialInterface* Base = InArena->GetBaseMaterial())
 	{
@@ -112,6 +129,40 @@ void AIJPPaddle::Dash(float Distance, float Duration)
 	const float Direction = PendingInput != 0.f ? FMath::Sign(PendingInput) : LastMoveSign;
 	DashTimeLeft = FMath::Max(Duration, UE_KINDA_SMALL_NUMBER);
 	DashVelocity = Direction * Distance * SpeedScale / DashTimeLeft;
+}
+
+void AIJPPaddle::SetSplitGap(float Gap)
+{
+	SplitGap = FMath::Clamp(Gap, 0.f, FMath::Max(GetSize().Y - 2.f, 0.f));
+	const bool bSplit = SplitGap > 0.f;
+	Collision->SetCollisionEnabled(bSplit ? ECollisionEnabled::NoCollision : ECollisionEnabled::QueryOnly);
+	HalfTop->SetCollisionEnabled(bSplit ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
+	HalfBottom->SetCollisionEnabled(bSplit ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
+	VisualBottom->SetVisibility(bSplit);
+	ApplyLayout();
+}
+
+float AIJPPaddle::GetSplitHalfOffset() const
+{
+	if (SplitGap <= 0.f)
+	{
+		return 0.f;
+	}
+	const float HalfLength = FMath::Max((GetSize().Y - SplitGap) * 0.5f, 1.f);
+	return SplitGap * 0.5f + HalfLength * 0.5f;
+}
+
+void AIJPPaddle::GetHitSpan(float Y, float& OutCentreY, float& OutHalfLength) const
+{
+	if (SplitGap <= 0.f)
+	{
+		OutCentreY = PlaneY;
+		OutHalfLength = GetSize().Y * 0.5f;
+		return;
+	}
+	const float Offset = GetSplitHalfOffset();
+	OutCentreY = Y >= PlaneY ? PlaneY + Offset : PlaneY - Offset;
+	OutHalfLength = FMath::Max((GetSize().Y - SplitGap) * 0.5f, 1.f) * 0.5f;
 }
 
 void AIJPPaddle::Stun(float Seconds)
@@ -166,7 +217,26 @@ void AIJPPaddle::ApplyLayout()
 	Collision->SetBoxExtent(FVector(Size.X * 0.5f, BlockerDepth * 0.5f, Size.Y * 0.5f));
 
 	const float CubeSize = 100.f; // /Engine/BasicShapes/Cube is 100 units, centred.
-	Visual->SetRelativeScale3D(FVector(Size.X / CubeSize, VisualDepth / CubeSize, Size.Y / CubeSize));
+	if (SplitGap > 0.f)
+	{
+		// Two halves, the gap between them at the paddle's centre.
+		const float HalfLength = FMath::Max((Size.Y - SplitGap) * 0.5f, 1.f);
+		const float Offset = GetSplitHalfOffset();
+		for (const bool bTop : { true, false })
+		{
+			const float Z = bTop ? Offset : -Offset;
+			(bTop ? HalfTop : HalfBottom)->SetBoxExtent(FVector(Size.X * 0.5f, BlockerDepth * 0.5f, HalfLength * 0.5f));
+			(bTop ? HalfTop : HalfBottom)->SetRelativeLocation(FVector(0.f, 0.f, Z));
+			UStaticMeshComponent* Look = bTop ? Visual : VisualBottom;
+			Look->SetRelativeLocation(FVector(0.f, 0.f, Z));
+			Look->SetRelativeScale3D(FVector(Size.X / CubeSize, VisualDepth / CubeSize, HalfLength / CubeSize));
+		}
+	}
+	else
+	{
+		Visual->SetRelativeLocation(FVector::ZeroVector);
+		Visual->SetRelativeScale3D(FVector(Size.X / CubeSize, VisualDepth / CubeSize, Size.Y / CubeSize));
+	}
 	const FVector2D HaloSize = Size + FVector2D(ArmedHaloMargin * 2.f);
 	ArmedHalo->SetRelativeLocation(FVector(0.f, -VisualDepth * 0.5f - 1.f, 0.f));
 	ArmedHalo->SetRelativeScale3D(FVector(HaloSize.X / CubeSize, 1.f / CubeSize, HaloSize.Y / CubeSize));
@@ -175,7 +245,11 @@ void AIJPPaddle::ApplyLayout()
 void AIJPPaddle::Flicker()
 {
 	// Hidden now, shown again after one toggle. Only the visual: the collision never flickers.
-	FlickerBlinker.Start(this, GetProfile()->FlickerTime, 1, false, [this](bool bShow) { Visual->SetVisibility(bShow); });
+	FlickerBlinker.Start(this, GetProfile()->FlickerTime, 1, false, [this](bool bShow)
+	{
+		Visual->SetVisibility(bShow);
+		VisualBottom->SetVisibility(bShow && SplitGap > 0.f);
+	});
 }
 
 bool AIJPPaddle::IsVisualShown() const

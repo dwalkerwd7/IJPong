@@ -12,6 +12,7 @@ class AIJPBall;
 class AIJPPaddleAIController;
 class UIJPAIProfile;
 class UIJPBanterComponent;
+class UIJPBossComponent;
 class UIJPConversation;
 class UIJPConversationPlayer;
 class UIJPMatchComponent;
@@ -70,6 +71,8 @@ public:
 
 	UIJPBanterComponent* GetBanter() const { return Banter; }
 
+	UIJPBossComponent* GetBoss() const { return Boss; }
+
 	/** The opponent's voice when no rival is set (a multiple of the tone set's Talk pitch). */
 	static constexpr float DefaultOpponentVoice = 0.8f;
 
@@ -114,6 +117,10 @@ protected:
 	/** The current rival's mid-rally reactions. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game|Components")
 	TObjectPtr<UIJPBanterComponent> Banter;
+
+	/** The current rival's boss phases (if it's a boss). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game|Components")
+	TObjectPtr<UIJPBossComponent> Boss;
 
 private:
 	UFUNCTION()

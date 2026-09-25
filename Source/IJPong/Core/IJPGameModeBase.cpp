@@ -11,6 +11,7 @@
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPPaddleClass.h"
 #include "Gameplay/IJPRival.h"
+#include "Gameplay/IJPBossComponent.h"
 #include "Narrative/IJPBanterComponent.h"
 #include "Narrative/IJPConversation.h"
 #include "Narrative/IJPSpeechBubbleComponent.h"
@@ -26,6 +27,7 @@ AIJPGameModeBase::AIJPGameModeBase()
 	Match = CreateDefaultSubobject<UIJPMatchComponent>(TEXT("Match"));
 	Conversations = CreateDefaultSubobject<UIJPConversationPlayer>(TEXT("Conversations"));
 	Banter = CreateDefaultSubobject<UIJPBanterComponent>(TEXT("Banter"));
+	Boss = CreateDefaultSubobject<UIJPBossComponent>(TEXT("Boss"));
 }
 
 void AIJPGameModeBase::StartPlay()
@@ -62,6 +64,7 @@ void AIJPGameModeBase::StartPlay()
 	Match->OnMatchEnded.AddDynamic(this, &AIJPGameModeBase::HandleMatchEnded);
 	Conversations->OnFinished.AddDynamic(this, &AIJPGameModeBase::HandleConversationFinished);
 	Banter->Bind(Arena, Match);
+	Boss->Bind(Arena, Match);
 	if (AIJPPaddle* Opponent = Arena->GetPaddle(IJP::Opposite(PlayerSide)))
 	{
 		Opponent->GetSpeechBubble()->SetVoicePitch(DefaultOpponentVoice);
@@ -97,6 +100,7 @@ void AIJPGameModeBase::BeginMatch(const UIJPMatchRules* Rules)
 	Conversations->Stop();
 	const UIJPConversation* PreMatch = Rival ? UIJPConversation::PickRandom(Rival->PreMatch) : nullptr;
 	Match->StartMatch(Arena, Rules, PreMatch != nullptr);
+	Boss->Restart(); // a fresh fight: back to its first form
 	if (PreMatch)
 	{
 		// HandleConversationFinished releases the serve.
@@ -149,6 +153,7 @@ void AIJPGameModeBase::SetRival(const UIJPRival* InRival)
 			Paddle->GetAbilities()->Equip(EIJPAbilitySlot::ClassSkill, Rival->RivalSkill);
 		}
 		Paddle->GetAbilities()->Equip(EIJPAbilitySlot::Spell, Rival ? Rival->Spell.Get() : nullptr);
+		Boss->SetBoss(Rival);
 	}
 }
 

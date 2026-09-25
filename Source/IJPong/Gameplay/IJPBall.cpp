@@ -424,8 +424,11 @@ bool AIJPBall::TryPaddleBounce(AIJPPaddle* Paddle, const FVector2D& Normal)
 	}
 
 	// Where on the paddle it hit: -1 bottom edge .. +1 top edge, counting the ball's own half-size.
-	const float Reach = Paddle->GetSize().Y * 0.5f + GetSize() * 0.5f;
-	const float Offset = (Position.Y - Paddle->GetPlanePosition().Y) / Reach;
+	float SpanCentre = 0.f;
+	float SpanHalf = 0.f;
+	Paddle->GetHitSpan(Position.Y, SpanCentre, SpanHalf);
+	const float Reach = SpanHalf + GetSize() * 0.5f;
+	const float Offset = FMath::Clamp((Position.Y - SpanCentre) / Reach, -1.f, 1.f);
 
 	CurveTimeLeft = 0.f;
 	bPiercing = false;

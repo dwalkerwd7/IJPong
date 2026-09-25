@@ -49,6 +49,37 @@ struct FIJPBanterLines
 	float Chance = 0.5f;
 };
 
+/** One stage of a boss fight, entered when the boss's health falls to AtHealth of its maximum. */
+USTRUCT(BlueprintType)
+struct FIJPBossPhase
+{
+	GENERATED_BODY()
+
+	/** Enter at or below this fraction of the boss's health (0.66 = two thirds). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss", meta = (ClampMin = "0", ClampMax = "1"))
+	float AtHealth = 0.66f;
+
+	/** Play stops for a moment as it changes (every ball frozen). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss", meta = (ClampMin = "0", Units = "s"))
+	float Pause = 1.f;
+
+	/** Said as it changes. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss")
+	TObjectPtr<UIJPConversation> Line;
+
+	/** A new skill from now on (empty = keep the current one). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss")
+	TObjectPtr<UIJPAbility> Skill;
+
+	/** A new spell from now on, charged and ready (empty = keep the current one). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss")
+	TObjectPtr<UIJPAbility> Spell;
+
+	/** Break the paddle into two halves with this gap (0 = no change). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss", meta = (ClampMin = "0"))
+	float SplitGap = 0.f;
+};
+
 /**
  * A named opponent: a paddle class (its body), its own ability, a playing style, and the
  * conversations that carry the story.
@@ -109,6 +140,18 @@ public:
 	/** Returns in one rally that count as a long rally. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Banter", meta = (ClampMin = "1"))
 	int32 LongRallyReturns = 8;
+
+	// --- Boss (a rival with a size and phases) ---
+
+	/** Length at full health, as a multiple of its class's; it shrinks back to 1x as it loses health. 1 = no change. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Boss", meta = (ClampMin = "1"))
+	float BossLength = 1.f;
+
+	/** Stages it goes through as its health falls, in order (see UIJPBossComponent). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Boss")
+	TArray<FIJPBossPhase> Phases;
+
+	bool IsBoss() const { return BossLength > 1.f || !Phases.IsEmpty(); }
 
 	/** The lines for Event, or null if the rival has none. */
 	const FIJPBanterLines* FindBanter(EIJPBanterEvent Event) const

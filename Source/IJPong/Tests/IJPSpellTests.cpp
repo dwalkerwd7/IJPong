@@ -4,6 +4,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "AI/IJPPaddleAIController.h"
 #include "Abilities/IJPAbility_Spell.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Core/IJPRunGameMode.h"
@@ -133,6 +134,9 @@ bool FIJPSpellAITest::RunTest(const FString& Parameters)
 	const float StartY = AIPaddle->GetPlanePosition().Y;
 	Test.RunFor(1.1f);
 	const float EndY = AIPaddle->GetPlanePosition().Y;
+	const AIJPPaddleAIController* AIC = Cast<AIJPPaddleAIController>(AIPaddle->GetController());
+	AddInfo(FString::Printf(TEXT("AI target %.0f, strikes %d, ball in play %d at (%.0f, %.0f) v(%.0f, %.0f)"), AIC ? AIC->GetTargetY() : -999.f, Arena->GetStrikes().Num(),
+		Arena->GetBall()->IsInPlay() ? 1 : 0, Arena->GetBall()->GetPlanePosition().X, Arena->GetBall()->GetPlanePosition().Y, Arena->GetBall()->GetPlaneVelocity().X, Arena->GetBall()->GetPlaneVelocity().Y));
 	Test.RunFor(0.3f);
 	UTEST_EQUAL(*FString::Printf(TEXT("The AI dodged (from %.0f to %.0f, AI %s)"), StartY, EndY, AIPaddle->GetController() ? *AIPaddle->GetController()->GetName() : TEXT("none")), Match->GetHealth(EIJPSide::Right), 5.f);
 

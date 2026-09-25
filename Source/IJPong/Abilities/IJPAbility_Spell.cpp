@@ -16,14 +16,19 @@ void UIJPAbility_Spell::Activate()
 		return;
 	}
 
+	// Aimed where they are now (several spread along the lane around it): moving is the dodge.
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	AIJPSpellStrike* SpellStrike = Paddle->GetWorld()->SpawnActor<AIJPSpellStrike>(AIJPSpellStrike::StaticClass(), Arena->GetActorTransform(), Params);
-	if (SpellStrike)
+	const float Limit = Arena->GetHalfExtents().Y - Strike.HalfHeight;
+	for (int32 i = 0; i < Strikes; ++i)
 	{
-		// Aimed where they are now: moving is the dodge.
-		SpellStrike->Launch(Arena, Paddle->GetSide(), Target->GetSide(), Target->GetPlanePosition().Y, Strike);
-		LastStrike = SpellStrike;
+		const float Y = FMath::Clamp(Target->GetPlanePosition().Y + (i - (Strikes - 1) * 0.5f) * StrikeSpacing, -Limit, Limit);
+		AIJPSpellStrike* SpellStrike = Paddle->GetWorld()->SpawnActor<AIJPSpellStrike>(AIJPSpellStrike::StaticClass(), Arena->GetActorTransform(), Params);
+		if (SpellStrike)
+		{
+			SpellStrike->Launch(Arena, Paddle->GetSide(), Target->GetSide(), Y, Strike);
+			LastStrike = SpellStrike;
+		}
 	}
 }
 
