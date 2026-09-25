@@ -46,6 +46,10 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Input", meta = (ClampMin = "0", Units = "deg"))
 	float KeyAimSpeed = 120.f;
 
+	/** Digital: use the carried item. */
+	UPROPERTY(Config, EditAnywhere, Category = "Input")
+	TSoftObjectPtr<UInputAction> ItemAction;
+
 	/** Digital: use the paddle's run ability. */
 	UPROPERTY(Config, EditAnywhere, Category = "Input")
 	TSoftObjectPtr<UInputAction> RunAbilityAction;

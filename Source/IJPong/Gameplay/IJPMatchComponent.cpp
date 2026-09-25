@@ -135,6 +135,23 @@ void UIJPMatchComponent::ApplyDamage(EIJPSide Side, float Amount)
 	Arena->FlashScore(Side);
 }
 
+void UIJPMatchComponent::Heal(EIJPSide Side, float Amount)
+{
+	if (!IsPlaying() || GetRules().IsEndless() || Amount <= 0.f)
+	{
+		return;
+	}
+	const int32 Index = SideIndex(Side);
+	const float Healed = FMath::Min(Health[Index] + Amount, MaxHealth[Index]) - Health[Index];
+	if (Healed <= 0.f)
+	{
+		return;
+	}
+	Health[Index] += Healed;
+	UpdateScoreDisplay();
+	OnHealthChanged.Broadcast(Side, Health[Index], -Healed);
+}
+
 void UIJPMatchComponent::SetHealth(EIJPSide Side, float InHealth, float InMaxHealth)
 {
 	const int32 Index = SideIndex(Side);

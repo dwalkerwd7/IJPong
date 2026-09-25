@@ -51,6 +51,10 @@ struct FIJPRunLoadout
 	/** Launched on every serve, on top of the match's own. */
 	UPROPERTY(BlueprintReadOnly, Category = "Loadout")
 	TArray<TObjectPtr<const UIJPBallType>> ExtraServedBalls;
+
+	/** The one item carried (Item slot), or null. A new one replaces it; using it clears it. */
+	UPROPERTY(BlueprintReadOnly, Category = "Loadout")
+	TObjectPtr<const UIJPAbility> Item;
 };
 
 /**
@@ -135,6 +139,10 @@ public:
 
 	/** For rewards granting themselves. */
 	FIJPRunLoadout& EditLoadout() { return Loadout; }
+
+	/** Heal up to the maximum (e.g. an item used mid-fight). */
+	UFUNCTION(BlueprintCallable, Category = "Run")
+	void RestoreHealth(float Amount);
 
 	/** Raise the maximum and heal the same amount. */
 	void AddMaxHealth(float Amount);

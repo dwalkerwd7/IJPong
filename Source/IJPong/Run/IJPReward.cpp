@@ -32,3 +32,8 @@ void UIJPReward_Ball::Grant(UIJPRunSubsystem& Run) const
 		Run.EditLoadout().ExtraServedBalls.Add(BallType);
 	}
 }
+
+void UIJPReward_Item::Grant(UIJPRunSubsystem& Run) const
+{
+	Run.EditLoadout().Item = Item;
+}

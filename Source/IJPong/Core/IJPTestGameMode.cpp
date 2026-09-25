@@ -40,6 +40,10 @@ void AIJPTestGameMode::OnArenaReady()
 
 void AIJPTestGameMode::RestartMatch(const UIJPMatchRules* Rules)
 {
+	if (AIJPPaddle* PlayerPaddle = GetArena() ? GetArena()->GetPaddle(PlayerSide) : nullptr)
+	{
+		PlayerPaddle->GetAbilities()->Equip(EIJPAbilitySlot::Item, PlayerItem.LoadSynchronous());
+	}
 	BeginMatch(Rules ? Rules : MatchRules.LoadSynchronous());
 }
 
@@ -190,6 +194,12 @@ void AIJPTestGameMode::GetDebugLines(TArray<FString>& OutLines) const
 		: FString(TEXT("Era: none")));
 
 	OutLines.Add(FString::Printf(TEXT("Balls in play: %d"), ArenaPtr ? ArenaPtr->GetNumBallsInPlay() : 0));
+	{
+		const AIJPPaddle* PlayerPaddle = ArenaPtr ? ArenaPtr->GetPaddle(PlayerSide) : nullptr;
+		const UIJPAbilityComponent* PlayerAbilities = PlayerPaddle ? PlayerPaddle->GetAbilities() : nullptr;
+		const UIJPAbility* Item = PlayerAbilities ? PlayerAbilities->GetAbility(EIJPAbilitySlot::Item) : nullptr;
+		OutLines.Add(FString::Printf(TEXT("Item (C): %s"), Item && PlayerAbilities->HasItem() ? *Item->DisplayName.ToString() : TEXT("none (R refills)")));
+	}
 
 	auto ClassName = [ArenaPtr](EIJPSide Side) -> FString
 	{

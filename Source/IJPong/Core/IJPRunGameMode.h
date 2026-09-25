@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Abilities/IJPAbility.h"
 #include "Core/IJPGameModeBase.h"
 #include "IJPRunGameMode.generated.h"
 
@@ -88,6 +89,10 @@ private:
 
 	UFUNCTION()
 	void HandleRunMatchEnded(EIJPSide Winner);
+
+	/** The player used their item: it's gone from the run too. */
+	UFUNCTION()
+	void HandlePlayerAbility(EIJPAbilitySlot Slot, const UIJPAbility* Ability);
 
 	UPROPERTY(Transient)
 	TObjectPtr<AIJPRunMapView> MapView;

@@ -7,6 +7,7 @@
 #include "Run/IJPRunMap.h"
 #include "IJPActConfig.generated.h"
 
+class UIJPAbility;
 class UIJPMatchRules;
 class UIJPReward;
 class UIJPRival;
@@ -115,6 +116,10 @@ public:
 	/** Skill points a run earns for each row it got down to (paid when the run ends, won or lost). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Meta", meta = (ClampMin = "0"))
 	int32 SkillPointsPerRow = 1;
+
+	/** Beating the boss gives one of these items, at random (replacing any held). Empty = none. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rewards")
+	TArray<TObjectPtr<UIJPAbility>> BossItems;
 
 	/** Boss tokens for beating this act's boss. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Meta", meta = (ClampMin = "0"))

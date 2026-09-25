@@ -63,6 +63,10 @@ void UIJPAbilityComponent::Equip(EIJPAbilitySlot Slot, const UIJPAbility* Defini
 	}
 	Abilities[Index] = Copy;
 	Cooldowns[Index] = 0.f;
+	if (Slot == EIJPAbilitySlot::Item)
+	{
+		bItemSpent = false;
+	}
 	WindUps[Index] = 0.f;
 }
 
@@ -97,11 +101,20 @@ void UIJPAbilityComponent::Fire(int32 Index)
 		return;
 	}
 	Ability->Activate();
+	if (Index == static_cast<int32>(EIJPAbilitySlot::Item))
+	{
+		bItemSpent = true; // one use
+	}
 	if (Ability->IsArmed())
 	{
 		PlayArmChirp();
 	}
 	OnActivated.Broadcast(static_cast<EIJPAbilitySlot>(Index), Ability);
+}
+
+bool UIJPAbilityComponent::HasItem() const
+{
+	return GetAbility(EIJPAbilitySlot::Item) && !bItemSpent;
 }
 
 bool UIJPAbilityComponent::IsWindingUp(EIJPAbilitySlot Slot) const
@@ -155,7 +168,8 @@ float UIJPAbilityComponent::GetCooldownRemaining(EIJPAbilitySlot Slot) const
 bool UIJPAbilityComponent::IsReady(EIJPAbilitySlot Slot) const
 {
 	const UIJPAbility* Ability = GetAbility(Slot);
-	return Ability && GetCooldownRemaining(Slot) <= 0.f && !IsWindingUp(Slot) && !IsLocked(Slot) && Ability->CanActivate();
+	const bool bSpent = Slot == EIJPAbilitySlot::Item && bItemSpent;
+	return Ability && !bSpent && GetCooldownRemaining(Slot) <= 0.f && !IsWindingUp(Slot) && !IsLocked(Slot) && Ability->CanActivate();
 }
 
 bool UIJPAbilityComponent::IsArmed() const

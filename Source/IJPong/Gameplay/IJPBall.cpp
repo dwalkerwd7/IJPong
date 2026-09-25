@@ -375,6 +375,14 @@ void AIJPBall::HandleHit(const FHitResult& Hit)
 		return;
 	}
 
+	for (const EIJPSide Side : { EIJPSide::Left, EIJPSide::Right })
+	{
+		if (Hit.GetComponent() == Arena->GetBarrier(Side))
+		{
+			Arena->NotifyBarrierHit(Side, this);
+		}
+	}
+
 	if (AIJPPaddle* Paddle = Cast<AIJPPaddle>(Hit.GetActor()))
 	{
 		if (TryPaddleBounce(Paddle, Normal))

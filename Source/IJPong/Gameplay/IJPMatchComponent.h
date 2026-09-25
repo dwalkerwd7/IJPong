@@ -73,6 +73,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Match")
 	void ApplyDamage(EIJPSide Side, float Amount);
 
+	/** Give Side health back, up to its maximum (items like Patch). Sends OnHealthChanged with a negative Damage. */
+	UFUNCTION(BlueprintCallable, Category = "Match")
+	void Heal(EIJPSide Side, float Amount);
+
 	/** Override a side's health for this match, e.g. the player's from the run. Call after StartMatch. */
 	UFUNCTION(BlueprintCallable, Category = "Match")
 	void SetHealth(EIJPSide Side, float InHealth, float InMaxHealth);
@@ -104,7 +108,7 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Match")
 	FIJPPointScoredSignature OnPointScored;
 
-	/** A side took damage; Health is what it has left. Sent before any match end the damage causes. */
+	/** A side took damage (or was healed: negative Damage); Health is what it has now. Sent before any match end the damage causes. */
 	UPROPERTY(BlueprintAssignable, Category = "Match")
 	FIJPHealthChangedSignature OnHealthChanged;
 

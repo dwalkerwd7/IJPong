@@ -100,7 +100,7 @@ void UIJPAbility_Mirror::Watch()
 void UIJPAbility_Mirror::HandleOtherActivated(EIJPAbilitySlot Slot, const UIJPAbility* Ability)
 {
 	// Two mirrors would only copy each other.
-	if (Ability && !Ability->IsA<UIJPAbility_Mirror>())
+	if (Ability && Slot != EIJPAbilitySlot::Item && !Ability->IsA<UIJPAbility_Mirror>())
 	{
 		LastSeen = Ability->GetDefinition();
 	}

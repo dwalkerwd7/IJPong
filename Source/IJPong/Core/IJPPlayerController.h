@@ -33,4 +33,5 @@ private:
 	void HandleAimKeys(const FInputActionValue& Value);
 	void HandleUIStep(const FInputActionValue& Value);
 	void HandleRunAbility();
+	void HandleItem();
 };

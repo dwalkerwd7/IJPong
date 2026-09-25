@@ -78,6 +78,10 @@ protected:
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Test|Abilities")
 	TSoftObjectPtr<UIJPAbility> PlayerRunAbility;
 
+	/** Put in the player paddle's Item slot at every new match (it's one use). Set in DefaultGame.ini. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Test|Abilities")
+	TSoftObjectPtr<UIJPAbility> PlayerItem;
+
 	/** Classes the class key steps through. Set in DefaultGame.ini. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Test|Classes")
 	TArray<TSoftObjectPtr<UIJPPaddleClass>> PlayerClasses;

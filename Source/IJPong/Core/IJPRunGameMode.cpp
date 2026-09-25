@@ -33,6 +33,10 @@ void AIJPRunGameMode::OnArenaReady()
 
 	GetMatch()->OnHealthChanged.AddDynamic(this, &AIJPRunGameMode::HandleHealthChanged);
 	GetMatch()->OnMatchEnded.AddDynamic(this, &AIJPRunGameMode::HandleRunMatchEnded);
+	if (AIJPPaddle* Player = ArenaPtr->GetPaddle(PlayerSide))
+	{
+		Player->GetAbilities()->OnActivated.AddDynamic(this, &AIJPRunGameMode::HandlePlayerAbility);
+	}
 
 	StartNewRun();
 }
@@ -159,10 +163,26 @@ void AIJPRunGameMode::HandleHealthChanged(EIJPSide Side, float Health, float Dam
 	// The match started from the run's health, so the same damage keeps the two in step, even in
 	// a match the player goes on to win. Running out ends the run, not just the match.
 	UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
+	if (Damage < 0.f)
+	{
+		Run->RestoreHealth(-Damage); // healed (an item)
+		return;
+	}
 	Run->LoseHealth(Damage);
 	if (Run->GetState() == EIJPRunState::Lost)
 	{
 		EndRun();
+	}
+}
+
+void AIJPRunGameMode::HandlePlayerAbility(EIJPAbilitySlot Slot, const UIJPAbility* Ability)
+{
+	if (Slot == EIJPAbilitySlot::Item)
+	{
+		if (UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this))
+		{
+			Run->EditLoadout().Item = nullptr;
+		}
 	}
 }
 
@@ -253,6 +273,7 @@ void AIJPRunGameMode::ApplyLoadout()
 		ClassSkill->SetUpgrades(Tree.SkillUpgrades);
 	}
 	Abilities->Equip(EIJPAbilitySlot::RunAbility, Loadout.RunAbility);
+	Abilities->Equip(EIJPAbilitySlot::Item, Loadout.Item);
 	GetMatch()->SetExtraServedBalls(Loadout.ExtraServedBalls);
 }
 

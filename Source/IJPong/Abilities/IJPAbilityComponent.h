@@ -54,6 +54,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Abilities")
 	bool IsReady(EIJPAbilitySlot Slot) const;
 
+	/** An item is in the Item slot and hasn't been used yet. */
+	UFUNCTION(BlueprintPure, Category = "Abilities")
+	bool HasItem() const;
+
 	/** Any equipped ability is armed, waiting for the paddle's next hit. */
 	UFUNCTION(BlueprintPure, Category = "Abilities")
 	bool IsArmed() const;
@@ -100,6 +104,9 @@ private:
 
 	/** Time left in each slot's lock (0 = free). */
 	TArray<float> Locks;
+
+	/** The Item slot's item has been used (its effect may still be running). */
+	bool bItemSpent = false;
 	TArray<float> CooldownScales;
 	FTimerHandle ChirpTimer;
 };

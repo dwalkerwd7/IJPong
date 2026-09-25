@@ -80,6 +80,19 @@ public:
 	virtual void Grant(UIJPRunSubsystem& Run) const override;
 };
 
+/** An item to carry (the Item slot), replacing the one held (if any). */
+UCLASS()
+class IJPONG_API UIJPReward_Item : public UIJPReward
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	TObjectPtr<UIJPAbility> Item;
+
+	virtual void Grant(UIJPRunSubsystem& Run) const override;
+};
+
 /** From now on every serve also launches a ball of this type. Picking it again adds another. */
 UCLASS()
 class IJPONG_API UIJPReward_Ball : public UIJPReward

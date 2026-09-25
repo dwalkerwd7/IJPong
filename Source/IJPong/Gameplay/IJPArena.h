@@ -25,6 +25,7 @@ class UIJPToneSet;
 class UIJPToneSynthComponent;
 class UIJPEra;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FIJPBarrierHitSignature, EIJPSide, Side, AIJPBall*, Ball);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FIJPArenaBallGoalSignature, AIJPBall*, Ball, EIJPSide, DefendingSide);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FIJPArenaBallReturnedSignature, AIJPBall*, Ball, AIJPPaddle*, Paddle);
 
@@ -88,6 +89,13 @@ public:
 
 	/** The ball-blocking line inside Side's goal (blocks only while up). */
 	UPrimitiveComponent* GetBarrier(EIJPSide Side) const;
+
+	/** Called by a ball that just bounced off Side's barrier. */
+	void NotifyBarrierHit(EIJPSide Side, AIJPBall* Ball) { OnBarrierHit.Broadcast(Side, Ball); }
+
+	/** A ball bounced off Side's barrier (items like Shield drop it after one block). */
+	UPROPERTY(BlueprintAssignable, Category = "Arena")
+	FIJPBarrierHitSignature OnBarrierHit;
 
 	UIJPSevenSegmentComponent* GetScoreDisplay(EIJPSide Side) const { return Side == EIJPSide::Left ? LeftScore : RightScore; }
 

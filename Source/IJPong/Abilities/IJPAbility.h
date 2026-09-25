@@ -18,6 +18,8 @@ enum class EIJPAbilitySlot : uint8
 	ClassSkill,
 	/** Found during a run; any class can use it. */
 	RunAbility,
+	/** A one-use consumable (Patch, Shield...): spent when used, no cooldown. */
+	Item,
 	Count UMETA(Hidden)
 };
 

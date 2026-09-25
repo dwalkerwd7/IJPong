@@ -85,6 +85,11 @@ void UIJPRunSubsystem::CompleteNode(bool bWon)
 			{
 				Meta->AddCurrency(0, Act->BossTokens);
 			}
+			// A boss always drops an item (for the acts to come).
+			if (!Act->BossItems.IsEmpty())
+			{
+				Loadout.Item = Act->BossItems[Random.RandHelper(Act->BossItems.Num())];
+			}
 			State = EIJPRunState::Won;
 			PayOut();
 		}
@@ -170,6 +175,15 @@ void UIJPRunSubsystem::PayOut()
 	if (UIJPMetaSubsystem* Meta = GetGameInstance()->GetSubsystem<UIJPMetaSubsystem>())
 	{
 		Meta->AddCurrency(EarnedSkillPoints, 0);
+	}
+}
+
+void UIJPRunSubsystem::RestoreHealth(float Amount)
+{
+	if (State == EIJPRunState::Running)
+	{
+		Heal(Amount);
+		OnRunChanged.Broadcast();
 	}
 }
 
