@@ -121,6 +121,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ball")
 	bool IsHeld() const { return HeldBy.IsValid(); }
 
+	/** A Ghost ball currently out of sight (its type's GhostBand). */
+	UFUNCTION(BlueprintPure, Category = "Ball")
+	bool IsGhosted() const { return bGhosted; }
+
+	/** A Twin ball has used its split (the arena splits it on its first return). */
+	bool HasSplit() const { return bHasSplit; }
+	void MarkSplit() { bHasSplit = true; }
+
 	/** The paddle holding the ball, or null. */
 	UFUNCTION(BlueprintPure, Category = "Ball")
 	AIJPPaddle* GetHolder() const { return HeldBy.Get(); }
@@ -261,6 +269,8 @@ private:
 	float CurveBend = 0.f;
 	int32 RallyHits = 0;
 	bool bPiercing = false;
+	bool bGhosted = false;
+	bool bHasSplit = false;
 	float Heat = 0.f;
 	float ArrivalHeat = 0.f;
 	/** The paddle holding the ball (Hold), and where on it. */

@@ -114,6 +114,7 @@ void AIJPBall::Serve(EIJPSide Toward, float AngleDeg)
 	RallyHits = 0;
 	bPiercing = false;
 	Heat = ArrivalHeat = 0.f;
+	bGhosted = bHasSplit = false;
 	HeldBy.Reset();
 	bInPlay = true;
 
@@ -219,6 +220,7 @@ void AIJPBall::Launch(const FVector2D& InPosition, const FVector2D& InVelocity)
 	RallyHits = 0;
 	bPiercing = false;
 	Heat = ArrivalHeat = 0.f;
+	bGhosted = bHasSplit = false;
 	HeldBy.Reset();
 	bInPlay = true;
 
@@ -248,6 +250,7 @@ void AIJPBall::ResetBall()
 	Accumulator = 0.f;
 	RallyHits = 0;
 	Heat = ArrivalHeat = 0.f;
+	bGhosted = bHasSplit = false;
 	HeldBy.Reset();
 	bInPlay = false;
 
@@ -297,6 +300,15 @@ void AIJPBall::Tick(float DeltaSeconds)
 
 	// Draw part-way between the last two substeps, by how far we are into the next one.
 	UpdateDrawnTransform(bInPlay ? Accumulator / Step : 1.f);
+
+	// Ghost: out of sight in the middle of the court.
+	const float Band = GetType().GhostBand;
+	const bool bNowGhosted = bInPlay && Band > 0.f && FMath::Abs(Position.X) < Band * Arena->GetHalfExtents().X;
+	if (bNowGhosted != bGhosted)
+	{
+		bGhosted = bNowGhosted;
+		SetActorHiddenInGame(bGhosted);
+	}
 }
 
 void AIJPBall::Substep(float StepSeconds)
@@ -361,6 +373,7 @@ void AIJPBall::HandleHit(const FHitResult& Hit)
 		Velocity = FVector2D::ZeroVector;
 		CurveTimeLeft = 0.f;
 		bPiercing = false;
+		bGhosted = false;
 		SetActorHiddenInGame(true);
 		OnGoal.Broadcast(this, Goal->DefendingSide);
 		return;

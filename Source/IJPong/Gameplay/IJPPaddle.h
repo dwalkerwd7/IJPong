@@ -103,6 +103,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	bool IsDashing() const { return DashTimeLeft > 0.f; }
 
+	/** Frozen in place for Seconds: input is ignored and any dash stops. For balls like the Bomb. */
+	UFUNCTION(BlueprintCallable, Category = "Paddle")
+	void Stun(float Seconds);
+
+	UFUNCTION(BlueprintPure, Category = "Paddle")
+	bool IsStunned() const { return StunLeft > 0.f; }
+
 	/** Stretch the paddle's length (1 = the profile's). Stays inside the walls. For abilities like Grow. */
 	UFUNCTION(BlueprintCallable, Category = "Paddle")
 	void SetLengthScale(float Scale);
@@ -233,6 +240,7 @@ private:
 	float LastMoveSign = 1.f;
 	float DashVelocity = 0.f;
 	float DashTimeLeft = 0.f;
+	float StunLeft = 0.f;
 	float ArmedTime = 0.f;
 	float ArmedCueStrength = 0.f;
 

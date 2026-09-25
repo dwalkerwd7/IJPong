@@ -22,7 +22,7 @@ public:
 	float SpreadDeg = 30.f;
 
 	/** Fan Ball's path out by Spread degrees: it turns half one way, a new ball of its type goes half the other. */
-	static void FanOut(AIJPBall& Ball, AIJPArena& Arena, float Spread);
+	static AIJPBall* FanOut(AIJPBall& Ball, AIJPArena& Arena, float Spread);
 
 	virtual void Activate() override { bArmed = true; }
 	virtual bool IsActive() const override { return bArmed; }

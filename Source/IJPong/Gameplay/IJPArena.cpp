@@ -1,6 +1,7 @@
 // It's Just Pong
 
 #include "Gameplay/IJPArena.h"
+#include "Abilities/IJPAbility_Split.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Audio/IJPToneSet.h"
 #include "Audio/IJPToneSynthComponent.h"
@@ -349,6 +350,17 @@ void AIJPArena::HandleBallPaddleHit(AIJPBall* HitBall, AIJPPaddle* Paddle)
 	Tones->PlayTone(GetToneSet().PaddleHit);
 	Paddle->Flicker();
 	Paddle->GetAbilities()->HandleBallHit(*HitBall);
+
+	// Twin: the first return splits it in two, and neither half splits again.
+	const UIJPBallType& HitType = HitBall->GetType();
+	if (HitType.bSplitsOnFirstHit && !HitBall->HasSplit() && HitBall->IsInPlay() && !HitBall->IsHeld())
+	{
+		HitBall->MarkSplit();
+		if (AIJPBall* Half = UIJPAbility_Split::FanOut(*HitBall, *this, HitType.SplitSpread))
+		{
+			Half->MarkSplit();
+		}
+	}
 	OnBallReturned.Broadcast(HitBall, Paddle);
 }
 
@@ -361,6 +373,13 @@ void AIJPArena::HandleBallGoal(AIJPBall* ScoringBall, EIJPSide DefendingSide)
 {
 	Tones->PlayTone(GetToneSet().Goal);
 	CRT->Pulse();
+
+	// Bomb: the paddle it got past is stunned.
+	const float Stun = ScoringBall ? ScoringBall->GetType().StunOnGoal : 0.f;
+	if (AIJPPaddle* Beaten = Stun > 0.f ? GetPaddle(DefendingSide) : nullptr)
+	{
+		Beaten->Stun(Stun);
+	}
 	OnBallGoal.Broadcast(ScoringBall, DefendingSide);
 }
 

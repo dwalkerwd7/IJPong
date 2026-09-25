@@ -41,4 +41,29 @@ public:
 	/** This type's colour cue, shown only in eras whose palette turns on bBallTypeColours. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Look")
 	FLinearColor Colour = FLinearColor::White;
+
+	// --- Behaviours (any mix; all off by default) ---
+
+	/**
+	 * Ghost: hidden while in the middle of the court, as a fraction of the half-width from the net
+	 * (0.4 = the middle 40% each side of the net). It still moves and bounces; you just can't see it.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Behaviour", meta = (ClampMin = "0", ClampMax = "1"))
+	float GhostBand = 0.f;
+
+	/** Twin: its first paddle return fans it into two balls of this type (neither splits again). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Behaviour")
+	bool bSplitsOnFirstHit = false;
+
+	/** Degrees between the two halves of a Twin's split. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Behaviour", meta = (ClampMin = "0", ClampMax = "60", EditCondition = "bSplitsOnFirstHit"))
+	float SplitSpread = 20.f;
+
+	/** Bomb: a goal with it stuns the paddle it got past for this long (can't move). 0 = none. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Behaviour", meta = (ClampMin = "0", Units = "s"))
+	float StunOnGoal = 0.f;
+
+	/** Leech: a goal with it also heals whoever scored by this much. 0 = none. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Behaviour", meta = (ClampMin = "0"))
+	float HealOnGoal = 0.f;
 };

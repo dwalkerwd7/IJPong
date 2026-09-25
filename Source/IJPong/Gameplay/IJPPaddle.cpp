@@ -114,6 +114,13 @@ void AIJPPaddle::Dash(float Distance, float Duration)
 	DashVelocity = Direction * Distance * SpeedScale / DashTimeLeft;
 }
 
+void AIJPPaddle::Stun(float Seconds)
+{
+	StunLeft = FMath::Max(StunLeft, Seconds);
+	Velocity = 0.f;
+	DashTimeLeft = 0.f;
+}
+
 void AIJPPaddle::SetLengthScale(float Scale)
 {
 	LengthScale = FMath::Max(Scale, KINDA_SMALL_NUMBER);
@@ -251,9 +258,16 @@ void AIJPPaddle::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	// Consume this frame's input, like APawn's movement input vector.
-	const float Input = FMath::Clamp(PendingInput, -1.f, 1.f);
+	// Consume this frame's input, like APawn's movement input vector. A stunned paddle ignores it.
+	float Input = FMath::Clamp(PendingInput, -1.f, 1.f);
 	PendingInput = 0.f;
+	if (StunLeft > 0.f)
+	{
+		StunLeft -= DeltaSeconds;
+		Input = 0.f;
+		Velocity = 0.f;
+		DashTimeLeft = 0.f;
+	}
 
 	AIJPArena* ArenaPtr = Arena.Get();
 	if (!ArenaPtr)

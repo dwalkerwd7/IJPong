@@ -184,6 +184,11 @@ void UIJPMatchComponent::HandleGoal(AIJPBall* ScoringBall, EIJPSide DefendingSid
 		{
 			return;
 		}
+		// Leech: the scorer drinks some back.
+		if (ScoringBall && ScoringBall->GetType().HealOnGoal > 0.f)
+		{
+			Heal(Scorer, ScoringBall->GetType().HealOnGoal);
+		}
 	}
 	OnPointScored.Broadcast(Scorer, Points);
 
