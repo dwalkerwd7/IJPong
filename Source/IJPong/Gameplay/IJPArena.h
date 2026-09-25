@@ -23,6 +23,7 @@ class UIJPCRTComponent;
 class UIJPGoalComponent;
 class UIJPSevenSegmentComponent;
 class UIJPChargePipsComponent;
+class UIJPHealthBarComponent;
 class AIJPSpellStrike;
 class UIJPToneSet;
 class UIJPToneSynthComponent;
@@ -101,6 +102,11 @@ public:
 	FIJPBarrierHitSignature OnBarrierHit;
 
 	UIJPSevenSegmentComponent* GetScoreDisplay(EIJPSide Side) const { return Side == EIJPSide::Left ? LeftScore : RightScore; }
+
+	/** Side's health for the era's health bar (MaxHealth 0 = no health: the numbers show instead). bInstant skips the damage trail. */
+	void SetHealthDisplay(EIJPSide Side, float Health, float MaxHealth, bool bInstant = false);
+
+	UIJPHealthBarComponent* GetHealthBar(EIJPSide Side) const { return Side == EIJPSide::Left ? LeftHealthBar : RightHealthBar; }
 
 	/** Side's spell charge, as pips under its health (Total 0 hides them). */
 	void SetChargePips(EIJPSide Side, int32 Filled, int32 Total);
@@ -234,6 +240,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Layout")
 	FVector2D ScoreOffset = FVector2D(120.f, 30.f);
 
+	/** Health bars: gap from the goal line (X) and from the top wall (Z) to the bar's outer corner. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Layout")
+	FVector2D HealthBarMargin = FVector2D(16.f, 16.f);
+
 	/** Seconds between on/off toggles of the winner's score once a match is over. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Presentation", meta = (ClampMin = "0.01", Units = "s"))
 	float WinnerBlinkPeriod = 0.4f;
@@ -346,6 +356,13 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<UIJPSevenSegmentComponent> RightScore;
 
+	/** Health as the era's bar art (eras with sprites); the right one is mirrored. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<UIJPHealthBarComponent> LeftHealthBar;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<UIJPHealthBarComponent> RightHealthBar;
+
 	/** Spell charge under each side's health. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<UIJPChargePipsComponent> LeftPips;
@@ -354,6 +371,13 @@ protected:
 	TObjectPtr<UIJPChargePipsComponent> RightPips;
 
 	TArray<TWeakObjectPtr<AIJPSpellStrike>> Strikes;
+
+	/** Bars or numbers for each side's health (era, and whether the match has health), placed with the pips. */
+	void RefreshHealthLook();
+	void LayoutHealth();
+	bool ShowsHealthBar(EIJPSide Side) const;
+
+	float HealthMax[2] = { 0.f, 0.f };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<UCameraComponent> Camera;

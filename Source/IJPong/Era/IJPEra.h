@@ -9,6 +9,7 @@
 class UIJPActConfig;
 class UMaterialInterface;
 class UIJPToneSet;
+class UTexture2D;
 
 /** The parts of the screen a palette colours. */
 UENUM(BlueprintType)
@@ -22,6 +23,40 @@ enum class EIJPPaletteRole : uint8
 	RightPaddle,
 	Ball,
 	Count UMETA(Hidden)
+};
+
+/**
+ * An era's health bar art: a frame and the fill that sits inside it, both greyscale and drawn for
+ * the LEFT side (the right one is mirrored). Sizes come from the textures at PixelsPerUnit.
+ */
+USTRUCT(BlueprintType)
+struct FIJPHealthBarStyle
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health Bar")
+	TObjectPtr<UTexture2D> Frame;
+
+	/** Drawn full width at full health and cut from the net side as health drops. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health Bar")
+	TObjectPtr<UTexture2D> Fill;
+
+	/** Where the fill's top-left corner sits in the frame texture, in pixels. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health Bar")
+	FVector2D FillOffset = FVector2D::ZeroVector;
+
+	/** Segmented fills: how many segments, and their pitch in pixels, so the cut lands between them. 0 = smooth. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health Bar", meta = (ClampMin = "0"))
+	int32 Segments = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health Bar", meta = (ClampMin = "0", EditCondition = "Segments > 0"))
+	float SegmentPitch = 0.f;
+
+	/** Texture pixels per game unit (the sprite brief exports at 8x). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health Bar", meta = (ClampMin = "0.1"))
+	float PixelsPerUnit = 8.f;
+
+	bool IsSet() const { return Frame && Fill; }
 };
 
 /** One colour per palette role. The defaults are the 1972 cabinet: white on black. */
@@ -100,6 +135,10 @@ public:
 	/** Balls use their early, square "classic" sprite where they have one (the early sprite eras). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Look", meta = (EditCondition = "bShowSprites"))
 	bool bClassicBallSprites = false;
+
+	/** Health as bars instead of seven-segment numbers (eras with sprites only; unset = keep the numbers). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Look", meta = (EditCondition = "bShowSprites"))
+	FIJPHealthBarStyle HealthBar;
 
 	/** Shown when a run climbs into this era (e.g. "1978 - ARCADE"). Empty = DisplayName. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Run")

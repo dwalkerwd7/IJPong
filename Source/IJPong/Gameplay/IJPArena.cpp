@@ -1,6 +1,7 @@
 // It's Just Pong
 
 #include "Gameplay/IJPArena.h"
+#include "Gameplay/IJPHealthBarComponent.h"
 #include "Abilities/IJPAbility_Split.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Audio/IJPToneSet.h"
@@ -91,6 +92,12 @@ AIJPArena::AIJPArena()
 
 	RightScore = CreateDefaultSubobject<UIJPSevenSegmentComponent>(TEXT("RightScore"));
 	RightScore->SetupAttachment(Root);
+
+	LeftHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("LeftHealthBar"));
+	LeftHealthBar->SetupAttachment(Root);
+	RightHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("RightHealthBar"));
+	RightHealthBar->SetupAttachment(Root);
+	RightHealthBar->SetRelativeScale3D(FVector(-1.f, 1.f, 1.f)); // Mirrored: drains toward the net too.
 
 	LeftPips = CreateDefaultSubobject<UIJPChargePipsComponent>(TEXT("LeftPips"));
 	LeftPips->SetupAttachment(Root);
@@ -191,12 +198,7 @@ void AIJPArena::OnConstruction(const FTransform& Transform)
 		}
 	}
 
-	const float ScoreZ = HalfExtents.Y - ScoreOffset.Y - LeftScore->DigitSize.Y * 0.5f;
-	LeftScore->SetRelativeLocation(FVector(-ScoreOffset.X, 0.f, ScoreZ));
-	RightScore->SetRelativeLocation(FVector(ScoreOffset.X, 0.f, ScoreZ));
-	const float PipsZ = ScoreZ - LeftScore->DigitSize.Y * 0.5f - 20.f;
-	LeftPips->SetRelativeLocation(FVector(-ScoreOffset.X, 0.f, PipsZ));
-	RightPips->SetRelativeLocation(FVector(ScoreOffset.X, 0.f, PipsZ));
+	LayoutHealth();
 
 	// Frame the playfield plus walls and margin; width follows from the screen's aspect ratio.
 	const float ScreenHeight = 2.f * (OuterHalfY + ScreenMargin);
@@ -362,6 +364,75 @@ void AIJPArena::ApplyPalette(const FIJPPalette& Palette)
 			Paddle->RefreshSprite();
 		}
 	}
+	RefreshHealthLook();
+}
+
+bool AIJPArena::ShowsHealthBar(EIJPSide Side) const
+{
+	return GetHealthBar(Side)->IsShown();
+}
+
+void AIJPArena::RefreshHealthLook()
+{
+	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
+	const FIJPHealthBarStyle Style = Era && Era->bShowSprites ? Era->HealthBar : FIJPHealthBarStyle();
+	for (const EIJPSide Side : { EIJPSide::Left, EIJPSide::Right })
+	{
+		UIJPHealthBarComponent* Bar = GetHealthBar(Side);
+		Bar->SetStyle(Style, GetSpriteMaterial());
+		Bar->SetColours(CurrentPalette.Get(EIJPPaletteRole::Score), CurrentPalette.Get(Side == EIJPSide::Left ? EIJPPaletteRole::LeftPaddle : EIJPPaletteRole::RightPaddle));
+
+		// A bar replaces the number only while there's health to show (endless matches count goals).
+		Bar->SetShown(Style.IsSet() && HealthMax[Side == EIJPSide::Left ? 0 : 1] > 0.f);
+		UIJPSevenSegmentComponent* Number = GetScoreDisplay(Side);
+		if (Bar->IsShown())
+		{
+			Number->StopFlash();
+		}
+		Number->SetVisibility(!Bar->IsShown());
+	}
+	LayoutHealth();
+}
+
+void AIJPArena::LayoutHealth()
+{
+	const float ScoreZ = HalfExtents.Y - ScoreOffset.Y - LeftScore->DigitSize.Y * 0.5f;
+	LeftScore->SetRelativeLocation(FVector(-ScoreOffset.X, 0.f, ScoreZ));
+	RightScore->SetRelativeLocation(FVector(ScoreOffset.X, 0.f, ScoreZ));
+	for (const EIJPSide Side : { EIJPSide::Left, EIJPSide::Right })
+	{
+		const float Sign = IJP::SideSign(Side);
+		UIJPHealthBarComponent* Bar = GetHealthBar(Side);
+		UIJPChargePipsComponent* Pips = GetChargePips(Side);
+		if (Bar->IsShown())
+		{
+			// The bar hugs its own side's top corner; the pips sit centred under it.
+			const FVector2D Size = Bar->GetSize();
+			const float BarZ = HalfExtents.Y - HealthBarMargin.Y - Size.Y * 0.5f;
+			const float OuterX = Sign * (HalfExtents.X - HealthBarMargin.X);
+			Bar->SetRelativeLocation(FVector(OuterX, 0.f, BarZ));
+			Pips->SetRelativeLocation(FVector(OuterX - Sign * Size.X * 0.5f, 0.f, BarZ - Size.Y * 0.5f - 16.f));
+		}
+		else
+		{
+			Pips->SetRelativeLocation(FVector(Sign * ScoreOffset.X, 0.f, ScoreZ - LeftScore->DigitSize.Y * 0.5f - 20.f));
+		}
+	}
+}
+
+void AIJPArena::SetHealthDisplay(EIJPSide Side, float Health, float MaxHealth, bool bInstant)
+{
+	float& Max = HealthMax[Side == EIJPSide::Left ? 0 : 1];
+	const bool bHadHealth = Max > 0.f;
+	Max = FMath::Max(MaxHealth, 0.f);
+	if (bHadHealth != (Max > 0.f))
+	{
+		RefreshHealthLook();
+	}
+	if (Max > 0.f)
+	{
+		GetHealthBar(Side)->SetFraction(Health / Max, bInstant);
+	}
 }
 
 void AIJPArena::HandleEraChanged(const UIJPEra* NewEra)
@@ -480,19 +551,36 @@ FLinearColor AIJPArena::GetBallColour(const UIJPBallType* Type) const
 
 void AIJPArena::FlashScore(EIJPSide Side)
 {
-	GetScoreDisplay(Side)->Flash();
+	// A bar shows the hit with its trail instead.
+	if (!ShowsHealthBar(Side))
+	{
+		GetScoreDisplay(Side)->Flash();
+	}
 }
 
 void AIJPArena::ShowWinner(EIJPSide Winner)
 {
-	GetScoreDisplay(IJP::Opposite(Winner))->StopFlash();
+	const EIJPSide Loser = IJP::Opposite(Winner);
+	if (ShowsHealthBar(Winner))
+	{
+		GetHealthBar(Loser)->StopFlash();
+		GetHealthBar(Winner)->Flash(0, WinnerBlinkPeriod);
+		return;
+	}
+	GetScoreDisplay(Loser)->StopFlash();
 	GetScoreDisplay(Winner)->Flash(0, WinnerBlinkPeriod);
 }
 
 void AIJPArena::ClearWinner()
 {
-	LeftScore->StopFlash();
-	RightScore->StopFlash();
+	for (const EIJPSide Side : { EIJPSide::Left, EIJPSide::Right })
+	{
+		GetHealthBar(Side)->StopFlash();
+		if (!ShowsHealthBar(Side))
+		{
+			GetScoreDisplay(Side)->StopFlash();
+		}
+	}
 }
 
 void AIJPArena::SetPaddleClass(EIJPSide Side, const UIJPPaddleClass* SideClass)

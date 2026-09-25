@@ -131,7 +131,8 @@ private:
 	void ServeBall();
 	void Serve(EIJPSide Toward);
 	void EndMatch(EIJPSide InWinner);
-	void UpdateScoreDisplay() const;
+	/** bInstant: a new match or a set health, not a hit (health bars skip their damage trail). */
+	void UpdateScoreDisplay(bool bInstant = false) const;
 	bool IsPlaying() const { return Phase == EIJPMatchPhase::Serve || Phase == EIJPMatchPhase::Rally; }
 	static int32 SideIndex(EIJPSide Side) { return Side == EIJPSide::Left ? 0 : 1; }
 	AIJPBall* GetBall() const;

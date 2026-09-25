@@ -39,7 +39,7 @@ void UIJPMatchComponent::StartMatch(AIJPArena* InArena, const UIJPMatchRules* In
 		Health[i] = MaxHealth[i] = GetRules().StartingHealth;
 		Goals[i] = 0;
 	}
-	UpdateScoreDisplay();
+	UpdateScoreDisplay(true);
 	Arena->ClearWinner();
 
 	// Abandons any rally: every ball leaves play and the main one blinks at the centre.
@@ -157,7 +157,7 @@ void UIJPMatchComponent::SetHealth(EIJPSide Side, float InHealth, float InMaxHea
 	const int32 Index = SideIndex(Side);
 	MaxHealth[Index] = FMath::Max(InMaxHealth, 0.f);
 	Health[Index] = FMath::Clamp(InHealth, 0.f, MaxHealth[Index]);
-	UpdateScoreDisplay();
+	UpdateScoreDisplay(true);
 }
 
 void UIJPMatchComponent::HandleGoal(AIJPBall* ScoringBall, EIJPSide DefendingSide)
@@ -278,7 +278,7 @@ void UIJPMatchComponent::EndMatch(EIJPSide InWinner)
 	OnMatchEnded.Broadcast(Winner);
 }
 
-void UIJPMatchComponent::UpdateScoreDisplay() const
+void UIJPMatchComponent::UpdateScoreDisplay(bool bInstant) const
 {
 	// Health rounded up (a side with any left never reads 0), or goals when there's no health.
 	const bool bEndless = GetRules().IsEndless();
@@ -286,6 +286,7 @@ void UIJPMatchComponent::UpdateScoreDisplay() const
 	{
 		const int32 Index = SideIndex(Side);
 		Arena->SetScore(Side, bEndless ? Goals[Index] : FMath::CeilToInt(Health[Index]));
+		Arena->SetHealthDisplay(Side, bEndless ? 0.f : Health[Index], bEndless ? 0.f : MaxHealth[Index], bInstant);
 	}
 }
 
