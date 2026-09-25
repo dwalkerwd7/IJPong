@@ -126,6 +126,9 @@ public:
 	/** The era palette on screen now. */
 	const FIJPPalette& GetPalette() const { return CurrentPalette; }
 
+	/** Material for chat-bubble panels (M_PongBubble): a box with a tail, drawn from parameters. */
+	UMaterialInterface* GetBubbleMaterial() const { return BubbleMaterial.LoadSynchronous(); }
+
 	/** Material for text in the arena (chat bubbles): unlit, coloured by the text's own colour. */
 	UMaterialInterface* GetTextMaterial() const { return TextMaterial.LoadSynchronous(); }
 
@@ -251,6 +254,10 @@ protected:
 	/** Flat unlit material for every piece, with a "Color" vector parameter the era's palette sets. From DefaultGame.ini. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Arena|Look")
 	TSoftObjectPtr<UMaterialInterface> PongMaterial;
+
+	/** Chat-bubble panel material (M_PongBubble via DefaultGame.ini). */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Arena|Look")
+	TSoftObjectPtr<UMaterialInterface> BubbleMaterial;
 
 	/** Unlit text material (M_PongText via DefaultGame.ini). */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Arena|Look")

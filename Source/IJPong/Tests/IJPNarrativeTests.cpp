@@ -6,6 +6,8 @@
 
 #include "Core/IJPTestGameMode.h"
 #include "Core/IJPTypes.h"
+#include "Era/IJPEra.h"
+#include "Era/IJPEraSubsystem.h"
 #include "Engine/World.h"
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPBall.h"
@@ -152,6 +154,31 @@ bool FIJPResultTest::RunTest(const FString& Parameters)
 	UTEST_EQUAL("Rival won", Mode->GetMatch()->GetWinner(), EIJPSide::Right);
 	UTEST_TRUE("Rival talking", IJPNarrativeTests::Bubble(Arena, EIJPSide::Right)->IsTalking());
 	UTEST_EQUAL("Their winning line", IJPNarrativeTests::Bubble(Arena, EIJPSide::Right)->GetLine(), FString(TEXT("GG")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPBubbleEraStyleTest, "IJPong.Narrative.BubbleShapeFollowsTheEra", IJPNarrativeTests::Flags)
+bool FIJPBubbleEraStyleTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPArena* Arena = Test.GetArena();
+	UIJPEraSubsystem* Eras = UIJPEraSubsystem::Get(Arena);
+	UIJPSpeechBubbleComponent* Bubble = IJPNarrativeTests::Bubble(Arena, EIJPSide::Left);
+
+	// 1972: square box, pixel-stepped tail.
+	Bubble->Say(FText::FromString(TEXT("HI")));
+	UTEST_EQUAL("Cabinet: square corners", Bubble->GetCornerRadius(), 0.f);
+	UTEST_TRUE("Cabinet: stepped tail", Bubble->IsTailStepped());
+
+	// A later era rounds the corners and smooths the tail, from the next line on.
+	UIJPEra* Later = NewObject<UIJPEra>(GetTransientPackage());
+	Later->BubbleCornerRadius = 8.f;
+	Later->bSmoothBubbleTail = true;
+	Eras->SetEra(Later);
+	Bubble->Say(FText::FromString(TEXT("HELLO")));
+	UTEST_EQUAL("Later era: rounded corners", Bubble->GetCornerRadius(), 8.f);
+	UTEST_FALSE("Later era: smooth tail", Bubble->IsTailStepped());
+	Eras->SetEraIndex(0);
 	return true;
 }
 

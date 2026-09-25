@@ -7,7 +7,7 @@
 #include "IJPSpeechBubbleComponent.generated.h"
 
 class AIJPPaddle;
-class UInstancedStaticMeshComponent;
+class UMaterialInstanceDynamic;
 class UStaticMesh;
 class UStaticMeshComponent;
 class UTextRenderComponent;
@@ -15,8 +15,10 @@ class UTextRenderComponent;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FIJPLineFinishedSignature);
 
 /**
- * A paddle's chat bubble: a box beside the paddle, on the side facing the net, that types a line
- * out letter by letter (with a soft blip), holds it, then disappears. It's drawn in the arena
+ * A paddle's chat bubble: a box beside the paddle, on the side facing the net, with a tail pointing
+ * at the paddle, that types a line out letter by letter (babbling), holds it, then disappears.
+ * Its corners and tail follow the era (square with a stepped pixel tail in 1972, rounded with a
+ * smooth tail later); the panel is drawn by the M_PongBubble shader from a few parameters. It's drawn in the arena
  * like everything else, so the CRT and the era palette apply, and it sits behind the paddles and
  * balls so it can never hide play. It follows the paddle and stays between the walls.
  */
@@ -56,6 +58,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Speech Bubble")
 	float GetVoicePitch() const { return VoicePitch; }
 
+	/** The current line's corner radius (0 = square), from the era when it was said. */
+	UFUNCTION(BlueprintPure, Category = "Speech Bubble")
+	float GetCornerRadius() const { return CornerRadius; }
+
+	/** The current line's tail is a pixel staircase (true) or a smooth wedge (false). */
+	UFUNCTION(BlueprintPure, Category = "Speech Bubble")
+	bool IsTailStepped() const { return bTailStepped; }
+
 	/** The line was typed out, held, and taken down. */
 	UPROPERTY(BlueprintAssignable, Category = "Speech Bubble")
 	FIJPLineFinishedSignature OnLineFinished;
@@ -85,6 +95,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Speech Bubble", meta = (ClampMin = "0.5"))
 	float OutlineThickness = 2.f;
 
+	/** Width of the tail where it leaves the box. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Speech Bubble", meta = (ClampMin = "1"))
+	float TailWidth = 14.f;
+
+	/** Size of each step of a stepped (pixel) tail. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Speech Bubble", meta = (ClampMin = "1"))
+	float TailStep = 3.f;
+
 private:
 	AIJPPaddle* GetPaddle() const;
 	void EnsurePieces();
@@ -99,13 +117,12 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UTextRenderComponent> Text;
 
-	/** Background-coloured box that the text sits on. */
+	/** The box and its tail, in one panel drawn by the bubble material. */
 	UPROPERTY(Transient)
-	TObjectPtr<UStaticMeshComponent> Fill;
+	TObjectPtr<UStaticMeshComponent> Panel;
 
-	/** The box's four edges plus two "tail" dots pointing at the paddle. */
 	UPROPERTY(Transient)
-	TObjectPtr<UInstancedStaticMeshComponent> Outline;
+	TObjectPtr<UMaterialInstanceDynamic> PanelMaterial;
 
 	UPROPERTY()
 	TObjectPtr<UStaticMesh> CubeMesh;
@@ -116,5 +133,7 @@ private:
 	float RevealTime = 0.f;
 	float HoldLeft = 0.f;
 	float VoicePitch = 1.f;
+	float CornerRadius = 0.f;
+	bool bTailStepped = true;
 	bool bTalking = false;
 };

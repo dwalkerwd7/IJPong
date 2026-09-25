@@ -3,12 +3,14 @@
 #include "Narrative/IJPSpeechBubbleComponent.h"
 #include "Audio/IJPToneSet.h"
 #include "Audio/IJPToneSynthComponent.h"
-#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Engine/StaticMesh.h"
+#include "Era/IJPEra.h"
+#include "Era/IJPEraSubsystem.h"
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPPaddle.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "UObject/ConstructorHelpers.h"
 
 namespace
@@ -17,18 +19,15 @@ namespace
 
 	// Depth (toward the camera) of each piece. Paddles and balls fill -5..5 and the arena's
 	// background sits at -10, so the bubble lives in between: behind play, in front of the screen.
-	constexpr float FillDepth = -8.f;
-	constexpr float OutlineDepth = -7.5f;
+	constexpr float PanelDepth = -8.f;
 	constexpr float TextDepth = -7.f;
 
-	// Outline instances: four edges, then the two tail dots.
-	constexpr int32 NumEdges = 4;
-	constexpr int32 NumTailDots = 2;
-
-	FTransform BoxPiece(float X, float Z, float Width, float Height)
-	{
-		return FTransform(FQuat::Identity, FVector(X, 0.f, Z), FVector(Width / CubeSize, 1.f / CubeSize, Height / CubeSize));
-	}
+	// Bubble material parameters (see M_PongBubble).
+	const FName ShapeParam(TEXT("Shape"));
+	const FName TailParam(TEXT("Tail"));
+	const FName StyleParam(TEXT("Style"));
+	const FName FillParam(TEXT("Fill"));
+	const FName InkParam(TEXT("Ink"));
 }
 
 UIJPSpeechBubbleComponent::UIJPSpeechBubbleComponent()
@@ -116,18 +115,13 @@ void UIJPSpeechBubbleComponent::EnsurePieces()
 	}
 
 	AActor* Owner = GetOwner();
-	Fill = NewObject<UStaticMeshComponent>(Owner, TEXT("BubbleFill"));
-	Outline = NewObject<UInstancedStaticMeshComponent>(Owner, TEXT("BubbleOutline"));
-	for (UStaticMeshComponent* Piece : TArray<UStaticMeshComponent*>{ Fill, Outline })
-	{
-		Piece->SetStaticMesh(CubeMesh);
-		Piece->CastShadow = false;
-		IJP::ConfigureAsVisualOnly(Piece);
-		Piece->SetupAttachment(this);
-		Piece->RegisterComponent();
-	}
-	Fill->SetRelativeLocation(FVector(0.f, FillDepth, 0.f));
-	Outline->SetRelativeLocation(FVector(0.f, OutlineDepth, 0.f));
+	Panel = NewObject<UStaticMeshComponent>(Owner, TEXT("BubblePanel"));
+	Panel->SetStaticMesh(CubeMesh);
+	Panel->CastShadow = false;
+	IJP::ConfigureAsVisualOnly(Panel);
+	Panel->SetupAttachment(this);
+	Panel->RegisterComponent();
+	Panel->SetRelativeLocation(FVector(0.f, PanelDepth, 0.f));
 
 	Text = NewObject<UTextRenderComponent>(Owner, TEXT("BubbleText"));
 	Text->SetHorizontalAlignment(EHTA_Left);
@@ -152,16 +146,33 @@ void UIJPSpeechBubbleComponent::ApplyLook()
 		return;
 	}
 
-	// The speaker's colour for the frame and text; the screen's background behind the words.
+	// The speaker's colour for the frame, tail and text; the screen's background behind the words.
 	const bool bLeft = Paddle->GetSide() == EIJPSide::Left;
-	Fill->SetMaterial(0, Arena->GetPaletteMaterial(EIJPPaletteRole::Background));
-	Outline->SetMaterial(0, Arena->GetPaletteMaterial(bLeft ? EIJPPaletteRole::LeftPaddle : EIJPPaletteRole::RightPaddle));
+	const FIJPPalette& Palette = Arena->GetPalette();
+	const FLinearColor Ink = bLeft ? Palette.LeftPaddle : Palette.RightPaddle;
+	if (!PanelMaterial)
+	{
+		if (UMaterialInterface* Base = Arena->GetBubbleMaterial())
+		{
+			PanelMaterial = UMaterialInstanceDynamic::Create(Base, this);
+			Panel->SetMaterial(0, PanelMaterial);
+		}
+	}
+	if (PanelMaterial)
+	{
+		PanelMaterial->SetVectorParameterValue(FillParam, Palette.Background);
+		PanelMaterial->SetVectorParameterValue(InkParam, Ink);
+	}
 	if (UMaterialInterface* TextMaterial = Arena->GetTextMaterial())
 	{
 		Text->SetTextMaterial(TextMaterial);
 	}
-	const FIJPPalette& Palette = Arena->GetPalette();
-	Text->SetTextRenderColor((bLeft ? Palette.LeftPaddle : Palette.RightPaddle).ToFColor(true));
+	Text->SetTextRenderColor(Ink.ToFColor(true));
+
+	// The era's hand: square corners and a pixel-stepped tail in 1972, rounded and smooth later.
+	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
+	CornerRadius = Era ? Era->BubbleCornerRadius : 0.f;
+	bTailStepped = Era ? !Era->bSmoothBubbleTail : true;
 }
 
 void UIJPSpeechBubbleComponent::BuildBox()
@@ -179,21 +190,15 @@ void UIJPSpeechBubbleComponent::BuildBox()
 	const float TextHeight = TextSizeLocal.Z > 0.f ? TextSizeLocal.Z : NumLines * TextSize;
 	BoxSize = FVector2D(TextWidth + Padding * 2.f, TextHeight + Padding * 2.f);
 
+	// The panel spans the box plus a tail's length on both sides (the shader draws the tail on one).
 	const float HalfW = BoxSize.X * 0.5f;
-	const float HalfH = BoxSize.Y * 0.5f;
-	const float T = OutlineThickness;
-
-	Fill->SetRelativeScale3D(FVector(BoxSize.X / CubeSize, 1.f / CubeSize, BoxSize.Y / CubeSize));
+	const float TailLength = Gap;
+	Panel->SetRelativeScale3D(FVector((BoxSize.X + TailLength * 2.f) / CubeSize, 1.f / CubeSize, BoxSize.Y / CubeSize));
 	Text->SetRelativeLocation(FVector(-HalfW + Padding, TextDepth, 0.f));
-
-	Outline->ClearInstances();
-	Outline->AddInstance(BoxPiece(0.f, HalfH + T * 0.5f, BoxSize.X + T * 2.f, T));
-	Outline->AddInstance(BoxPiece(0.f, -HalfH - T * 0.5f, BoxSize.X + T * 2.f, T));
-	Outline->AddInstance(BoxPiece(-HalfW - T * 0.5f, 0.f, T, BoxSize.Y));
-	Outline->AddInstance(BoxPiece(HalfW + T * 0.5f, 0.f, T, BoxSize.Y));
-	for (int32 i = 0; i < NumTailDots; ++i)
+	if (PanelMaterial)
 	{
-		Outline->AddInstance(BoxPiece(0.f, 0.f, T * 1.5f, T * 1.5f)); // placed by FollowPaddle
+		PanelMaterial->SetVectorParameterValue(ShapeParam, FLinearColor(BoxSize.X, BoxSize.Y, TailLength));
+		PanelMaterial->SetVectorParameterValue(StyleParam, FLinearColor(CornerRadius, OutlineThickness, bTailStepped ? TailStep : 0.f));
 	}
 }
 
@@ -215,12 +220,11 @@ void UIJPSpeechBubbleComponent::FollowPaddle()
 	const float BoxY = FMath::Clamp(PaddleY, -MaxY, MaxY);
 	SetRelativeLocation(FVector(TowardNet * (Paddle->GetSize().X * 0.5f + Gap + HalfW), 0.f, BoxY - PaddleY));
 
-	// The tail dots step from the box's paddle-side edge toward the paddle, at the paddle's height.
-	const float TailZ = FMath::Clamp(PaddleY - BoxY, -HalfH + OutlineThickness, HalfH - OutlineThickness);
-	for (int32 i = 0; i < NumTailDots; ++i)
+	// The tail leaves the box's paddle-side edge at the paddle's height (kept on the box).
+	if (PanelMaterial)
 	{
-		const float X = -TowardNet * (HalfW + OutlineThickness + Gap * (i + 1) / (NumTailDots + 1));
-		Outline->UpdateInstanceTransform(NumEdges + i, BoxPiece(X, TailZ, OutlineThickness * 1.5f, OutlineThickness * 1.5f), false, i == NumTailDots - 1);
+		const float TailZ = FMath::Clamp(PaddleY - BoxY, -HalfH + TailWidth * 0.5f, HalfH - TailWidth * 0.5f);
+		PanelMaterial->SetVectorParameterValue(TailParam, FLinearColor(TailWidth, TailZ, -TowardNet));
 	}
 }
 

@@ -92,6 +92,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Look")
 	FIJPPalette Palette;
 
+	/** Chat-bubble corner radius, in arena units. 0 = square corners (hardware that can't draw curves). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Look", meta = (ClampMin = "0"))
+	float BubbleCornerRadius = 0.f;
+
+	/** Chat-bubble tail: a smooth wedge (true) or a staircase of pixel steps (false). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Look")
+	bool bSmoothBubbleTail = false;
+
 	/** The beeps for ball events. Empty = UIJPToneSet's defaults. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Sound")
 	TObjectPtr<UIJPToneSet> ToneSet;
