@@ -82,6 +82,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ball")
 	bool IsCurving() const { return CurveTimeLeft > 0.f; }
 
+	/**
+	 * Pass through barriers (AIJPArena::SetBarrierUp) until the next paddle hit, serve or goal.
+	 * For rival abilities like Breaker: one shot cracks through, the barrier stays up for the rest.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Ball")
+	void SetPiercing(bool bInPiercing) { bPiercing = bInPiercing; }
+
+	UFUNCTION(BlueprintPure, Category = "Ball")
+	bool IsPiercing() const { return bPiercing; }
+
 	/** Put the ball in play at Position with Velocity (plane space), e.g. a copy split off another ball. */
 	UFUNCTION(BlueprintCallable, Category = "Ball")
 	void Launch(const FVector2D& InPosition, const FVector2D& InVelocity);
@@ -199,5 +209,6 @@ private:
 	/** +1 bends up the screen, -1 down. */
 	float CurveBend = 0.f;
 	int32 RallyHits = 0;
+	bool bPiercing = false;
 	bool bInPlay = false;
 };

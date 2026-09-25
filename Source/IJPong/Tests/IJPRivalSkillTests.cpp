@@ -4,6 +4,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "Abilities/IJPAbility_Breaker.h"
 #include "Abilities/IJPAbility_Snare.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Audio/IJPToneSet.h"
@@ -14,6 +15,7 @@
 #include "GameFramework/Controller.h"
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPBall.h"
+#include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPRival.h"
 #include "Tests/IJPTestWorld.h"
@@ -113,6 +115,74 @@ bool FIJPRivalAIUsesSkillTest::RunTest(const FString& Parameters)
 	Arena->GetBall()->Serve(EIJPSide::Left, 0.f);
 	UTEST_TRUE("The rival triggers it", IJPRivalSkillTests::RunUntil(Test, 0.3f, [Abilities] { return Abilities->IsWindingUp(EIJPAbilitySlot::ClassSkill); }));
 	UTEST_TRUE("It lands", IJPRivalSkillTests::RunUntil(Test, 1.f, [Player] { return Player->GetSpeedScale() < 1.f; }));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPBreakerTest, "IJPong.RivalSkill.BreakerCracksOneShotThroughABarrier", IJPRivalSkillTests::Flags)
+bool FIJPBreakerTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = IJPRivalSkillTests::GetMode(Test);
+	AIJPArena* Arena = Mode->GetArena();
+	AIJPPaddle* Player = Arena->GetPaddle(EIJPSide::Left);
+	AIJPPaddle* RivalPaddle = Arena->GetPaddle(EIJPSide::Right);
+	UIJPMatchComponent* Match = Mode->GetMatch();
+	UIJPRival* Rival = NewObject<UIJPRival>(GetTransientPackage());
+	Rival->RivalSkill = NewObject<UIJPAbility_Breaker>(Rival);
+	Mode->SetRival(Rival);
+	RivalPaddle->GetController()->UnPossess(); // it stays in the middle and returns straight
+	UIJPAbilityComponent* Abilities = RivalPaddle->GetAbilities();
+
+	// The player hides at the top behind a barrier.
+	const auto HoldUp = [Player] { Player->AddMoveInput(1.f); };
+	Test.RunFor(0.5f, HoldUp);
+	Arena->SetBarrierUp(EIJPSide::Left, true);
+
+	// Armed after the wind-up; the rival's next return cracks through.
+	UTEST_TRUE("Triggered", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
+	Test.RunFor(0.6f, HoldUp);
+	UTEST_TRUE("Armed", Abilities->IsArmed());
+	AIJPBall* Ball = Arena->GetBall();
+	Ball->Serve(EIJPSide::Right, 0.f);
+	UTEST_TRUE("Returned", IJPRivalSkillTests::RunUntil(Test, 2.f, [Ball] { return Ball->GetPlaneVelocity().X < 0.f; }));
+	UTEST_TRUE("That ball pierces", Ball->IsPiercing());
+	UTEST_FALSE("Spent", Abilities->IsArmed());
+	const int32 GoalsBefore = Match->GetGoals(EIJPSide::Right);
+	UTEST_TRUE("Through the barrier and in", IJPRivalSkillTests::RunUntil(Test, 2.f, [Ball] { return !Ball->IsInPlay(); }));
+	UTEST_EQUAL("A goal", Match->GetGoals(EIJPSide::Right), GoalsBefore + 1);
+	UTEST_TRUE("The barrier is still up", Arena->IsBarrierUp(EIJPSide::Left));
+
+	// The next ordinary return is stopped as usual.
+	Test.RunFor(0.1f, HoldUp);
+	Ball->Serve(EIJPSide::Right, 0.f);
+	UTEST_TRUE("Returned again", IJPRivalSkillTests::RunUntil(Test, 2.f, [Ball] { return Ball->GetPlaneVelocity().X < 0.f; }));
+	UTEST_FALSE("Not piercing", Ball->IsPiercing());
+	UTEST_TRUE("Bounced off the barrier", IJPRivalSkillTests::RunUntil(Test, 2.f, [Ball] { return Ball->GetPlaneVelocity().X > 0.f; }));
+	UTEST_TRUE("Still in play", Ball->IsInPlay());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPBreakerAITest, "IJPong.RivalSkill.BreakerOnlyArmsAgainstABarrier", IJPRivalSkillTests::Flags)
+bool FIJPBreakerAITest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = IJPRivalSkillTests::GetMode(Test);
+	AIJPArena* Arena = Mode->GetArena();
+	UIJPRival* Rival = NewObject<UIJPRival>(GetTransientPackage());
+	Rival->RivalSkill = NewObject<UIJPAbility_Breaker>(Rival);
+	Mode->SetRival(Rival);
+	UIJPAbilityComponent* Abilities = Arena->GetPaddle(EIJPSide::Right)->GetAbilities();
+	AIJPBall* Ball = Arena->GetBall();
+
+	// A Classic player has no barrier: a ball on its way to the rival isn't worth arming for.
+	Ball->Serve(EIJPSide::Right, 0.f);
+	Test.RunFor(0.3f);
+	UTEST_EQUAL("Held back", Abilities->GetCooldownRemaining(EIJPAbilitySlot::ClassSkill), 0.f);
+
+	// With a barrier up, it arms.
+	Arena->SetBarrierUp(EIJPSide::Left, true);
+	Ball->Serve(EIJPSide::Right, 0.f);
+	UTEST_TRUE("Arms", IJPRivalSkillTests::RunUntil(Test, 0.3f, [Abilities] { return Abilities->IsWindingUp(EIJPAbilitySlot::ClassSkill); }));
 	return true;
 }
 

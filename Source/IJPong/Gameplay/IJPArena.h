@@ -86,6 +86,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Arena")
 	bool IsBarrierUp(EIJPSide Side) const;
 
+	/** The ball-blocking line inside Side's goal (blocks only while up). */
+	UPrimitiveComponent* GetBarrier(EIJPSide Side) const;
+
 	UIJPSevenSegmentComponent* GetScoreDisplay(EIJPSide Side) const { return Side == EIJPSide::Left ? LeftScore : RightScore; }
 
 	/** The paddle defending this side's goal. Null before BeginPlay. */

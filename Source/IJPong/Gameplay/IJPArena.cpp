@@ -313,6 +313,11 @@ void AIJPArena::SetBarrierUp(EIJPSide Side, bool bUp)
 	(bLeft ? LeftBarrierVisual : RightBarrierVisual)->SetVisibility(bUp);
 }
 
+UPrimitiveComponent* AIJPArena::GetBarrier(EIJPSide Side) const
+{
+	return Side == EIJPSide::Left ? LeftBarrier : RightBarrier;
+}
+
 bool AIJPArena::IsBarrierUp(EIJPSide Side) const
 {
 	return (Side == EIJPSide::Left ? LeftBarrier : RightBarrier)->GetCollisionEnabled() != ECollisionEnabled::NoCollision;

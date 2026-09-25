@@ -112,6 +112,7 @@ void AIJPBall::Serve(EIJPSide Toward, float AngleDeg)
 	Velocity = FVector2D(IJP::SideSign(Toward) * FMath::Cos(AngleRad), FMath::Sin(AngleRad)) * Speed;
 	Accumulator = 0.f;
 	RallyHits = 0;
+	bPiercing = false;
 	bInPlay = true;
 
 	SetActorHiddenInGame(false);
@@ -162,6 +163,7 @@ void AIJPBall::Launch(const FVector2D& InPosition, const FVector2D& InVelocity)
 	FreezeLeft = 0.f;
 	Accumulator = 0.f;
 	RallyHits = 0;
+	bPiercing = false;
 	bInPlay = true;
 
 	SetActorHiddenInGame(false);
@@ -271,7 +273,12 @@ bool AIJPBall::Sweep(const FVector2D& From, const FVector2D& To, FHitResult& Out
 	const AIJPArena* ArenaPtr = Arena.Get();
 	const float Half = GetSize() * 0.5f;
 	const FCollisionShape Box = FCollisionShape::MakeBox(FVector(Half, Half, Half));
-	const FCollisionQueryParams Params(SCENE_QUERY_STAT(IJPBallSweep), false, this);
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(IJPBallSweep), false, this);
+	if (bPiercing)
+	{
+		Params.AddIgnoredComponent(ArenaPtr->GetBarrier(EIJPSide::Left));
+		Params.AddIgnoredComponent(ArenaPtr->GetBarrier(EIJPSide::Right));
+	}
 
 	// The box is aligned with the arena, so ball faces meet wall and paddle faces flat.
 	return GetWorld()->SweepSingleByChannel(OutHit, ArenaPtr->PlaneToWorld(From), ArenaPtr->PlaneToWorld(To),
@@ -285,6 +292,7 @@ void AIJPBall::HandleHit(const FHitResult& Hit)
 		bInPlay = false;
 		Velocity = FVector2D::ZeroVector;
 		CurveTimeLeft = 0.f;
+		bPiercing = false;
 		SetActorHiddenInGame(true);
 		OnGoal.Broadcast(this, Goal->DefendingSide);
 		return;
@@ -331,6 +339,7 @@ bool AIJPBall::TryPaddleBounce(AIJPPaddle* Paddle, const FVector2D& Normal)
 	const float Offset = (Position.Y - Paddle->GetPlanePosition().Y) / Reach;
 
 	CurveTimeLeft = 0.f;
+	bPiercing = false;
 	const float RallySpeed = UnboostedSpeed > 0.f ? UnboostedSpeed : Speed;
 	UnboostedSpeed = 0.f;
 	Speed = FMath::Min(RallySpeed + GetType().SpeedPerHit, GetType().MaxSpeed);
