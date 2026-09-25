@@ -143,7 +143,7 @@ void AIJPRunMapView::Init(AIJPArena* InArena)
 	Header->SetRelativeLocation(FVector(0.f, TextDepth, HalfScreen.Y - 28.f));
 	Footer->SetRelativeLocation(FVector(0.f, TextDepth, -HalfScreen.Y + 24.f));
 
-	CursorBlinker.Start(this, 0.25f, 0, true, [this](bool bShow) { Cursor->SetVisibility(bShow && !Reachable.IsEmpty()); });
+	CursorBlinker.Start(this, 0.25f, 0, true, [this](bool bShow) { Cursor->SetVisibility(bShow && (bShowingCards ? NumCards > 0 : !Reachable.IsEmpty())); });
 	Refresh();
 }
 
@@ -155,15 +155,12 @@ void AIJPRunMapView::Refresh()
 		return;
 	}
 	ApplyColours();
+	ClearDrawing();
+	bShowingCards = false;
 
 	const FIJPRunMap& Map = Run->GetMap();
 	Reachable = Run->GetReachableNodes();
 	Selected = FMath::Clamp(Selected, 0, FMath::Max(Reachable.Num() - 1, 0));
-
-	for (UInstancedStaticMeshComponent* Pieces : { BrightPieces.Get(), MidPieces.Get(), DimPieces.Get() })
-	{
-		Pieces->ClearInstances();
-	}
 
 	// Paths first, so frames sit on top. A path already travelled is brighter.
 	for (int32 i = 0; i < Map.Nodes.Num(); ++i)
@@ -197,7 +194,8 @@ void AIJPRunMapView::Refresh()
 		const float Scale = bReachable ? 1.f : bVisited ? MidScale : DimScale;
 
 		const FVector2D Position = NodePosition(i);
-		AddFrame(Pieces, Position, Node.Type == EIJPNodeType::Boss ? NodeSize * 1.4f : NodeSize);
+		const float Size = Node.Type == EIJPNodeType::Boss ? NodeSize * 1.4f : NodeSize;
+		AddFrame(Pieces, Position, Size, Size);
 		Text->SetText(FText::FromString(Glyph(Node.Type)));
 		Text->SetTextRenderColor(Scaled(Palette.Score, Scale).ToFColor(true));
 		Text->SetRelativeLocation(FVector(Position.X, TextDepth, Position.Y));
@@ -209,13 +207,88 @@ void AIJPRunMapView::Refresh()
 	PlaceCursor();
 }
 
+void AIJPRunMapView::ShowCards(const FString& Heading, const TArray<FCard>& Cards)
+{
+	if (!Arena.IsValid())
+	{
+		return;
+	}
+	ApplyColours();
+	ClearDrawing();
+	bShowingCards = true;
+	NumCards = Cards.Num();
+	SelectedCard = 0;
+
+	const FColor Ink = Arena->GetPalette().Score.ToFColor(true);
+	while (CardTexts.Num() < NumCards * 2)
+	{
+		CardTexts.Add(MakeText(CardTextSize));
+	}
+	const FVector2D Size = CardSize();
+	for (int32 i = 0; i < NumCards; ++i)
+	{
+		const FVector2D Centre = CardCentre(i);
+		AddFrame(MidPieces, Centre, Size.X, Size.Y);
+
+		// Title near the top of the card, the text in the middle.
+		UTextRenderComponent* Title = CardTexts[i * 2];
+		UTextRenderComponent* Text = CardTexts[i * 2 + 1];
+		Title->SetText(FText::FromString(Cards[i].Title));
+		Title->SetWorldSize(CardTextSize * 1.25f);
+		Title->SetRelativeLocation(FVector(Centre.X, TextDepth, Centre.Y + Size.Y * 0.5f - 22.f));
+		Text->SetText(FText::FromString(Cards[i].Text));
+		Text->SetRelativeLocation(FVector(Centre.X, TextDepth, Centre.Y - 12.f));
+		for (UTextRenderComponent* Piece : { Title, Text })
+		{
+			Piece->SetTextRenderColor(Ink);
+			Piece->SetVisibility(true);
+		}
+	}
+	Header->SetText(FText::FromString(Heading));
+	PlaceCursor();
+}
+
 void AIJPRunMapView::Step(int32 Direction)
 {
-	if (!Reachable.IsEmpty())
+	if (bShowingCards)
+	{
+		SelectedCard = FMath::Clamp(SelectedCard + Direction, 0, FMath::Max(NumCards - 1, 0));
+		PlaceCursor();
+	}
+	else if (!Reachable.IsEmpty())
 	{
 		Selected = FMath::Clamp(Selected + Direction, 0, Reachable.Num() - 1);
 		PlaceCursor();
 	}
+}
+
+void AIJPRunMapView::ClearDrawing()
+{
+	for (UInstancedStaticMeshComponent* Pieces : { BrightPieces.Get(), MidPieces.Get(), DimPieces.Get() })
+	{
+		Pieces->ClearInstances();
+	}
+	for (UTextRenderComponent* Text : Glyphs)
+	{
+		Text->SetVisibility(false);
+	}
+	for (UTextRenderComponent* Text : CardTexts)
+	{
+		Text->SetVisibility(false);
+	}
+}
+
+FVector2D AIJPRunMapView::CardSize() const
+{
+	// Up to four across the screen, tall enough for a title and three short lines.
+	const float Width = FMath::Min(190.f, (HalfScreen.X * 2.f - 60.f) / FMath::Max(NumCards, 1) - 14.f);
+	return FVector2D(Width, 150.f);
+}
+
+FVector2D AIJPRunMapView::CardCentre(int32 Card) const
+{
+	const float Step = CardSize().X + 14.f;
+	return FVector2D((Card - (NumCards - 1) * 0.5f) * Step, 10.f);
 }
 
 int32 AIJPRunMapView::GetSelectedNode() const
@@ -243,18 +316,19 @@ FVector2D AIJPRunMapView::NodePosition(int32 Node) const
 	return FVector2D(X, Top - MapNode.Row * RowStep);
 }
 
-void AIJPRunMapView::AddFrame(UInstancedStaticMeshComponent* Target, const FVector2D& Centre, float Size) const
+void AIJPRunMapView::AddFrame(UInstancedStaticMeshComponent* Target, const FVector2D& Centre, float Width, float Height) const
 {
-	const float Half = Size * 0.5f;
+	const float HalfW = Width * 0.5f;
+	const float HalfH = Height * 0.5f;
 	const float T = LineThickness;
-	auto Bar = [&](float X, float Z, float Width, float Height)
+	auto Bar = [&](float X, float Z, float BarWidth, float BarHeight)
 	{
-		Target->AddInstance(FTransform(FQuat::Identity, FVector(Centre.X + X, 0.f, Centre.Y + Z), FVector(Width / CubeSize, 1.f / CubeSize, Height / CubeSize)));
+		Target->AddInstance(FTransform(FQuat::Identity, FVector(Centre.X + X, 0.f, Centre.Y + Z), FVector(BarWidth / CubeSize, 1.f / CubeSize, BarHeight / CubeSize)));
 	};
-	Bar(0.f, Half, Size + T, T);
-	Bar(0.f, -Half, Size + T, T);
-	Bar(-Half, 0.f, T, Size);
-	Bar(Half, 0.f, T, Size);
+	Bar(0.f, HalfH, Width + T, T);
+	Bar(0.f, -HalfH, Width + T, T);
+	Bar(-HalfW, 0.f, T, Height);
+	Bar(HalfW, 0.f, T, Height);
 }
 
 void AIJPRunMapView::AddDashes(UInstancedStaticMeshComponent* Target, const FVector2D& From, const FVector2D& To) const
@@ -317,10 +391,20 @@ void AIJPRunMapView::ApplyColours()
 void AIJPRunMapView::PlaceCursor()
 {
 	Cursor->ClearInstances();
-	const int32 Node = GetSelectedNode();
-	if (Node != INDEX_NONE)
+	bool bHasPick = false;
+	if (bShowingCards)
 	{
-		AddFrame(Cursor, NodePosition(Node), NodeSize + 12.f);
+		bHasPick = NumCards > 0;
+		if (bHasPick)
+		{
+			const FVector2D Size = CardSize();
+			AddFrame(Cursor, CardCentre(SelectedCard), Size.X + 12.f, Size.Y + 12.f);
+		}
 	}
-	Cursor->SetVisibility(Node != INDEX_NONE);
+	else if (const int32 Node = GetSelectedNode(); Node != INDEX_NONE)
+	{
+		bHasPick = true;
+		AddFrame(Cursor, NodePosition(Node), NodeSize + 12.f, NodeSize + 12.f);
+	}
+	Cursor->SetVisibility(bHasPick);
 }

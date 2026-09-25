@@ -95,7 +95,7 @@ const UIJPPaddleProfile* AIJPPaddle::GetProfile() const
 FVector2D AIJPPaddle::GetSize() const
 {
 	const FVector2D Size = GetProfile()->Size;
-	return FVector2D(Size.X, Size.Y * LengthScale);
+	return FVector2D(Size.X, Size.Y * LengthScale * RunLengthScale);
 }
 
 void AIJPPaddle::Dash(float Distance, float Duration)
@@ -129,7 +129,14 @@ bool AIJPPaddle::ClampToWalls()
 
 float AIJPPaddle::GetMaxSpeed() const
 {
-	return GetProfile()->MaxSpeed;
+	return GetProfile()->MaxSpeed * RunSpeedScale;
+}
+
+void AIJPPaddle::SetRunScales(float Length, float Speed)
+{
+	RunLengthScale = FMath::Max(Length, KINDA_SMALL_NUMBER);
+	RunSpeedScale = FMath::Max(Speed, 0.f);
+	SetLengthScale(LengthScale); // re-lay out and keep inside the walls
 }
 
 float AIJPPaddle::GetRampTime() const

@@ -107,6 +107,7 @@ void AIJPBall::Serve(EIJPSide Toward, float AngleDeg)
 	Speed = GetType().BaseSpeed;
 	UnboostedSpeed = 0.f;
 	CurveTimeLeft = 0.f;
+	FreezeLeft = 0.f;
 	Velocity = FVector2D(IJP::SideSign(Toward) * FMath::Cos(AngleRad), FMath::Sin(AngleRad)) * Speed;
 	Accumulator = 0.f;
 	RallyHits = 0;
@@ -141,6 +142,14 @@ void AIJPBall::Curve(float DegreesPerSecond, float Duration, float BendUp)
 	}
 }
 
+void AIJPBall::Freeze(float Seconds)
+{
+	if (bInPlay)
+	{
+		FreezeLeft = FMath::Max(FreezeLeft, Seconds);
+	}
+}
+
 void AIJPBall::Launch(const FVector2D& InPosition, const FVector2D& InVelocity)
 {
 	ServeBlinker.Cancel();
@@ -149,6 +158,7 @@ void AIJPBall::Launch(const FVector2D& InPosition, const FVector2D& InVelocity)
 	Speed = InVelocity.Size();
 	UnboostedSpeed = 0.f;
 	CurveTimeLeft = 0.f;
+	FreezeLeft = 0.f;
 	Accumulator = 0.f;
 	RallyHits = 0;
 	bInPlay = true;
@@ -167,6 +177,8 @@ void AIJPBall::SetPlaneVelocity(const FVector2D& InVelocity)
 void AIJPBall::ResetBall()
 {
 	ServeBlinker.Cancel();
+	FreezeLeft = 0.f;
+	TimeScale = 1.f;
 
 	Position = PreviousPosition = FVector2D::ZeroVector;
 	Velocity = FVector2D::ZeroVector;
@@ -192,6 +204,14 @@ void AIJPBall::Tick(float DeltaSeconds)
 	{
 		return;
 	}
+
+	// Frozen: time stands still for the ball (real time passes for the freeze itself).
+	if (FreezeLeft > 0.f)
+	{
+		FreezeLeft -= DeltaSeconds;
+		return;
+	}
+	DeltaSeconds *= TimeScale;
 
 	// Fixed substeps: same result at any frame rate. The cap stops a long hitch from simulating a burst of steps.
 	const float Step = 1.f / SimRate;

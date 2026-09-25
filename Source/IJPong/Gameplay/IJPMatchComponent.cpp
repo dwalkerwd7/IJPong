@@ -169,7 +169,7 @@ void UIJPMatchComponent::ServeBall()
 void UIJPMatchComponent::Serve(EIJPSide Toward)
 {
 	// The main ball goes first: once it's in play, AddBall won't hand it out again.
-	const int32 NumBalls = FMath::Max(GetRules().ServedBalls.Num(), 1);
+	const int32 NumBalls = FMath::Max(GetRules().ServedBalls.Num(), 1) + ExtraServedBalls.Num();
 	for (int32 i = 0; i < NumBalls; ++i)
 	{
 		AIJPBall* Ball = i == 0 ? GetBall() : Arena->AddBall(GetServedType(i));
@@ -185,8 +185,12 @@ void UIJPMatchComponent::Serve(EIJPSide Toward)
 
 const UIJPBallType* UIJPMatchComponent::GetServedType(int32 Index) const
 {
+	// The rules' serve list (or one default ball) first, then any extras.
 	const TArray<TObjectPtr<UIJPBallType>>& Served = GetRules().ServedBalls;
-	const UIJPBallType* Type = Served.IsValidIndex(Index) ? Served[Index].Get() : nullptr;
+	const int32 RulesCount = FMath::Max(Served.Num(), 1);
+	const UIJPBallType* Type = Index < RulesCount
+		? (Served.IsValidIndex(Index) ? Served[Index].Get() : nullptr)
+		: (ExtraServedBalls.IsValidIndex(Index - RulesCount) ? ExtraServedBalls[Index - RulesCount].Get() : nullptr);
 	return Type ? Type : Arena->GetDefaultBallType();
 }
 

@@ -1,13 +1,17 @@
 // It's Just Pong
 
 #include "Core/IJPRunGameMode.h"
+#include "Abilities/IJPAbility.h"
+#include "Abilities/IJPAbilityComponent.h"
 #include "Engine/World.h"
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPMatchComponent.h"
+#include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPRival.h"
 #include "GameFramework/PlayerController.h"
 #include "Narrative/IJPConversationPlayer.h"
 #include "Run/IJPActConfig.h"
+#include "Run/IJPReward.h"
 #include "Run/IJPRunMapView.h"
 #include "Run/IJPRunSubsystem.h"
 #include "TimerManager.h"
@@ -46,13 +50,14 @@ void AIJPRunGameMode::StartNewRun(const UIJPActConfig* Act, int32 Seed, int32 In
 	RunAct = Act ? Act : FirstAct.LoadSynchronous();
 	RunStartingHealth = InStartingHealth > 0 ? InStartingHealth : StartingHealth;
 	Run->StartRun(RunAct, Seed == INDEX_NONE ? FMath::Rand() : Seed, RunStartingHealth);
+	ApplyLoadout(); // a fresh run: nothing gathered yet
 	Phase = EIJPRunPhase::Map;
 	ShowMap();
 }
 
 bool AIJPRunGameMode::HandleUIStep(int32 Direction)
 {
-	if (Phase != EIJPRunPhase::Map)
+	if (Phase != EIJPRunPhase::Map && Phase != EIJPRunPhase::Reward)
 	{
 		return false;
 	}
@@ -67,6 +72,16 @@ bool AIJPRunGameMode::HandleUIConfirm()
 	case EIJPRunPhase::Map:
 		EnterSelectedNode();
 		return true;
+	case EIJPRunPhase::Reward:
+	{
+		// The cards are the offer, left to right, then "skip".
+		UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
+		const int32 Card = MapView->GetSelectedCard();
+		Run->TakeReward(Run->GetOffer().IsValidIndex(Card) ? Card : INDEX_NONE);
+		Phase = EIJPRunPhase::Map;
+		ShowMap();
+		return true;
+	}
 	case EIJPRunPhase::Ended:
 		// Same act and health as the run that just ended, on a fresh map.
 		StartNewRun(RunAct, INDEX_NONE, RunStartingHealth);
@@ -99,6 +114,7 @@ void AIJPRunGameMode::EnterSelectedNode()
 	const UIJPRival* NodeRival = Encounter->Rivals.IsEmpty() ? nullptr : Encounter->Rivals[FMath::RandHelper(Encounter->Rivals.Num())].Get();
 	SetRival(NodeRival);
 	SetOpponentSkill(Encounter->Skill);
+	ApplyLoadout();
 	BeginMatch(Encounter->Rules);
 	Phase = EIJPRunPhase::Playing;
 	ShowArena();
@@ -140,7 +156,12 @@ void AIJPRunGameMode::FinishNode()
 	GetMatch()->StopMatch();
 	GetConversations()->Stop();
 
-	if (Run->GetState() == EIJPRunState::Running)
+	if (Run->GetState() == EIJPRunState::Running && Run->HasOffer())
+	{
+		Phase = EIJPRunPhase::Reward;
+		ShowRewards();
+	}
+	else if (Run->GetState() == EIJPRunState::Running)
 	{
 		Phase = EIJPRunPhase::Map;
 		ShowMap();
@@ -174,6 +195,38 @@ void AIJPRunGameMode::ShowMap()
 	{
 		MapView->SetFooter(TEXT("A / D  CHOOSE    SPACE  GO"));
 	}
+	SetViewTarget(MapView);
+}
+
+void AIJPRunGameMode::ApplyLoadout()
+{
+	const UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
+	AIJPPaddle* Paddle = GetArena() ? GetArena()->GetPaddle(PlayerSide) : nullptr;
+	if (!Run || !Paddle)
+	{
+		return;
+	}
+
+	const FIJPRunLoadout& Loadout = Run->GetLoadout();
+	Paddle->SetRunScales(1.f + Loadout.PaddleLengthBonus, 1.f + Loadout.PaddleSpeedBonus);
+	UIJPAbilityComponent* Abilities = Paddle->GetAbilities();
+	Abilities->SetCooldownScale(EIJPAbilitySlot::ClassSkill, FMath::Max(1.f - Loadout.ClassSkillCooldownCut, 0.1f));
+	Abilities->Equip(EIJPAbilitySlot::RunAbility, Loadout.RunAbility);
+	GetMatch()->SetExtraServedBalls(Loadout.ExtraServedBalls);
+}
+
+void AIJPRunGameMode::ShowRewards()
+{
+	const UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
+	TArray<AIJPRunMapView::FCard> Cards;
+	for (const UIJPReward* Reward : Run->GetOffer())
+	{
+		Cards.Add({ Reward->DisplayName.ToString().ToUpper(), Reward->Description.ToString() });
+	}
+	Cards.Add({ TEXT("SKIP"), FString::Printf(TEXT("+%d COINS"), Run->GetAct()->SkipCoins) });
+
+	MapView->ShowCards(FString::Printf(TEXT("PICK A REWARD    HP %d/%d    COINS %d"), Run->GetHealth(), Run->GetMaxHealth(), Run->GetCoins()), Cards);
+	MapView->SetFooter(TEXT("A / D  CHOOSE    SPACE  TAKE"));
 	SetViewTarget(MapView);
 }
 

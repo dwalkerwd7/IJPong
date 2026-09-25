@@ -107,6 +107,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Paddle")
 	void SetLengthScale(float Scale);
 
+	/**
+	 * Lasting scales on length and top speed (1 = the profile's), e.g. from a run's modifiers.
+	 * Separate from SetLengthScale, which abilities use for short effects on top.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Paddle")
+	void SetRunScales(float Length, float Speed);
+
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	UIJPAbilityComponent* GetAbilities() const { return Abilities; }
 
@@ -167,6 +174,8 @@ private:
 	float Velocity = 0.f;
 	float PendingInput = 0.f;
 	float LengthScale = 1.f;
+	float RunLengthScale = 1.f;
+	float RunSpeedScale = 1.f;
 	/** +1 or -1: the way the paddle was last steered. */
 	float LastMoveSign = 1.f;
 	float DashVelocity = 0.f;

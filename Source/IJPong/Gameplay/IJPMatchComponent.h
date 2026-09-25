@@ -40,6 +40,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Match")
 	void StopMatch();
 
+	/** Balls launched on every serve on top of the rules' own (e.g. a run's ball rewards). Kept until changed. */
+	void SetExtraServedBalls(const TArray<TObjectPtr<const UIJPBallType>>& Types) { ExtraServedBalls = Types; }
+
 	/** Let a held serve go: it follows after the rules' serve delay. */
 	UFUNCTION(BlueprintCallable, Category = "Match")
 	void ReleaseServe();
@@ -102,6 +105,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<const UIJPMatchRules> Rules;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<const UIJPBallType>> ExtraServedBalls;
 
 	/** The arena whose OnBallGoal we're bound to, so a new arena rebinds cleanly. */
 	TWeakObjectPtr<AIJPArena> BoundArena;

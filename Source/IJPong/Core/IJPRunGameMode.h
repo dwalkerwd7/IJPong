@@ -19,6 +19,8 @@ enum class EIJPRunPhase : uint8
 	Playing,
 	/** The match just ended; the result shows for a moment before the map comes back. */
 	AfterMatch,
+	/** Picking a reward after a win (or skipping it for coins). */
+	Reward,
 	/** The run is over (won or lost); confirm starts a new one. */
 	Ended
 };
@@ -68,6 +70,9 @@ protected:
 
 private:
 	void EnterSelectedNode();
+	/** Put what the run has gathered on the player's paddle and serves. */
+	void ApplyLoadout();
+	void ShowRewards();
 	void FinishNode();
 	void EndRun();
 	void ShowMap();

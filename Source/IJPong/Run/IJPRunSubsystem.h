@@ -7,7 +7,10 @@
 #include "Run/IJPRunMap.h"
 #include "IJPRunSubsystem.generated.h"
 
+class UIJPAbility;
 class UIJPActConfig;
+class UIJPBallType;
+class UIJPReward;
 
 UENUM(BlueprintType)
 enum class EIJPRunState : uint8
@@ -22,6 +25,33 @@ enum class EIJPRunState : uint8
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FIJPRunChangedSignature);
+
+/** What the player has gathered this run, applied to every fight (see AIJPRunGameMode). */
+USTRUCT(BlueprintType)
+struct FIJPRunLoadout
+{
+	GENERATED_BODY()
+
+	/** Added to the paddle's length, as a fraction (0.2 = +20%). */
+	UPROPERTY(BlueprintReadOnly, Category = "Loadout")
+	float PaddleLengthBonus = 0.f;
+
+	/** Added to the paddle's top speed, as a fraction. */
+	UPROPERTY(BlueprintReadOnly, Category = "Loadout")
+	float PaddleSpeedBonus = 0.f;
+
+	/** Cut from the class skill's cooldown, as a fraction. */
+	UPROPERTY(BlueprintReadOnly, Category = "Loadout")
+	float ClassSkillCooldownCut = 0.f;
+
+	/** In the run-ability slot. Null = empty. */
+	UPROPERTY(BlueprintReadOnly, Category = "Loadout")
+	TObjectPtr<const UIJPAbility> RunAbility;
+
+	/** Launched on every serve, on top of the match's own. */
+	UPROPERTY(BlueprintReadOnly, Category = "Loadout")
+	TArray<TObjectPtr<const UIJPBallType>> ExtraServedBalls;
+};
 
 /**
  * The run in progress: its act and map, where the player is on it, and the run-wide health and
@@ -55,7 +85,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Run")
 	bool IsInNode() const { return bInNode; }
 
-	/** Nodes the player may enter next, left to right. Empty while in a node or once the run is over. */
+	/** Nodes the player may enter next, left to right. Empty while in a node, while a reward is on offer, or once the run is over. */
 	UFUNCTION(BlueprintPure, Category = "Run")
 	TArray<int32> GetReachableNodes() const;
 
@@ -69,7 +99,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Run")
 	bool EnterNode(int32 Node);
 
-	/** The fight at the current node ended. A win pays its coins; winning the boss wins the run. */
+	/**
+	 * The fight at the current node ended. A win pays its coins and, for Match and Elite, puts a pick
+	 * of rewards on offer (see TakeReward). Winning the boss wins the run.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Run")
 	void CompleteNode(bool bWon);
 
@@ -86,17 +119,45 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Run")
 	int32 GetCoins() const { return Coins; }
 
+	// --- Rewards and loadout ---
+
+	/** Rewards waiting to be picked (the map is on hold until one is taken or skipped). */
+	UFUNCTION(BlueprintPure, Category = "Run")
+	bool HasOffer() const { return !Offer.IsEmpty(); }
+
+	const TArray<TObjectPtr<const UIJPReward>>& GetOffer() const { return Offer; }
+
+	/** Take the offered reward at Index, or skip for the act's SkipCoins with INDEX_NONE. */
+	UFUNCTION(BlueprintCallable, Category = "Run")
+	void TakeReward(int32 Index);
+
+	const FIJPRunLoadout& GetLoadout() const { return Loadout; }
+
+	/** For rewards granting themselves. */
+	FIJPRunLoadout& EditLoadout() { return Loadout; }
+
+	/** Raise the maximum and heal the same amount. */
+	void AddMaxHealth(int32 Amount);
+
 	/** Anything about the run changed (moved, health, coins, state). */
 	UPROPERTY(BlueprintAssignable, Category = "Run")
 	FIJPRunChangedSignature OnRunChanged;
 
 private:
 	void Heal(int32 Amount);
+	void RollOffer(const TArray<TObjectPtr<UIJPReward>>& Pool);
 
 	UPROPERTY(Transient)
 	TObjectPtr<const UIJPActConfig> Act;
 
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<const UIJPReward>> Offer;
+
+	UPROPERTY(Transient)
+	FIJPRunLoadout Loadout;
+
 	FIJPRunMap Map;
+	FRandomStream Random;
 	TArray<bool> Visited;
 	EIJPRunState State = EIJPRunState::None;
 	int32 CurrentNode = INDEX_NONE;

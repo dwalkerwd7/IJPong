@@ -32,10 +32,26 @@ public:
 	/** Take the arena's look (palette, materials, screen size and camera settings). Call once after spawning. */
 	void Init(AIJPArena* InArena);
 
-	/** Redraw from the run's current state. */
+	/** Redraw from the run's current state (and leave card mode). */
 	void Refresh();
 
-	/** Move the pick one reachable node left (-1) or right (+1). */
+	/** One card in a pick: a title and a few lines under it. */
+	struct FCard
+	{
+		FString Title;
+		FString Text;
+	};
+
+	/** Show a row of cards to pick from instead of the map, under Heading. Refresh() goes back to the map. */
+	void ShowCards(const FString& Heading, const TArray<FCard>& Cards);
+
+	UFUNCTION(BlueprintPure, Category = "Map")
+	bool IsShowingCards() const { return bShowingCards; }
+
+	/** The picked card, 0 = leftmost. */
+	int32 GetSelectedCard() const { return SelectedCard; }
+
+	/** Move the pick one node (or card) left (-1) or right (+1). */
 	void Step(int32 Direction);
 
 	/** The picked node (index into the run's map), or INDEX_NONE if there's nowhere to go. */
@@ -91,13 +107,19 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Map|Layout")
 	float TextSize = 18.f;
 
+	UPROPERTY(EditAnywhere, Category = "Map|Layout")
+	float CardTextSize = 13.f;
+
 private:
 	FVector2D NodePosition(int32 Node) const;
-	void AddFrame(UInstancedStaticMeshComponent* Target, const FVector2D& Centre, float Size) const;
+	void AddFrame(UInstancedStaticMeshComponent* Target, const FVector2D& Centre, float Width, float Height) const;
 	void AddDashes(UInstancedStaticMeshComponent* Target, const FVector2D& From, const FVector2D& To) const;
 	UTextRenderComponent* MakeText(float Size);
 	void ApplyColours();
 	void PlaceCursor();
+	void ClearDrawing();
+	FVector2D CardCentre(int32 Card) const;
+	FVector2D CardSize() const;
 
 	TWeakObjectPtr<AIJPArena> Arena;
 	FVector2D HalfScreen = FVector2D(400.f, 300.f);
@@ -114,7 +136,14 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> DimMaterial;
 
+	/** Title and text components for the cards, two per card. */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UTextRenderComponent>> CardTexts;
+
 	TArray<int32> Reachable;
 	int32 Selected = 0;
+	int32 NumCards = 0;
+	int32 SelectedCard = 0;
+	bool bShowingCards = false;
 	FIJPBlinker CursorBlinker;
 };

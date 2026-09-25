@@ -90,6 +90,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Ball")
 	void SetPlaneVelocity(const FVector2D& InVelocity);
 
+	/** Stop dead in place for Seconds, then carry on exactly as before. For abilities like Freeze. */
+	UFUNCTION(BlueprintCallable, Category = "Ball")
+	void Freeze(float Seconds);
+
+	UFUNCTION(BlueprintPure, Category = "Ball")
+	bool IsFrozen() const { return FreezeLeft > 0.f; }
+
+	/** Run the ball's own clock at Scale (1 = normal, 0.5 = half speed). For abilities like Slow-mo. */
+	UFUNCTION(BlueprintCallable, Category = "Ball")
+	void SetTimeScale(float Scale) { TimeScale = FMath::Max(Scale, 0.f); }
+
+	UFUNCTION(BlueprintPure, Category = "Ball")
+	float GetTimeScale() const { return TimeScale; }
+
 	/** Take the ball out of play and hide it at the centre. */
 	UFUNCTION(BlueprintCallable, Category = "Ball")
 	void ResetBall();
@@ -176,6 +190,8 @@ private:
 	/** The speed before a Boost, which the next paddle hit builds on. 0 = not boosted. */
 	float UnboostedSpeed = 0.f;
 	float Accumulator = 0.f;
+	float FreezeLeft = 0.f;
+	float TimeScale = 1.f;
 	float CurveRate = 0.f;
 	float CurveTimeLeft = 0.f;
 	/** +1 bends up the screen, -1 down. */

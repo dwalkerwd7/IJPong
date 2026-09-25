@@ -8,6 +8,7 @@
 #include "IJPActConfig.generated.h"
 
 class UIJPMatchRules;
+class UIJPReward;
 class UIJPRival;
 
 /** Who and how you play at one kind of fight node. */
@@ -84,6 +85,30 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Nodes")
 	FIJPEncounter Boss;
+
+	// --- Rewards ---
+
+	/** Offered (a few at random) after winning a Match. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Rewards")
+	TArray<TObjectPtr<UIJPReward>> MatchRewards;
+
+	/** Offered after winning an Elite. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Rewards")
+	TArray<TObjectPtr<UIJPReward>> EliteRewards;
+
+	/** How many rewards each pick offers. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Rewards", meta = (ClampMin = "1", ClampMax = "4"))
+	int32 RewardChoices = 3;
+
+	/** Coins for skipping a pick instead. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Rewards", meta = (ClampMin = "0"))
+	int32 SkipCoins = 5;
+
+	/** The reward pool after winning a node of this type (empty for the boss: the act ends). */
+	const TArray<TObjectPtr<UIJPReward>>* GetRewardPool(EIJPNodeType Type) const
+	{
+		return Type == EIJPNodeType::Match ? &MatchRewards : Type == EIJPNodeType::Elite ? &EliteRewards : nullptr;
+	}
 
 	/** Health restored at a Rest node (never above the run's maximum). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Nodes", meta = (ClampMin = "0"))

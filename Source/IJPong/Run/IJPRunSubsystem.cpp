@@ -4,6 +4,7 @@
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Run/IJPActConfig.h"
+#include "Run/IJPReward.h"
 
 UIJPRunSubsystem* UIJPRunSubsystem::Get(const UObject* WorldContext)
 {
@@ -15,8 +16,10 @@ UIJPRunSubsystem* UIJPRunSubsystem::Get(const UObject* WorldContext)
 void UIJPRunSubsystem::StartRun(const UIJPActConfig* InAct, int32 Seed, int32 StartingHealth)
 {
 	Act = InAct;
-	FRandomStream Random(Seed);
+	Random.Initialize(Seed);
 	Map = Act ? FIJPRunMap::Generate(*Act, Random) : FIJPRunMap();
+	Offer.Reset();
+	Loadout = FIJPRunLoadout();
 	Visited.Init(false, Map.Nodes.Num());
 	CurrentNode = INDEX_NONE;
 	bInNode = false;
@@ -28,7 +31,7 @@ void UIJPRunSubsystem::StartRun(const UIJPActConfig* InAct, int32 Seed, int32 St
 
 TArray<int32> UIJPRunSubsystem::GetReachableNodes() const
 {
-	if (State != EIJPRunState::Running || bInNode)
+	if (State != EIJPRunState::Running || bInNode || HasOffer())
 	{
 		return {};
 	}
@@ -75,6 +78,10 @@ void UIJPRunSubsystem::CompleteNode(bool bWon)
 		{
 			State = EIJPRunState::Won;
 		}
+		else if (const TArray<TObjectPtr<UIJPReward>>* Pool = Act->GetRewardPool(Type))
+		{
+			RollOffer(*Pool);
+		}
 	}
 	OnRunChanged.Broadcast();
 }
@@ -91,6 +98,52 @@ void UIJPRunSubsystem::LoseHealth(int32 Amount)
 		State = EIJPRunState::Lost;
 	}
 	OnRunChanged.Broadcast();
+}
+
+void UIJPRunSubsystem::RollOffer(const TArray<TObjectPtr<UIJPReward>>& Pool)
+{
+	// A few different rewards at random, leaving out any not worth offering now.
+	TArray<const UIJPReward*> Candidates;
+	for (const UIJPReward* Reward : Pool)
+	{
+		if (Reward && Reward->CanOffer(*this))
+		{
+			Candidates.AddUnique(Reward);
+		}
+	}
+	for (int32 i = Candidates.Num() - 1; i > 0; --i)
+	{
+		Candidates.Swap(i, Random.RandHelper(i + 1));
+	}
+	Offer.Reset();
+	for (int32 i = 0; i < FMath::Min(Candidates.Num(), Act->RewardChoices); ++i)
+	{
+		Offer.Add(Candidates[i]);
+	}
+}
+
+void UIJPRunSubsystem::TakeReward(int32 Index)
+{
+	if (!HasOffer())
+	{
+		return;
+	}
+	if (Offer.IsValidIndex(Index))
+	{
+		Offer[Index]->Grant(*this);
+	}
+	else
+	{
+		Coins += Act->SkipCoins;
+	}
+	Offer.Reset();
+	OnRunChanged.Broadcast();
+}
+
+void UIJPRunSubsystem::AddMaxHealth(int32 Amount)
+{
+	MaxHealth += FMath::Max(Amount, 0);
+	Heal(Amount);
 }
 
 void UIJPRunSubsystem::Heal(int32 Amount)

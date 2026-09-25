@@ -31,6 +31,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
 	void Equip(EIJPAbilitySlot Slot, const UIJPAbility* Definition);
 
+	/** Multiply the slot's cooldowns from now on (0.85 = 15% shorter), e.g. from a run's modifiers. */
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+	void SetCooldownScale(EIJPAbilitySlot Slot, float Scale);
+
 	/** Press the slot's button. True if the ability activated. */
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
 	bool TryActivate(EIJPAbilitySlot Slot);
@@ -70,5 +74,6 @@ private:
 	TArray<TObjectPtr<UIJPAbility>> Abilities;
 
 	TArray<float> Cooldowns;
+	TArray<float> CooldownScales;
 	FTimerHandle ChirpTimer;
 };

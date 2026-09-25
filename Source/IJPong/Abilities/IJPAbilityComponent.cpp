@@ -18,6 +18,7 @@ UIJPAbilityComponent::UIJPAbilityComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 	Abilities.SetNum(NumSlots);
 	Cooldowns.SetNumZeroed(NumSlots);
+	CooldownScales.Init(1.f, NumSlots);
 }
 
 void UIJPAbilityComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -62,13 +63,18 @@ bool UIJPAbilityComponent::TryActivate(EIJPAbilitySlot Slot)
 	const int32 Index = static_cast<int32>(Slot);
 	UIJPAbility* Ability = Abilities[Index];
 	Ability->Activate();
-	Cooldowns[Index] = Ability->Cooldown;
+	Cooldowns[Index] = Ability->Cooldown * CooldownScales[Index];
 	if (Ability->IsArmed())
 	{
 		PlayArmChirp();
 	}
 	OnActivated.Broadcast(Slot, Ability);
 	return true;
+}
+
+void UIJPAbilityComponent::SetCooldownScale(EIJPAbilitySlot Slot, float Scale)
+{
+	CooldownScales[static_cast<int32>(Slot)] = FMath::Max(Scale, 0.f);
 }
 
 UIJPAbility* UIJPAbilityComponent::GetAbility(EIJPAbilitySlot Slot) const
