@@ -50,7 +50,9 @@ namespace
 
 AIJPRunMapView::AIJPRunMapView()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	// Ticks only while the era change plays.
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeMesh(TEXT("/Engine/BasicShapes/Cube.Cube"));
 
@@ -148,6 +150,7 @@ void AIJPRunMapView::Init(AIJPArena* InArena)
 	InfoText = MakeText(CardTextSize);
 	StartText = MakeText(TextSize);
 	UnlockText = MakeText(TextSize);
+	EraTitleText = MakeText(TextSize * 2.f);
 	CursorBlinker.Start(this, 0.25f, 0, true, [this](bool bShow)
 	{
 		const bool bHasPick = ShownTree ? !TreeOrder.IsEmpty() : bShowingCards ? NumCards > 0 : !Reachable.IsEmpty();
@@ -259,6 +262,69 @@ void AIJPRunMapView::ShowCards(const FString& Heading, const TArray<FCard>& Card
 	PlaceCursor();
 }
 
+void AIJPRunMapView::PlayEraChange(const FString& Title, float Duration)
+{
+	ApplyColours();
+	ClearDrawing();
+	Cursor->ClearInstances();
+	CursorBlinker.Stop();
+	Header->SetText(FText::GetEmpty());
+	Footer->SetText(FText::GetEmpty());
+	EraTitleText->SetText(FText::FromString(Title));
+	EraTitleText->SetTextRenderColor(Arena->GetPalette().Score.ToFColor(true));
+	EraTitleText->SetRelativeLocation(FVector(0.f, 2.f, 0.f));
+	EraTitleText->SetVisibility(false);
+	EraChangeTime = FMath::Max(Duration, 1.f);
+	EraChangeLeft = EraChangeTime;
+	SetActorTickEnabled(true);
+	Tick(0.f);
+}
+
+void AIJPRunMapView::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	if (EraChangeLeft <= 0.f)
+	{
+		SetActorTickEnabled(false);
+		return;
+	}
+	EraChangeLeft = FMath::Max(EraChangeLeft - DeltaSeconds, 0.f);
+	const float T = EraChangeTime - EraChangeLeft;
+
+	// The switch-off: the whole picture squeezes to a bright line (0.35 s), the line to a dot
+	// (0.25 s), the dot fades; then the title, then dark again before the new era warms up.
+	BrightPieces->ClearInstances();
+	const FVector2D Full = HalfScreen * 2.f;
+	FVector2D Size = FVector2D::ZeroVector;
+	if (T < 0.35f)
+	{
+		Size = FVector2D(Full.X, FMath::Lerp(Full.Y, 3.f, T / 0.35f));
+	}
+	else if (T < 0.6f)
+	{
+		Size = FVector2D(FMath::Lerp(Full.X, 3.f, (T - 0.35f) / 0.25f), 3.f);
+	}
+	else if (T < 0.8f)
+	{
+		Size = FVector2D(3.f, 3.f);
+	}
+	if (Size.X > 0.f)
+	{
+		BrightPieces->AddInstance(FTransform(FQuat::Identity, FVector::ZeroVector, FVector(Size.X / CubeSize, 1.f / CubeSize, Size.Y / CubeSize)));
+	}
+	EraTitleText->SetVisibility(T >= 1.f && EraChangeLeft > 0.4f);
+	if (EraChangeLeft <= 0.f)
+	{
+		EraTitleText->SetVisibility(false);
+		SetActorTickEnabled(false);
+	}
+}
+
+void AIJPRunMapView::WarmUp()
+{
+	CRT->Pulse(1.5f, 0.8f);
+}
+
 void AIJPRunMapView::Step(int32 Direction)
 {
 	if (ShownTree)
@@ -292,7 +358,7 @@ void AIJPRunMapView::ClearDrawing()
 	{
 		Text->SetVisibility(false);
 	}
-	for (UTextRenderComponent* Text : { InfoText.Get(), StartText.Get(), UnlockText.Get() })
+	for (UTextRenderComponent* Text : { InfoText.Get(), StartText.Get(), UnlockText.Get(), EraTitleText.Get() })
 	{
 		if (Text)
 		{

@@ -9,6 +9,7 @@
 
 class UIJPAbility;
 class UIJPActConfig;
+class UIJPEra;
 class UIJPBallType;
 class UIJPReward;
 
@@ -20,11 +21,25 @@ enum class EIJPRunState : uint8
 	Running,
 	/** Health ran out. */
 	Lost,
-	/** The act's boss was beaten. */
+	/** The last act's boss was beaten. */
 	Won
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FIJPRunChangedSignature);
+
+/** One act of a run's climb, and the era it's played in. */
+USTRUCT(BlueprintType)
+struct FIJPRunStage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Run")
+	TObjectPtr<const UIJPActConfig> Act;
+
+	/** The era it's played in (null = whatever era is on). */
+	UPROPERTY(BlueprintReadOnly, Category = "Run")
+	TObjectPtr<const UIJPEra> Era;
+};
 
 /** What the player has gathered this run, applied to every fight (see AIJPRunGameMode). */
 USTRUCT(BlueprintType)
@@ -78,6 +93,28 @@ public:
 	/** Begin a fresh run of Act from its top row. Seed makes the map reproducible. */
 	UFUNCTION(BlueprintCallable, Category = "Run")
 	void StartRun(const UIJPActConfig* Act, int32 Seed, float StartingHealth);
+
+	/**
+	 * Start a climb: the Stages' acts one after another (each boss leads to the next act's map),
+	 * the last boss wins the run. UnlocksErasTo > 0: winning it unlocks eras up to that count.
+	 */
+	void StartRun(const TArray<FIJPRunStage>& InStages, int32 Seed, float StartingHealth, int32 InUnlocksErasTo = 0);
+
+	/** Which stage (act) of the climb the run is on, 0 = the first. */
+	UFUNCTION(BlueprintPure, Category = "Run")
+	int32 GetStageIndex() const { return StageIndex; }
+
+	UFUNCTION(BlueprintPure, Category = "Run")
+	int32 GetNumStages() const { return Stages.Num(); }
+
+	/** The era the current stage is played in (null = none set). */
+	const UIJPEra* GetStageEra() const { return Stages.IsValidIndex(StageIndex) ? Stages[StageIndex].Era.Get() : nullptr; }
+
+	/** Winning this run unlocked a new era (eras now unlocked: UnlocksErasTo). */
+	UFUNCTION(BlueprintPure, Category = "Run")
+	bool DidUnlockEra() const { return bUnlockedEra; }
+
+	int32 GetUnlocksErasTo() const { return UnlocksErasTo; }
 
 	UFUNCTION(BlueprintPure, Category = "Run")
 	EIJPRunState GetState() const { return State; }
@@ -185,6 +222,8 @@ public:
 
 private:
 	void Heal(float Amount);
+	/** A boss fell and more acts follow: on to the next one's map. */
+	void AdvanceStage();
 	/** Up to Count different rewards from Pool, at random, leaving out any not worth offering now. */
 	TArray<TObjectPtr<const UIJPReward>> Roll(const TArray<TObjectPtr<UIJPReward>>& Pool, int32 Count);
 	void RollOffer(const TArray<TObjectPtr<UIJPReward>>& Pool);
@@ -193,6 +232,15 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<const UIJPActConfig> Act;
+
+	UPROPERTY(Transient)
+	TArray<FIJPRunStage> Stages;
+
+	int32 StageIndex = 0;
+	int32 UnlocksErasTo = 0;
+	bool bUnlockedEra = false;
+	/** Rows of the acts already cleared (depth keeps counting across acts). */
+	int32 RowsBefore = 0;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<const UIJPReward>> Offer;

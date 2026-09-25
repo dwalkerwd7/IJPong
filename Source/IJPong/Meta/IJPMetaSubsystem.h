@@ -58,6 +58,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Meta")
 	void ResetProgress();
 
+	/** How many eras are unlocked, in order (at least 1: the Cabinet). */
+	UFUNCTION(BlueprintPure, Category = "Meta")
+	int32 GetErasUnlocked() const;
+
+	/** Unlock eras up to Count (never locks any). True if that unlocked a new one. */
+	UFUNCTION(BlueprintCallable, Category = "Meta")
+	bool UnlockErasUpTo(int32 Count);
+
+	bool HasSeenEraCard(const FString& EraName) const;
+	void MarkEraCardSeen(const FString& EraName);
+
 	/** The Spell slot is open for every class; runs can then find spells. */
 	UFUNCTION(BlueprintPure, Category = "Meta")
 	bool IsSpellSlotUnlocked() const;

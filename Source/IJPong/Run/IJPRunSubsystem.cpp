@@ -16,7 +16,22 @@ UIJPRunSubsystem* UIJPRunSubsystem::Get(const UObject* WorldContext)
 
 void UIJPRunSubsystem::StartRun(const UIJPActConfig* InAct, int32 Seed, float StartingHealth)
 {
-	Act = InAct;
+	TArray<FIJPRunStage> One;
+	if (InAct)
+	{
+		One.Add({ InAct, nullptr });
+	}
+	StartRun(One, Seed, StartingHealth, 0);
+}
+
+void UIJPRunSubsystem::StartRun(const TArray<FIJPRunStage>& InStages, int32 Seed, float StartingHealth, int32 InUnlocksErasTo)
+{
+	Stages = InStages;
+	StageIndex = 0;
+	UnlocksErasTo = InUnlocksErasTo;
+	bUnlockedEra = false;
+	RowsBefore = 0;
+	Act = Stages.IsEmpty() ? nullptr : Stages[0].Act.Get();
 	Random.Initialize(Seed);
 	Map = Act ? FIJPRunMap::Generate(*Act, Random) : FIJPRunMap();
 	Offer.Reset();
@@ -97,8 +112,18 @@ void UIJPRunSubsystem::CompleteNode(bool bWon)
 			{
 				Loadout.Item = Act->BossItems[Random.RandHelper(Act->BossItems.Num())];
 			}
-			State = EIJPRunState::Won;
-			PayOut();
+			if (Stages.IsValidIndex(StageIndex + 1))
+			{
+				AdvanceStage();
+			}
+			else
+			{
+				// The last boss: the run is won, and the first win of your newest era opens the next.
+				State = EIJPRunState::Won;
+				UIJPMetaSubsystem* Meta = GetGameInstance()->GetSubsystem<UIJPMetaSubsystem>();
+				bUnlockedEra = UnlocksErasTo > 0 && Meta && Meta->UnlockErasUpTo(UnlocksErasTo);
+				PayOut();
+			}
 		}
 		else if (const TArray<TObjectPtr<UIJPReward>>* Pool = Act->GetRewardPool(Type))
 		{
@@ -106,6 +131,17 @@ void UIJPRunSubsystem::CompleteNode(bool bWon)
 		}
 	}
 	OnRunChanged.Broadcast();
+}
+
+void UIJPRunSubsystem::AdvanceStage()
+{
+	RowsBefore += Map.Rows;
+	++StageIndex;
+	Act = Stages[StageIndex].Act;
+	Map = Act ? FIJPRunMap::Generate(*Act, Random) : FIJPRunMap();
+	Visited.Init(false, Map.Nodes.Num());
+	CurrentNode = INDEX_NONE;
+	Offer.Reset();
 }
 
 void UIJPRunSubsystem::LoseHealth(float Amount)
@@ -202,7 +238,7 @@ int32 UIJPRunSubsystem::GetDepthReached() const
 			Depth = FMath::Max(Depth, Map.Nodes[i].Row + 1);
 		}
 	}
-	return Depth;
+	return RowsBefore + Depth;
 }
 
 void UIJPRunSubsystem::PayOut()

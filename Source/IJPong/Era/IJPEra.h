@@ -6,6 +6,7 @@
 #include "Engine/DataAsset.h"
 #include "IJPEra.generated.h"
 
+class UIJPActConfig;
 class UMaterialInterface;
 class UIJPToneSet;
 
@@ -91,6 +92,18 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Look")
 	FIJPPalette Palette;
+
+	/** Shown when a run climbs into this era (e.g. "1978 - ARCADE"). Empty = DisplayName. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Run")
+	FText TitleCard;
+
+	/** The era's acts, in order. A run plays all of them while this is your newest era. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Run")
+	TArray<TObjectPtr<UIJPActConfig>> Acts;
+
+	/** Once this era is beaten, how many of its acts (its first ones) a run passes through. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Run", meta = (ClampMin = "1"))
+	int32 ActsWhenBeaten = 1;
 
 	/** Chat-bubble corner radius, in arena units. 0 = square corners (hardware that can't draw curves). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Look", meta = (ClampMin = "0"))

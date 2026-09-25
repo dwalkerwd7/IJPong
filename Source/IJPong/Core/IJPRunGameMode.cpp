@@ -4,6 +4,8 @@
 #include "Abilities/IJPAbility.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Engine/World.h"
+#include "Era/IJPEraSubsystem.h"
+#include "Era/IJPEra.h"
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPPaddle.h"
@@ -43,6 +45,30 @@ void AIJPRunGameMode::OnArenaReady()
 
 void AIJPRunGameMode::StartNewRun(const UIJPActConfig* Act, int32 Seed, float InStartingHealth)
 {
+	// A given act (tests, a chosen act) is a one-act run; otherwise the climb through the eras.
+	RunAct = Act;
+	int32 UnlocksTo = 0;
+	TArray<FIJPRunStage> Stages;
+	if (Act)
+	{
+		Stages.Add({ Act, nullptr });
+	}
+	else
+	{
+		Stages = BuildClimb(UnlocksTo);
+		if (Stages.IsEmpty())
+		{
+			if (const UIJPActConfig* Fallback = FirstAct.LoadSynchronous())
+			{
+				Stages.Add({ Fallback, nullptr });
+			}
+		}
+	}
+	StartClimb(Stages, Seed, InStartingHealth, UnlocksTo);
+}
+
+void AIJPRunGameMode::StartClimb(const TArray<FIJPRunStage>& Stages, int32 Seed, float InStartingHealth, int32 UnlocksErasTo)
+{
 	UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
 	if (!Run)
 	{
@@ -50,16 +76,58 @@ void AIJPRunGameMode::StartNewRun(const UIJPActConfig* Act, int32 Seed, float In
 	}
 
 	GetWorld()->GetTimerManager().ClearTimer(AfterMatchTimer);
+	GetWorld()->GetTimerManager().ClearTimer(EraChangeTimer);
 	GetMatch()->StopMatch();
 	GetConversations()->Stop();
 	SetRival(nullptr);
 
-	RunAct = Act ? Act : FirstAct.LoadSynchronous();
 	RunStartingHealth = InStartingHealth > 0.f ? InStartingHealth : StartingHealth;
-	Run->StartRun(RunAct, Seed == INDEX_NONE ? FMath::Rand() : Seed, RunStartingHealth);
+	Run->StartRun(Stages, Seed == INDEX_NONE ? FMath::Rand() : Seed, RunStartingHealth, UnlocksErasTo);
+	// Every run starts back in its first era.
+	if (const UIJPEra* Era = Run->GetStageEra())
+	{
+		if (UIJPEraSubsystem* Eras = UIJPEraSubsystem::Get(this))
+		{
+			Eras->SetEra(Era);
+		}
+	}
 	ApplyLoadout(); // a fresh run: nothing gathered yet
 	Phase = EIJPRunPhase::Map;
 	ShowMap();
+}
+
+TArray<FIJPRunStage> AIJPRunGameMode::BuildClimb(int32& OutUnlocksErasTo) const
+{
+	TArray<FIJPRunStage> Stages;
+	OutUnlocksErasTo = 0;
+	const UIJPEraSubsystem* Eras = UIJPEraSubsystem::Get(this);
+	const UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(this);
+	if (!Eras || Eras->GetNumEras() == 0)
+	{
+		return Stages;
+	}
+
+	// Beaten eras briefly, the newest in full; winning it unlocks the next (if there is one).
+	const int32 Unlocked = FMath::Clamp(Meta ? Meta->GetErasUnlocked() : 1, 1, Eras->GetNumEras());
+	for (int32 EraIndex = 0; EraIndex < Unlocked; ++EraIndex)
+	{
+		const UIJPEra* Era = Eras->GetEraAt(EraIndex);
+		if (!Era)
+		{
+			continue;
+		}
+		const bool bNewest = EraIndex == Unlocked - 1;
+		const int32 Count = bNewest ? Era->Acts.Num() : FMath::Min(Era->ActsWhenBeaten, Era->Acts.Num());
+		for (int32 i = 0; i < Count; ++i)
+		{
+			if (Era->Acts[i])
+			{
+				Stages.Add({ Era->Acts[i], Era });
+			}
+		}
+	}
+	OutUnlocksErasTo = Unlocked < Eras->GetNumEras() ? Unlocked + 1 : 0;
+	return Stages;
 }
 
 bool AIJPRunGameMode::HandleUIStep(int32 Direction)
@@ -107,6 +175,13 @@ bool AIJPRunGameMode::HandleUIConfirm()
 		ShowMap();
 		return true;
 	}
+	case EIJPRunPhase::EraChange:
+		// Skippable once seen.
+		if (const UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(this); Meta && PendingEra && Meta->HasSeenEraCard(PendingEra->GetName()))
+		{
+			FinishEraChange();
+		}
+		return true;
 	case EIJPRunPhase::Ended:
 		if (const UIJPSkillTree* Tree = GetPlayerTree())
 		{
@@ -231,11 +306,19 @@ void AIJPRunGameMode::HandleRunMatchEnded(EIJPSide Winner)
 void AIJPRunGameMode::FinishNode()
 {
 	UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
+	const int32 StageBefore = Run->GetStageIndex();
+	const UIJPEra* EraBefore = Run->GetStageEra();
 	Run->CompleteNode(bLastMatchWon);
 	GetMatch()->StopMatch();
 	GetConversations()->Stop();
 
-	if (Run->GetState() == EIJPRunState::Running && Run->HasOffer())
+	// A boss fell and the climb goes on: into the next act, via the era change if the era moves on.
+	const bool bNextAct = Run->GetState() == EIJPRunState::Running && Run->GetStageIndex() != StageBefore;
+	if (bNextAct && Run->GetStageEra() && Run->GetStageEra() != EraBefore)
+	{
+		BeginEraChange(Run->GetStageEra());
+	}
+	else if (Run->GetState() == EIJPRunState::Running && Run->HasOffer())
 	{
 		Phase = EIJPRunPhase::Reward;
 		ShowRewards();
@@ -249,6 +332,37 @@ void AIJPRunGameMode::FinishNode()
 	{
 		EndRun();
 	}
+}
+
+void AIJPRunGameMode::BeginEraChange(const UIJPEra* NewEra)
+{
+	PendingEra = NewEra;
+	Phase = EIJPRunPhase::EraChange;
+	SetViewTarget(MapView);
+	const FString Title = (NewEra->TitleCard.IsEmpty() ? NewEra->DisplayName : NewEra->TitleCard).ToString().ToUpper();
+	MapView->PlayEraChange(Title, EraChangeTime);
+	GetWorld()->GetTimerManager().SetTimer(EraChangeTimer, this, &AIJPRunGameMode::FinishEraChange, EraChangeTime);
+}
+
+void AIJPRunGameMode::FinishEraChange()
+{
+	if (Phase != EIJPRunPhase::EraChange)
+	{
+		return;
+	}
+	GetWorld()->GetTimerManager().ClearTimer(EraChangeTimer);
+	if (UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(this); Meta && PendingEra)
+	{
+		Meta->MarkEraCardSeen(PendingEra->GetName());
+	}
+	if (UIJPEraSubsystem* Eras = UIJPEraSubsystem::Get(this))
+	{
+		Eras->SetEra(PendingEra);
+	}
+	PendingEra = nullptr;
+	Phase = EIJPRunPhase::Map;
+	ShowMap();
+	MapView->WarmUp();
 }
 
 void AIJPRunGameMode::EndRun()
@@ -268,9 +382,13 @@ void AIJPRunGameMode::ShowMap()
 	{
 		// What this run earned for the skill trees, and the totals so far.
 		const UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(this);
-		MapView->SetHeader(FString::Printf(TEXT("%s    +%d SKILL PTS    +%d BOSS TOKENS"),
-			Run->GetState() == EIJPRunState::Won ? TEXT("ACT CLEARED!") : TEXT("RUN OVER"),
-			Run->GetEarnedSkillPoints(), Run->GetEarnedBossTokens()));
+		FString Result = Run->GetState() == EIJPRunState::Won ? TEXT("RUN WON!") : TEXT("RUN OVER");
+		const UIJPEraSubsystem* Eras = UIJPEraSubsystem::Get(this);
+		if (const UIJPEra* Unlocked = Run->DidUnlockEra() && Eras ? Eras->GetEraAt(Run->GetUnlocksErasTo() - 1) : nullptr)
+		{
+			Result += FString::Printf(TEXT(" %s UNLOCKED"), *Unlocked->DisplayName.ToString().ToUpper());
+		}
+		MapView->SetHeader(FString::Printf(TEXT("%s    +%d SKILL PTS    +%d BOSS TOKENS"), *Result, Run->GetEarnedSkillPoints(), Run->GetEarnedBossTokens()));
 		MapView->SetFooter(FString::Printf(TEXT("SKILL PTS %d    BOSS TOKENS %d    SPACE: NEW RUN"),
 			Meta ? Meta->GetSkillPoints() : 0, Meta ? Meta->GetBossTokens() : 0));
 	}

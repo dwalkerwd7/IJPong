@@ -25,6 +25,14 @@ public:
 	UPROPERTY()
 	TArray<FString> OwnedNodes;
 
+	/** Eras unlocked, counting from the first (the Cabinet is always unlocked). */
+	UPROPERTY()
+	int32 ErasUnlocked = 1;
+
+	/** Eras whose title card has been seen (so it can be skipped). */
+	UPROPERTY()
+	TArray<FString> SeenEraCards;
+
 	/** The Spell slot is open, for every class (bought once with boss tokens). */
 	UPROPERTY()
 	bool bSpellSlotUnlocked = false;

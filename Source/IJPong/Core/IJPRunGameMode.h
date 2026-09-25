@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Abilities/IJPAbility.h"
 #include "Core/IJPGameModeBase.h"
+#include "Run/IJPRunSubsystem.h"
 #include "IJPRunGameMode.generated.h"
 
 class AIJPBall;
@@ -24,6 +25,8 @@ enum class EIJPRunPhase : uint8
 	Reward,
 	/** At a Shop node: buying with coins, then LEAVE. */
 	Shop,
+	/** Between two acts in different eras: the tube switches off, the title card, then the new era. */
+	EraChange,
 	/** The run is over (won or lost); confirm opens the skill tree (or starts a new run if the class has none). */
 	Ended,
 	/** Between runs: spending meta currencies on the class's skill tree, then START RUN. */
@@ -50,6 +53,16 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Run")
 	void StartNewRun(const UIJPActConfig* Act = nullptr, int32 Seed = -1, float InStartingHealth = 0.f);
+
+	/** Start a run climbing through Stages (each an act in an era); UnlocksErasTo as UIJPRunSubsystem::StartRun. */
+	void StartClimb(const TArray<FIJPRunStage>& Stages, int32 Seed = -1, float InStartingHealth = 0.f, int32 UnlocksErasTo = 0);
+
+	/** The climb a new run takes: every unlocked era in order (beaten ones briefly, the newest in full). */
+	TArray<FIJPRunStage> BuildClimb(int32& OutUnlocksErasTo) const;
+
+	/** How long the era change (switch-off and title card) takes. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Run")
+	float EraChangeTime = 3.f;
 
 	UFUNCTION(BlueprintPure, Category = "Run")
 	EIJPRunPhase GetPhase() const { return Phase; }
@@ -82,6 +95,8 @@ private:
 	void ShowShop(int32 SelectedCard = 0);
 	const class UIJPSkillTree* GetPlayerTree() const;
 	void FinishNode();
+	void BeginEraChange(const UIJPEra* NewEra);
+	void FinishEraChange();
 	void EndRun();
 	void ShowMap();
 	void ShowArena();
@@ -108,6 +123,11 @@ private:
 	float RunStartingHealth = 0.f;
 
 	FTimerHandle AfterMatchTimer;
+	FTimerHandle EraChangeTimer;
+
+	/** The era the change is heading to. */
+	UPROPERTY(Transient)
+	TObjectPtr<const UIJPEra> PendingEra;
 	EIJPRunPhase Phase = EIJPRunPhase::Map;
 	bool bLastMatchWon = false;
 };

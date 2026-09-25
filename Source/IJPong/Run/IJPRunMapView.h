@@ -68,6 +68,20 @@ public:
 	/** GetSelectedTreeNode's value for the UNLOCK SPELLS box (shown until the Spell slot is bought). */
 	static constexpr int32 TreeUnlockSpells = -2;
 
+	/**
+	 * The era change: the tube switches off (the picture collapses to a line, then a dot), then
+	 * Title shows on the dark screen, all within Duration. Refresh() afterwards shows the new map.
+	 */
+	void PlayEraChange(const FString& Title, float Duration);
+
+	UFUNCTION(BlueprintPure, Category = "Map")
+	bool IsPlayingEraChange() const { return EraChangeLeft > 0.f; }
+
+	/** A bright flash that fades, like a tube warming up. */
+	void WarmUp();
+
+	virtual void Tick(float DeltaSeconds) override;
+
 	/** Move the pick one node (or card) left (-1) or right (+1). */
 	void Step(int32 Direction);
 
@@ -182,6 +196,13 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UTextRenderComponent> UnlockText;
+
+	/** The era change's title card. */
+	UPROPERTY(Transient)
+	TObjectPtr<UTextRenderComponent> EraTitleText;
+
+	float EraChangeTime = 0.f;
+	float EraChangeLeft = 0.f;
 
 	int32 NumCards = 0;
 	int32 SelectedCard = 0;

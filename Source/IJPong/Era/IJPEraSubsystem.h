@@ -48,6 +48,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Era")
 	int32 GetNumEras() const { return LoadedEras.Num(); }
 
+	/** The Index-th era in order, or null. */
+	const UIJPEra* GetEraAt(int32 Index) const { return LoadedEras.IsValidIndex(Index) ? LoadedEras[Index].Get() : nullptr; }
+
 	UPROPERTY(BlueprintAssignable, Category = "Era")
 	FIJPEraChangedSignature OnEraChanged;
 

@@ -111,6 +111,37 @@ FIJPTreeBonuses UIJPMetaSubsystem::GetBonuses(const UIJPSkillTree* Tree) const
 	return Bonuses;
 }
 
+int32 UIJPMetaSubsystem::GetErasUnlocked() const
+{
+	return SaveData ? FMath::Max(SaveData->ErasUnlocked, 1) : 1;
+}
+
+bool UIJPMetaSubsystem::UnlockErasUpTo(int32 Count)
+{
+	if (!SaveData || Count <= GetErasUnlocked())
+	{
+		return false;
+	}
+	SaveData->ErasUnlocked = Count;
+	Save();
+	OnMetaChanged.Broadcast();
+	return true;
+}
+
+bool UIJPMetaSubsystem::HasSeenEraCard(const FString& EraName) const
+{
+	return SaveData && SaveData->SeenEraCards.Contains(EraName);
+}
+
+void UIJPMetaSubsystem::MarkEraCardSeen(const FString& EraName)
+{
+	if (SaveData && !SaveData->SeenEraCards.Contains(EraName))
+	{
+		SaveData->SeenEraCards.Add(EraName);
+		Save();
+	}
+}
+
 bool UIJPMetaSubsystem::IsSpellSlotUnlocked() const
 {
 	return SaveData && SaveData->bSpellSlotUnlocked;
