@@ -132,6 +132,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	bool IsStunned() const { return StunLeft > 0.f; }
 
+	/** Drawn dim and fizzing (while stunned). */
+	bool IsShowingStun() const { return bShowingStun; }
+
+	/** A stunned paddle's brightness wanders between these (fractions of its colour) every frame: a fizz. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Presentation")
+	FVector2D StunBrightness = FVector2D(0.12f, 0.4f);
+
 	/** Stretch the paddle's length (1 = the profile's). Stays inside the walls. For abilities like Grow. */
 	UFUNCTION(BlueprintCallable, Category = "Paddle")
 	void SetLengthScale(float Scale);
@@ -283,6 +290,13 @@ private:
 	float DashVelocity = 0.f;
 	float DashTimeLeft = 0.f;
 	float StunLeft = 0.f;
+
+	/** The stun look: its own dimmed copy of the paddle material (the palette's is shared with the barrier). */
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> StunMaterial;
+
+	bool bShowingStun = false;
+	void UpdateStunLook();
 	float SplitGap = 0.f;
 	float ArmedTime = 0.f;
 	float ArmedCueStrength = 0.f;

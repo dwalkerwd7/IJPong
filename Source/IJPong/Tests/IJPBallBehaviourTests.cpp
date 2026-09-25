@@ -109,11 +109,14 @@ bool FIJPBombBallTest::RunTest(const FString& Parameters)
 
 	UTEST_TRUE("Goal", IJPBallBehaviourTests::ScoreAgainst(Test, Arena, EIJPSide::Left, Bomb));
 	UTEST_TRUE("Stunned", Left->IsStunned());
+	Test.Step();
+	UTEST_TRUE("And looks it: dim and fizzing", Left->IsShowingStun());
 	const float Y = Left->GetPlanePosition().Y;
 	Test.RunFor(0.5f, [Left] { Left->AddMoveInput(-1.f); });
 	UTEST_EQUAL_TOLERANCE("Can't move", static_cast<float>(Left->GetPlanePosition().Y), static_cast<float>(Y), 0.01f);
 	Test.RunFor(0.6f);
 	UTEST_FALSE("Wears off", Left->IsStunned());
+	UTEST_FALSE("Looks normal again", Left->IsShowingStun());
 	Test.RunFor(0.3f, [Left] { Left->AddMoveInput(-1.f); });
 	UTEST_TRUE("Moves again", Left->GetPlanePosition().Y < Y - 10.f);
 	return true;

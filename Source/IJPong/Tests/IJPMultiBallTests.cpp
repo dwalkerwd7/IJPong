@@ -191,4 +191,38 @@ bool FIJPAIPicksBallTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPGoalKeepsPaddleMovingTest, "IJPong.MultiBall.AGoalMidRallyDoesntStopThePlayer", IJPMultiBallTests::Flags)
+bool FIJPGoalKeepsPaddleMovingTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPArena* Arena = Test.GetArena();
+	AIJPPaddle* Player = Arena->GetPaddle(EIJPSide::Left);
+	if (AController* AI = Arena->GetPaddle(EIJPSide::Right)->GetController())
+	{
+		AI->UnPossess();
+	}
+	const auto HoldUp = [Player] { Player->AddMoveInput(1.f); };
+
+	// One ball about to score on the right, another still crossing the middle.
+	AIJPBall* Scorer = Arena->GetBall();
+	Scorer->Launch(FVector2D(Arena->GetHalfExtents().X - 20.f, -150.f), FVector2D(600.f, 0.f));
+	AIJPBall* Other = Arena->AddBall(nullptr);
+	Other->Launch(FVector2D(0.f, 150.f), FVector2D(-100.f, 0.f));
+
+	for (int32 i = 0; i < 30 && Scorer->IsInPlay(); ++i)
+	{
+		HoldUp();
+		Test.Step();
+	}
+	UTEST_FALSE("Scored", Scorer->IsInPlay());
+	UTEST_TRUE("The rally goes on", Other->IsInPlay());
+
+	// Still holding up: the paddle keeps climbing through and after the goal.
+	const float Before = Player->GetPlanePosition().Y;
+	Test.RunFor(0.1f, HoldUp);
+	UTEST_TRUE("Still moving", Player->GetPlanePosition().Y > Before + 1.f);
+	UTEST_FALSE("Not stunned", Player->IsStunned());
+	return true;
+}
+
 #endif

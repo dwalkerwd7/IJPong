@@ -177,6 +177,46 @@ void AIJPPaddle::GetHitSpan(float Y, float& OutCentreY, float& OutHalfLength) co
 	OutHalfLength = FMath::Max((GetSize().Y - SplitGap) * 0.5f, 1.f) * 0.5f;
 }
 
+void AIJPPaddle::UpdateStunLook()
+{
+	AIJPArena* ArenaPtr = Arena.Get();
+	const bool bStunned = StunLeft > 0.f;
+	if (!ArenaPtr || (!bStunned && !bShowingStun))
+	{
+		return;
+	}
+	static const FName ColorParam(TEXT("Color"));
+	const FLinearColor PaddleColour = ArenaPtr->GetPalette().Get(Side == EIJPSide::Left ? EIJPPaletteRole::LeftPaddle : EIJPPaletteRole::RightPaddle);
+	UMaterialInterface* PaletteMaterial = ArenaPtr->GetPaletteMaterial(Side == EIJPSide::Left ? EIJPPaletteRole::LeftPaddle : EIJPPaletteRole::RightPaddle);
+	if (!bStunned)
+	{
+		// Back to normal: the shared palette colour and the sprite's own.
+		bShowingStun = false;
+		Visual->SetMaterial(0, PaletteMaterial);
+		VisualBottom->SetMaterial(0, PaletteMaterial);
+		RefreshSprite();
+		return;
+	}
+
+	if (!StunMaterial && ArenaPtr->GetBaseMaterial())
+	{
+		StunMaterial = UMaterialInstanceDynamic::Create(ArenaPtr->GetBaseMaterial(), this);
+	}
+	bShowingStun = true;
+	FLinearColor Dim = PaddleColour * FMath::FRandRange(StunBrightness.X, StunBrightness.Y);
+	Dim.A = 1.f;
+	if (StunMaterial)
+	{
+		StunMaterial->SetVectorParameterValue(ColorParam, Dim);
+		Visual->SetMaterial(0, StunMaterial);
+		VisualBottom->SetMaterial(0, StunMaterial);
+	}
+	if (SpriteMaterial)
+	{
+		SpriteMaterial->SetVectorParameterValue(ColorParam, Dim);
+	}
+}
+
 void AIJPPaddle::Stun(float Seconds)
 {
 	StunLeft = FMath::Max(StunLeft, Seconds);
@@ -453,6 +493,7 @@ void AIJPPaddle::Tick(float DeltaSeconds)
 	}
 
 	UpdateArmedCue(DeltaSeconds);
+	UpdateStunLook();
 
 	UpdateTransform();
 }

@@ -524,6 +524,7 @@ void AIJPArena::HandleBallGoal(AIJPBall* ScoringBall, EIJPSide DefendingSide)
 	if (AIJPPaddle* Beaten = Stun > 0.f ? GetPaddle(DefendingSide) : nullptr)
 	{
 		Beaten->Stun(Stun);
+		Tones->PlayTone(GetToneSet().Stun);
 	}
 	OnBallGoal.Broadcast(ScoringBall, DefendingSide);
 }

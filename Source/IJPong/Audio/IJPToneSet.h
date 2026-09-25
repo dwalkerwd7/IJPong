@@ -76,6 +76,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones")
 	FIJPTone Deadpan = { 110.f, 0.07f, 0.15f };
 
+	/** A paddle stunned (a Bomb goal): a low electric buzz. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones")
+	FIJPTone Stun = { 70.f, 0.35f, 0.25f };
+
 	/** How far babble wanders from the voice's pitch, in semitones either way. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones", meta = (ClampMin = "0", ClampMax = "12"))
 	float TalkRange = 4.f;
