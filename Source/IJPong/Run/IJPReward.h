@@ -29,6 +29,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Reward", meta = (MultiLine = "true"))
 	FText Description;
 
+	/** What it costs at a shop, in run coins. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Reward", meta = (ClampMin = "0"))
+	int32 Price = 10;
+
 	/** Worth offering right now (e.g. not the run ability you already have). */
 	virtual bool CanOffer(const UIJPRunSubsystem& Run) const { return true; }
 

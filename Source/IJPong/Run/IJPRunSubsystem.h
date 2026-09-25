@@ -140,6 +140,22 @@ public:
 	/** For rewards granting themselves. */
 	FIJPRunLoadout& EditLoadout() { return Loadout; }
 
+	// --- Shop ---
+
+	/** At a Shop node: its stock is on sale until LeaveShop. */
+	UFUNCTION(BlueprintPure, Category = "Run")
+	bool IsInShop() const { return bInShop; }
+
+	const TArray<TObjectPtr<const UIJPReward>>& GetShopStock() const { return ShopStock; }
+
+	/** Buy the stock at Index if the coins cover its price: it's given to the run and leaves the shelf. */
+	UFUNCTION(BlueprintCallable, Category = "Run")
+	bool BuyFromShop(int32 Index);
+
+	/** Done shopping: the map opens again. */
+	UFUNCTION(BlueprintCallable, Category = "Run")
+	void LeaveShop();
+
 	/** Heal up to the maximum (e.g. an item used mid-fight). */
 	UFUNCTION(BlueprintCallable, Category = "Run")
 	void RestoreHealth(float Amount);
@@ -165,6 +181,8 @@ public:
 
 private:
 	void Heal(float Amount);
+	/** Up to Count different rewards from Pool, at random, leaving out any not worth offering now. */
+	TArray<TObjectPtr<const UIJPReward>> Roll(const TArray<TObjectPtr<UIJPReward>>& Pool, int32 Count);
 	void RollOffer(const TArray<TObjectPtr<UIJPReward>>& Pool);
 	/** The run just ended (won or lost): pay its skill points into the meta currencies. */
 	void PayOut();
@@ -174,6 +192,11 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<const UIJPReward>> Offer;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<const UIJPReward>> ShopStock;
+
+	bool bInShop = false;
 
 	UPROPERTY(Transient)
 	FIJPRunLoadout Loadout;

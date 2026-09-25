@@ -20,6 +20,8 @@ void UIJPRunSubsystem::StartRun(const UIJPActConfig* InAct, int32 Seed, float St
 	Random.Initialize(Seed);
 	Map = Act ? FIJPRunMap::Generate(*Act, Random) : FIJPRunMap();
 	Offer.Reset();
+	ShopStock.Reset();
+	bInShop = false;
 	Loadout = FIJPRunLoadout();
 	Visited.Init(false, Map.Nodes.Num());
 	CurrentNode = INDEX_NONE;
@@ -34,7 +36,7 @@ void UIJPRunSubsystem::StartRun(const UIJPActConfig* InAct, int32 Seed, float St
 
 TArray<int32> UIJPRunSubsystem::GetReachableNodes() const
 {
-	if (State != EIJPRunState::Running || bInNode || HasOffer())
+	if (State != EIJPRunState::Running || bInNode || bInShop || HasOffer())
 	{
 		return {};
 	}
@@ -53,6 +55,11 @@ bool UIJPRunSubsystem::EnterNode(int32 Node)
 	if (Map.Nodes[Node].Type == EIJPNodeType::Rest)
 	{
 		Heal(Act->RestHeal);
+	}
+	else if (Map.Nodes[Node].Type == EIJPNodeType::Shop)
+	{
+		ShopStock = Roll(Act->ShopRewards, Act->ShopChoices);
+		bInShop = true;
 	}
 	else
 	{
@@ -118,6 +125,34 @@ void UIJPRunSubsystem::LoseHealth(float Amount)
 
 void UIJPRunSubsystem::RollOffer(const TArray<TObjectPtr<UIJPReward>>& Pool)
 {
+	Offer = Roll(Pool, Act->RewardChoices);
+}
+
+bool UIJPRunSubsystem::BuyFromShop(int32 Index)
+{
+	if (!bInShop || !ShopStock.IsValidIndex(Index) || Coins < ShopStock[Index]->Price)
+	{
+		return false;
+	}
+	Coins -= ShopStock[Index]->Price;
+	ShopStock[Index]->Grant(*this);
+	ShopStock.RemoveAt(Index);
+	OnRunChanged.Broadcast();
+	return true;
+}
+
+void UIJPRunSubsystem::LeaveShop()
+{
+	if (bInShop)
+	{
+		bInShop = false;
+		ShopStock.Reset();
+		OnRunChanged.Broadcast();
+	}
+}
+
+TArray<TObjectPtr<const UIJPReward>> UIJPRunSubsystem::Roll(const TArray<TObjectPtr<UIJPReward>>& Pool, int32 Count)
+{
 	// A few different rewards at random, leaving out any not worth offering now.
 	TArray<const UIJPReward*> Candidates;
 	for (const UIJPReward* Reward : Pool)
@@ -131,11 +166,12 @@ void UIJPRunSubsystem::RollOffer(const TArray<TObjectPtr<UIJPReward>>& Pool)
 	{
 		Candidates.Swap(i, Random.RandHelper(i + 1));
 	}
-	Offer.Reset();
-	for (int32 i = 0; i < FMath::Min(Candidates.Num(), Act->RewardChoices); ++i)
+	TArray<TObjectPtr<const UIJPReward>> Picked;
+	for (int32 i = 0; i < FMath::Min(Candidates.Num(), Count); ++i)
 	{
-		Offer.Add(Candidates[i]);
+		Picked.Add(Candidates[i]);
 	}
+	return Picked;
 }
 
 void UIJPRunSubsystem::TakeReward(int32 Index)

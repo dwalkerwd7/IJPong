@@ -72,6 +72,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Map", meta = (ClampMin = "0"))
 	float RestWeight = 1.5f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Map", meta = (ClampMin = "0"))
+	float ShopWeight = 1.f;
+
 	/** Elites can't appear above this row (0 = top). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Map", meta = (ClampMin = "1"))
 	int32 EliteFromRow = 2;
@@ -96,6 +99,14 @@ public:
 	/** Offered after winning an Elite. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Rewards")
 	TArray<TObjectPtr<UIJPReward>> EliteRewards;
+
+	/** What shops can stock (a few at random per visit), each at its Price. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Rewards")
+	TArray<TObjectPtr<UIJPReward>> ShopRewards;
+
+	/** How many things a shop has on sale. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Rewards", meta = (ClampMin = "1", ClampMax = "4"))
+	int32 ShopChoices = 3;
 
 	/** How many rewards each pick offers. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Rewards", meta = (ClampMin = "1", ClampMax = "4"))
@@ -129,7 +140,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Nodes", meta = (ClampMin = "0"))
 	float RestHeal = 3.f;
 
-	/** The encounter for a fight node type, or null for Rest (and the unbuilt Shop / Event). */
+	/** The encounter for a fight node type, or null for Rest and Shop (and the unbuilt Event). */
 	const FIJPEncounter* GetEncounter(EIJPNodeType Type) const
 	{
 		switch (Type)

@@ -216,7 +216,7 @@ void AIJPRunMapView::Refresh()
 	PlaceCursor();
 }
 
-void AIJPRunMapView::ShowCards(const FString& Heading, const TArray<FCard>& Cards)
+void AIJPRunMapView::ShowCards(const FString& Heading, const TArray<FCard>& Cards, int32 InSelectedCard)
 {
 	if (!Arena.IsValid())
 	{
@@ -227,7 +227,7 @@ void AIJPRunMapView::ShowCards(const FString& Heading, const TArray<FCard>& Card
 	bShowingCards = true;
 	ShownTree = nullptr;
 	NumCards = Cards.Num();
-	SelectedCard = 0;
+	SelectedCard = FMath::Clamp(InSelectedCard, 0, FMath::Max(NumCards - 1, 0));
 
 	const FColor Ink = Arena->GetPalette().Score.ToFColor(true);
 	while (CardTexts.Num() < NumCards * 2)

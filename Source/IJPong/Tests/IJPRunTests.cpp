@@ -58,7 +58,7 @@ bool FIJPMapShapeTest::RunTest(const FString& Parameters)
 				if (Row == Map.Rows - 2) { UTEST_EQUAL(Tag + TEXT("rest before the boss"), Node.Type, EIJPNodeType::Rest); }
 				if (Row == Map.Rows - 1) { UTEST_EQUAL(Tag + TEXT("boss alone at the bottom"), i, Map.BossIndex); }
 				if (Node.Type == EIJPNodeType::Elite) { UTEST_TRUE(Tag + TEXT("no early elites"), Row >= Act->EliteFromRow); }
-				UTEST_TRUE(Tag + TEXT("never shop/event yet"), Node.Type != EIJPNodeType::Shop && Node.Type != EIJPNodeType::Event);
+				UTEST_TRUE(Tag + TEXT("never an event yet"), Node.Type != EIJPNodeType::Event);
 				UTEST_TRUE(Tag + TEXT("everything is reachable"), Reached[i]);
 				UTEST_TRUE(Tag + TEXT("everything leads on"), i == Map.BossIndex || !Node.Next.IsEmpty());
 

@@ -64,7 +64,7 @@ void AIJPRunGameMode::StartNewRun(const UIJPActConfig* Act, int32 Seed, float In
 
 bool AIJPRunGameMode::HandleUIStep(int32 Direction)
 {
-	if (Phase != EIJPRunPhase::Map && Phase != EIJPRunPhase::Reward && Phase != EIJPRunPhase::Tree)
+	if (Phase != EIJPRunPhase::Map && Phase != EIJPRunPhase::Reward && Phase != EIJPRunPhase::Shop && Phase != EIJPRunPhase::Tree)
 	{
 		return false;
 	}
@@ -85,6 +85,24 @@ bool AIJPRunGameMode::HandleUIConfirm()
 		UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
 		const int32 Card = MapView->GetSelectedCard();
 		Run->TakeReward(Run->GetOffer().IsValidIndex(Card) ? Card : INDEX_NONE);
+		Phase = EIJPRunPhase::Map;
+		ShowMap();
+		return true;
+	}
+	case EIJPRunPhase::Shop:
+	{
+		// The shelf, left to right, then "leave".
+		UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
+		const int32 Card = MapView->GetSelectedCard();
+		if (Run->GetShopStock().IsValidIndex(Card))
+		{
+			if (Run->BuyFromShop(Card))
+			{
+				ShowShop(FMath::Min(Card, Run->GetShopStock().Num()));
+			}
+			return true;
+		}
+		Run->LeaveShop();
 		Phase = EIJPRunPhase::Map;
 		ShowMap();
 		return true;
@@ -133,6 +151,12 @@ void AIJPRunGameMode::EnterSelectedNode()
 	}
 
 	const EIJPNodeType Type = Run->GetMap().Nodes[Node].Type;
+	if (Type == EIJPNodeType::Shop)
+	{
+		Phase = EIJPRunPhase::Shop;
+		ShowShop();
+		return;
+	}
 	const FIJPEncounter* Encounter = Run->GetAct()->GetEncounter(Type);
 	if (!Encounter)
 	{
@@ -282,6 +306,23 @@ const UIJPSkillTree* AIJPRunGameMode::GetPlayerTree() const
 	const AIJPPaddle* Paddle = GetArena() ? GetArena()->GetPaddle(PlayerSide) : nullptr;
 	const UIJPPaddleClass* PaddleClass = Paddle ? Paddle->GetPaddleClass() : nullptr;
 	return PaddleClass ? PaddleClass->SkillTree.Get() : nullptr;
+}
+
+void AIJPRunGameMode::ShowShop(int32 SelectedCard)
+{
+	const UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
+	TArray<AIJPRunMapView::FCard> Cards;
+	for (const UIJPReward* Reward : Run->GetShopStock())
+	{
+		const bool bAfford = Run->GetCoins() >= Reward->Price;
+		Cards.Add({ Reward->DisplayName.ToString().ToUpper(),
+			FString::Printf(TEXT("%s\n%d COINS%s"), *Reward->Description.ToString(), Reward->Price, bAfford ? TEXT("") : TEXT(" (SHORT)")) });
+	}
+	Cards.Add({ TEXT("LEAVE"), TEXT("BACK TO\nTHE MAP") });
+
+	MapView->ShowCards(FString::Printf(TEXT("SHOP    HP %d/%d    COINS %d"), FMath::CeilToInt(Run->GetHealth()), FMath::CeilToInt(Run->GetMaxHealth()), Run->GetCoins()), Cards, SelectedCard);
+	MapView->SetFooter(TEXT("A / D  CHOOSE    SPACE  BUY / LEAVE"));
+	SetViewTarget(MapView);
 }
 
 void AIJPRunGameMode::ShowRewards()

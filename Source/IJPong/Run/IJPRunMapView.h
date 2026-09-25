@@ -44,7 +44,7 @@ public:
 	};
 
 	/** Show a row of cards to pick from instead of the map, under Heading. Refresh() goes back to the map. */
-	void ShowCards(const FString& Heading, const TArray<FCard>& Cards);
+	void ShowCards(const FString& Heading, const TArray<FCard>& Cards, int32 InSelectedCard = 0);
 
 	UFUNCTION(BlueprintPure, Category = "Map")
 	bool IsShowingCards() const { return bShowingCards; }

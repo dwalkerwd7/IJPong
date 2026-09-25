@@ -22,6 +22,8 @@ enum class EIJPRunPhase : uint8
 	AfterMatch,
 	/** Picking a reward after a win (or skipping it for coins). */
 	Reward,
+	/** At a Shop node: buying with coins, then LEAVE. */
+	Shop,
 	/** The run is over (won or lost); confirm opens the skill tree (or starts a new run if the class has none). */
 	Ended,
 	/** Between runs: spending meta currencies on the class's skill tree, then START RUN. */
@@ -76,6 +78,8 @@ private:
 	/** Put what the run has gathered on the player's paddle and serves. */
 	void ApplyLoadout();
 	void ShowRewards();
+	/** The shop's shelf as cards (with prices) plus LEAVE; SelectedCard keeps the pick after a purchase. */
+	void ShowShop(int32 SelectedCard = 0);
 	const class UIJPSkillTree* GetPlayerTree() const;
 	void FinishNode();
 	void EndRun();

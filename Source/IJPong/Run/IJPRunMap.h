@@ -16,7 +16,7 @@ enum class EIJPNodeType : uint8
 	Elite,
 	/** Recover health. */
 	Rest,
-	/** Not built yet: never generated. */
+	/** Spend coins on items and reward cards. */
 	Shop,
 	/** Not built yet: never generated. */
 	Event,
