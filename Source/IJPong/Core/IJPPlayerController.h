@@ -32,6 +32,7 @@ private:
 	void HandleAim(const FInputActionValue& Value);
 	void HandleAimKeys(const FInputActionValue& Value);
 	void HandleUIStep(const FInputActionValue& Value);
+	void HandleUIStepVertical(const FInputActionValue& Value);
 	void HandleRunAbility();
 	void HandleItem();
 	void HandleSpell();

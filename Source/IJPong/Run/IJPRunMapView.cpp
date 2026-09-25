@@ -569,6 +569,42 @@ void AIJPRunMapView::Step(int32 Direction)
 	}
 }
 
+void AIJPRunMapView::StepVertical(int32 Direction)
+{
+	if (!ShownTree || TreeOrder.IsEmpty() || Direction == 0)
+	{
+		return;
+	}
+	auto PositionOf = [this](int32 Entry)
+	{
+		return Entry == INDEX_NONE ? TreeStartPosition() : Entry == TreeUnlockSpells ? TreeUnlockPosition() : TreeNodePosition(Entry);
+	};
+
+	// The nearest pick up (or down) the screen, favouring ones straight above (or below).
+	const FVector2D From = PositionOf(TreeOrder[FMath::Clamp(TreeSelected, 0, TreeOrder.Num() - 1)]);
+	int32 Best = INDEX_NONE;
+	float BestScore = TNumericLimits<float>::Max();
+	for (int32 i = 0; i < TreeOrder.Num(); ++i)
+	{
+		const FVector2D Delta = PositionOf(TreeOrder[i]) - From;
+		if (Delta.Y * Direction <= 5.f)
+		{
+			continue;
+		}
+		const float Score = FMath::Abs(Delta.Y) + 2.f * FMath::Abs(Delta.X);
+		if (Score < BestScore)
+		{
+			BestScore = Score;
+			Best = i;
+		}
+	}
+	if (Best != INDEX_NONE)
+	{
+		TreeSelected = Best;
+		ShowTree(ShownTree, false); // the info line follows the pick
+	}
+}
+
 void AIJPRunMapView::ClearDrawing()
 {
 	for (UInstancedStaticMeshComponent* Pieces : { BrightPieces.Get(), MidPieces.Get(), DimPieces.Get() })

@@ -140,6 +140,16 @@ bool AIJPRunGameMode::HandleUIStep(int32 Direction)
 	return true;
 }
 
+bool AIJPRunGameMode::HandleUIStepVertical(int32 Direction)
+{
+	if (Phase != EIJPRunPhase::Map && Phase != EIJPRunPhase::Reward && Phase != EIJPRunPhase::Shop && Phase != EIJPRunPhase::Tree)
+	{
+		return false;
+	}
+	MapView->StepVertical(Direction);
+	return true;
+}
+
 bool AIJPRunGameMode::HandleUIConfirm()
 {
 	switch (Phase)
@@ -188,7 +198,7 @@ bool AIJPRunGameMode::HandleUIConfirm()
 			// Between runs: grow the class first.
 			Phase = EIJPRunPhase::Tree;
 			MapView->ShowTree(Tree, true);
-			MapView->SetFooter(TEXT("A / D  CHOOSE    SPACE  BUY / START"));
+			MapView->SetFooter(TEXT("ARROWS  CHOOSE    SPACE  BUY / START"));
 			SetViewTarget(MapView);
 		}
 		else
@@ -397,7 +407,7 @@ void AIJPRunGameMode::ShowMap()
 	}
 	else
 	{
-		MapView->SetFooter(TEXT("A / D  CHOOSE    SPACE  GO"));
+		MapView->SetFooter(TEXT("ARROWS  CHOOSE    SPACE  GO"));
 	}
 	SetViewTarget(MapView);
 }
@@ -451,7 +461,7 @@ void AIJPRunGameMode::ShowShop(int32 SelectedCard)
 	Cards.Add({ TEXT("LEAVE"), TEXT("BACK TO\nTHE MAP") });
 
 	MapView->ShowCards(FString::Printf(TEXT("SHOP    HP %d/%d    COINS %d"), FMath::CeilToInt(Run->GetHealth()), FMath::CeilToInt(Run->GetMaxHealth()), Run->GetCoins()), Cards, SelectedCard);
-	MapView->SetFooter(TEXT("A / D  CHOOSE    SPACE  BUY / LEAVE"));
+	MapView->SetFooter(TEXT("ARROWS  CHOOSE    SPACE  BUY / LEAVE"));
 	SetViewTarget(MapView);
 }
 
@@ -466,7 +476,7 @@ void AIJPRunGameMode::ShowRewards()
 	Cards.Add({ TEXT("SKIP"), FString::Printf(TEXT("+%d COINS"), Run->GetAct()->SkipCoins) });
 
 	MapView->ShowCards(FString::Printf(TEXT("PICK A REWARD    HP %d/%d    COINS %d"), FMath::CeilToInt(Run->GetHealth()), FMath::CeilToInt(Run->GetMaxHealth()), Run->GetCoins()), Cards);
-	MapView->SetFooter(TEXT("A / D  CHOOSE    SPACE  TAKE"));
+	MapView->SetFooter(TEXT("ARROWS  CHOOSE    SPACE  TAKE"));
 	SetViewTarget(MapView);
 }
 

@@ -154,6 +154,9 @@ public:
 	/** Icons showing now (sprite eras draw icons instead of letters). */
 	int32 GetShownIconCount() const;
 
+	/** A step up (+1) or down (-1): on the skill tree, to the nearest pick in that direction. The map and cards are one row, so it does nothing there. */
+	void StepVertical(int32 Direction);
+
 	/** Node letters showing now. */
 	int32 GetShownGlyphCount() const;
 

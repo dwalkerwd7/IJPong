@@ -70,6 +70,7 @@ public:
 	AIJPRunMapView* GetMapView() const { return MapView; }
 
 	virtual bool HandleUIStep(int32 Direction) override;
+	virtual bool HandleUIStepVertical(int32 Direction) override;
 	virtual bool HandleUIConfirm() override;
 
 	/** Seconds the result of a match stays up (winner blink, rival's last word) before the map returns. */

@@ -85,6 +85,9 @@ public:
 	 * button. Return true to consume it; false lets it through to the paddle as usual.
 	 */
 	virtual bool HandleUIStep(int32 Direction) { return false; }
+
+	/** Menus: a step up (+1) or down (-1). False = nothing to move. */
+	virtual bool HandleUIStepVertical(int32 Direction) { return false; }
 	virtual bool HandleUIConfirm() { return false; }
 
 	/** The side the local player plays. */

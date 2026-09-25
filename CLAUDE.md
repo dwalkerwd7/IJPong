@@ -39,7 +39,7 @@ The engine's experimental `ModelContextProtocol` plugin is enabled, along with t
 
 ## Decisions so far
 - Vs AI only, no networking.
-- **Controls** (the user's layout, `IMC_Pong`; keyboard-only, no mouse): keyboard Up/Down arrows move, W/S aim (the Catcher), Space = class skill (also confirms on menus), Z = run ability, X = spell and C = item/consumable (both reserved until those exist), A/D or Left/Right step through menus and the map. Gamepad (my pick, mirroring the letters): left stick / D-pad up-down move, right stick aims, A = class skill, B = run ability, X = spell and Y = item (reserved), left stick / D-pad left-right step menus. Test-mode debug keys live in `IMC_Debug` and must not take any of these.
+- **Controls** (the user's layout, `IMC_Pong`; keyboard-only, no mouse): keyboard Up/Down arrows move, W/S aim (the Catcher), Space or Enter = class skill (also confirms on menus), Z = run ability, X = spell and C = item. Menus take arrows and WASD in all four directions (the user's call, playtest 2): A/D or Left/Right step along a row (`IA_UIStep`), W/S or Up/Down step between rows (`IA_UIStepVertical` -> `HandleUIStepVertical` -> `AIJPRunMapView::StepVertical`, which moves to the nearest pick up/down the skill tree; the map and cards are one row). Gamepad (my pick, mirroring the letters): left stick / D-pad up-down move, right stick aims, A = class skill, B = run ability, X = spell and Y = item (reserved), left stick / D-pad left-right step menus. Test-mode debug keys live in `IMC_Debug` and must not take any of these.
 - C++ owns rules and simulation. Data Assets and BP own tuning and content.
 - The ball is a custom kinematic, sweep-based mover (not Chaos).
 - Git + LFS: `.uasset`/`.umap`/`.png`/`.wav`/`.fbx` are tracked by LFS.

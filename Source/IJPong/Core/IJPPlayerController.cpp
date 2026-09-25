@@ -78,6 +78,10 @@ void AIJPPlayerController::SetupInputComponent()
 		// Started: one step per press, not one per frame held.
 		EnhancedInput->BindAction(UIStep, ETriggerEvent::Started, this, &AIJPPlayerController::HandleUIStep);
 	}
+	if (UInputAction* UIStepVertical = Settings->UIStepVerticalAction.LoadSynchronous())
+	{
+		EnhancedInput->BindAction(UIStepVertical, ETriggerEvent::Started, this, &AIJPPlayerController::HandleUIStepVertical);
+	}
 	if (UInputAction* Spell = Settings->SpellAction.LoadSynchronous())
 	{
 		EnhancedInput->BindAction(Spell, ETriggerEvent::Started, this, &AIJPPlayerController::HandleSpell);
@@ -111,6 +115,15 @@ void AIJPPlayerController::HandleUIStep(const FInputActionValue& Value)
 	if (AIJPGameModeBase* GameMode = GetWorld()->GetAuthGameMode<AIJPGameModeBase>(); GameMode && Axis != 0.f)
 	{
 		GameMode->HandleUIStep(Axis > 0.f ? 1 : -1);
+	}
+}
+
+void AIJPPlayerController::HandleUIStepVertical(const FInputActionValue& Value)
+{
+	const float Axis = Value.Get<float>();
+	if (AIJPGameModeBase* GameMode = GetWorld()->GetAuthGameMode<AIJPGameModeBase>(); GameMode && Axis != 0.f)
+	{
+		GameMode->HandleUIStepVertical(Axis > 0.f ? 1 : -1);
 	}
 }
 

@@ -30,6 +30,10 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Input")
 	TSoftObjectPtr<UInputAction> UIStepAction;
 
+	/** Menus: up/down (Up/Down, W/S, D-pad, stick), one step per press; +1 = up. */
+	UPROPERTY(Config, EditAnywhere, Category = "Input")
+	TSoftObjectPtr<UInputAction> UIStepVerticalAction;
+
 	/** Digital: use the paddle's class skill (also confirms on menus and the run map). */
 	UPROPERTY(Config, EditAnywhere, Category = "Input")
 	TSoftObjectPtr<UInputAction> ClassSkillAction;
