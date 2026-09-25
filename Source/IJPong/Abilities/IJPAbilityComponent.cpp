@@ -18,6 +18,7 @@ UIJPAbilityComponent::UIJPAbilityComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 	Abilities.SetNum(NumSlots);
 	Cooldowns.SetNumZeroed(NumSlots);
+	WindUps.SetNumZeroed(NumSlots);
 	CooldownScales.Init(1.f, NumSlots);
 }
 
@@ -28,6 +29,15 @@ void UIJPAbilityComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 	for (int32 i = 0; i < NumSlots; ++i)
 	{
 		Cooldowns[i] = FMath::Max(Cooldowns[i] - DeltaTime, 0.f);
+		if (WindUps[i] > 0.f)
+		{
+			WindUps[i] -= DeltaTime;
+			if (WindUps[i] <= 0.f)
+			{
+				WindUps[i] = 0.f;
+				Fire(i);
+			}
+		}
 		if (Abilities[i])
 		{
 			Abilities[i]->TickAbility(DeltaTime);
@@ -51,6 +61,7 @@ void UIJPAbilityComponent::Equip(EIJPAbilitySlot Slot, const UIJPAbility* Defini
 	}
 	Abilities[Index] = Copy;
 	Cooldowns[Index] = 0.f;
+	WindUps[Index] = 0.f;
 }
 
 bool UIJPAbilityComponent::TryActivate(EIJPAbilitySlot Slot)
@@ -60,16 +71,54 @@ bool UIJPAbilityComponent::TryActivate(EIJPAbilitySlot Slot)
 		return false;
 	}
 
+	// The cooldown runs from the button, wind-up included.
 	const int32 Index = static_cast<int32>(Slot);
 	UIJPAbility* Ability = Abilities[Index];
-	Ability->Activate();
 	Cooldowns[Index] = Ability->Cooldown * CooldownScales[Index];
+	if (Ability->Telegraph > 0.f)
+	{
+		WindUps[Index] = Ability->Telegraph;
+		PlayWarning();
+	}
+	else
+	{
+		Fire(Index);
+	}
+	return true;
+}
+
+void UIJPAbilityComponent::Fire(int32 Index)
+{
+	UIJPAbility* Ability = Abilities[Index];
+	if (!Ability)
+	{
+		return;
+	}
+	Ability->Activate();
 	if (Ability->IsArmed())
 	{
 		PlayArmChirp();
 	}
-	OnActivated.Broadcast(Slot, Ability);
-	return true;
+	OnActivated.Broadcast(static_cast<EIJPAbilitySlot>(Index), Ability);
+}
+
+bool UIJPAbilityComponent::IsWindingUp(EIJPAbilitySlot Slot) const
+{
+	return WindUps[static_cast<int32>(Slot)] > 0.f;
+}
+
+bool UIJPAbilityComponent::ShouldShowCue() const
+{
+	return IsArmed() || WindUps.ContainsByPredicate([](float Time) { return Time > 0.f; });
+}
+
+void UIJPAbilityComponent::PlayWarning()
+{
+	const AIJPPaddle* Paddle = GetPaddle();
+	if (AIJPArena* Arena = Paddle ? Paddle->GetArena() : nullptr)
+	{
+		Arena->GetTones()->PlayTone(Arena->GetToneSet().Warn);
+	}
 }
 
 void UIJPAbilityComponent::SetCooldownScale(EIJPAbilitySlot Slot, float Scale)
@@ -90,7 +139,7 @@ float UIJPAbilityComponent::GetCooldownRemaining(EIJPAbilitySlot Slot) const
 bool UIJPAbilityComponent::IsReady(EIJPAbilitySlot Slot) const
 {
 	const UIJPAbility* Ability = GetAbility(Slot);
-	return Ability && GetCooldownRemaining(Slot) <= 0.f && Ability->CanActivate();
+	return Ability && GetCooldownRemaining(Slot) <= 0.f && !IsWindingUp(Slot) && Ability->CanActivate();
 }
 
 bool UIJPAbilityComponent::IsArmed() const
@@ -146,6 +195,10 @@ AIJPPaddle* UIJPAbilityComponent::GetPaddle() const
 
 void UIJPAbilityComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	for (float& WindUp : WindUps)
+	{
+		WindUp = 0.f;
+	}
 	for (UIJPAbility* Ability : Abilities)
 	{
 		if (Ability)

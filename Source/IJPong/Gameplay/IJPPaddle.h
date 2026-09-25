@@ -58,7 +58,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	bool IsVisualShown() const;
 
-	/** The armed cue (a pulsing halo) is up: a skill is waiting for this paddle's next hit. */
+	/** The armed cue (a pulsing halo) is up: a skill is waiting for this paddle's next hit, or winding up. */
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	bool IsArmedCueShown() const;
 
@@ -113,6 +113,16 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Paddle")
 	void SetRunScales(float Length, float Speed);
+
+	/**
+	 * Top-speed multiplier for short effects (1 = none), on top of the run's; dashes shrink with it.
+	 * For abilities like a rival's Snare.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Paddle")
+	void SetSpeedScale(float Scale) { SpeedScale = FMath::Max(Scale, 0.f); }
+
+	UFUNCTION(BlueprintPure, Category = "Paddle")
+	float GetSpeedScale() const { return SpeedScale; }
 
 	/** Degrees added to how steeply this paddle can return the ball (e.g. from a skill tree). */
 	UFUNCTION(BlueprintCallable, Category = "Paddle")
@@ -183,6 +193,7 @@ private:
 	float LengthScale = 1.f;
 	float RunLengthScale = 1.f;
 	float RunSpeedScale = 1.f;
+	float SpeedScale = 1.f;
 	float ReturnAngleBonus = 0.f;
 	/** +1 or -1: the way the paddle was last steered. */
 	float LastMoveSign = 1.f;

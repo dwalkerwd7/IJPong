@@ -1,6 +1,7 @@
 // It's Just Pong
 
 #include "Core/IJPGameModeBase.h"
+#include "Abilities/IJPAbilityComponent.h"
 #include "AI/IJPAIProfile.h"
 #include "AI/IJPPaddleAIController.h"
 #include "Core/IJPPlayerController.h"
@@ -142,6 +143,11 @@ void AIJPGameModeBase::SetRival(const UIJPRival* InRival)
 		}
 		// Their voice in the chat bubbles.
 		Paddle->GetSpeechBubble()->SetVoicePitch(Rival ? Rival->VoicePitch : DefaultOpponentVoice);
+		// Their own ability in place of the class skill.
+		if (Rival && Rival->RivalSkill)
+		{
+			Paddle->GetAbilities()->Equip(EIJPAbilitySlot::ClassSkill, Rival->RivalSkill);
+		}
 	}
 }
 

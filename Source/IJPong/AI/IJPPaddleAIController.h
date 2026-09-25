@@ -11,7 +11,7 @@ class AIJPPaddle;
 class UIJPAIProfile;
 
 /**
- * Plays a paddle. Every ReactionTime it picks the ball that will reach its paddle first, predicts
+ * Plays a paddle. It also uses the paddle's abilities when they say it's their moment (WantsAIUse). Every ReactionTime it picks the ball that will reach its paddle first, predicts
  * where that ball will meet its paddle face, then steers there through AddMoveInput, exactly like a
  * player would. Imperfection comes from the
  * profile: a speed-scaled misjudgement and an aim offset, both rolled once per incoming shot.
@@ -58,6 +58,8 @@ private:
 	const AIJPBall* PickIncomingBall(const AIJPPaddle& Paddle) const;
 	void Decide(const AIJPPaddle& Paddle, const AIJPBall* Ball);
 	void Steer(AIJPPaddle& Paddle) const;
+	/** Trigger any ability that says now is its moment (rival abilities). */
+	void UseAbilities(AIJPPaddle& Paddle) const;
 
 	UPROPERTY(Transient)
 	TObjectPtr<const UIJPAIProfile> Profile;

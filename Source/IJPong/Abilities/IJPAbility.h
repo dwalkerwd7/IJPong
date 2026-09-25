@@ -42,6 +42,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability", meta = (ClampMin = "0", Units = "s"))
 	float Cooldown = 5.f;
 
+	/**
+	 * Wind-up between the button and the effect: the paddle glows (the armed halo) and a warning
+	 * tone plays, so the other side can react. Rival abilities use it; 0 = instant.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability", meta = (ClampMin = "0", Units = "s"))
+	float Telegraph = 0.f;
+
 	// --- Runtime, on the equipped copy ---
 
 	/** Called once when equipped. */
@@ -57,6 +64,12 @@ public:
 
 	/** Waiting to change the paddle's next hit (Smash, Curve shot, Split). The paddle shows a cue while any is. */
 	virtual bool IsArmed() const { return false; }
+
+	/**
+	 * An AI holding this ability would use it now (asked every frame while the slot is ready).
+	 * Abilities written for rivals answer it; the rest never get used by the AI.
+	 */
+	virtual bool WantsAIUse() const { return false; }
 
 	/** Every frame while equipped. */
 	virtual void TickAbility(float DeltaSeconds) {}

@@ -15,12 +15,12 @@
 
 namespace
 {
-	constexpr float CubeSize = 100.f; // /Engine/BasicShapes/Cube is 100 units, centred.
+	constexpr float BubbleCubeSize = 100.f; // /Engine/BasicShapes/Cube is 100 units, centred.
 
 	// Depth (toward the camera) of each piece. Paddles and balls fill -5..5 and the arena's
 	// background sits at -10, so the bubble lives in between: behind play, in front of the screen.
-	constexpr float PanelDepth = -8.f;
-	constexpr float TextDepth = -7.f;
+	constexpr float BubblePanelDepth = -8.f;
+	constexpr float BubbleTextDepth = -7.f;
 
 	// Bubble material parameters (see M_PongBubble).
 	const FName ShapeParam(TEXT("Shape"));
@@ -121,7 +121,7 @@ void UIJPSpeechBubbleComponent::EnsurePieces()
 	IJP::ConfigureAsVisualOnly(Panel);
 	Panel->SetupAttachment(this);
 	Panel->RegisterComponent();
-	Panel->SetRelativeLocation(FVector(0.f, PanelDepth, 0.f));
+	Panel->SetRelativeLocation(FVector(0.f, BubblePanelDepth, 0.f));
 
 	Text = NewObject<UTextRenderComponent>(Owner, TEXT("BubbleText"));
 	Text->SetHorizontalAlignment(EHTA_Left);
@@ -193,8 +193,8 @@ void UIJPSpeechBubbleComponent::BuildBox()
 	// The panel spans the box plus a tail's length on both sides (the shader draws the tail on one).
 	const float HalfW = BoxSize.X * 0.5f;
 	const float TailLength = Gap;
-	Panel->SetRelativeScale3D(FVector((BoxSize.X + TailLength * 2.f) / CubeSize, 1.f / CubeSize, BoxSize.Y / CubeSize));
-	Text->SetRelativeLocation(FVector(-HalfW + Padding, TextDepth, 0.f));
+	Panel->SetRelativeScale3D(FVector((BoxSize.X + TailLength * 2.f) / BubbleCubeSize, 1.f / BubbleCubeSize, BoxSize.Y / BubbleCubeSize));
+	Text->SetRelativeLocation(FVector(-HalfW + Padding, BubbleTextDepth, 0.f));
 	if (PanelMaterial)
 	{
 		PanelMaterial->SetVectorParameterValue(ShapeParam, FLinearColor(BoxSize.X, BoxSize.Y, TailLength));

@@ -103,7 +103,7 @@ void AIJPPaddle::Dash(float Distance, float Duration)
 	// Steering this very frame wins over the last direction (input arrives before the paddle ticks).
 	const float Direction = PendingInput != 0.f ? FMath::Sign(PendingInput) : LastMoveSign;
 	DashTimeLeft = FMath::Max(Duration, UE_KINDA_SMALL_NUMBER);
-	DashVelocity = Direction * Distance / DashTimeLeft;
+	DashVelocity = Direction * Distance * SpeedScale / DashTimeLeft;
 }
 
 void AIJPPaddle::SetLengthScale(float Scale)
@@ -129,7 +129,7 @@ bool AIJPPaddle::ClampToWalls()
 
 float AIJPPaddle::GetMaxSpeed() const
 {
-	return GetProfile()->MaxSpeed * RunSpeedScale;
+	return GetProfile()->MaxSpeed * RunSpeedScale * SpeedScale;
 }
 
 void AIJPPaddle::SetRunScales(float Length, float Speed)
@@ -175,7 +175,7 @@ bool AIJPPaddle::IsArmedCueShown() const
 
 void AIJPPaddle::UpdateArmedCue(float DeltaSeconds)
 {
-	const bool bArmed = Abilities->IsArmed();
+	const bool bArmed = Abilities->ShouldShowCue();
 	if (bArmed != ArmedHalo->IsVisible())
 	{
 		ArmedHalo->SetVisibility(bArmed);

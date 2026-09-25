@@ -6,6 +6,7 @@
 #include "Engine/DataAsset.h"
 #include "IJPRival.generated.h"
 
+class UIJPAbility;
 class UIJPAIProfile;
 class UIJPConversation;
 class UIJPPaddleClass;
@@ -49,7 +50,8 @@ struct FIJPBanterLines
 };
 
 /**
- * A named opponent: a paddle class, a playing style, and the conversations that carry the story.
+ * A named opponent: a paddle class (its body), its own ability, a playing style, and the
+ * conversations that carry the story.
  * How hard they play is not theirs to decide: that's authored per arena (OpponentSkill).
  */
 UCLASS(BlueprintType)
@@ -64,6 +66,13 @@ public:
 	/** Empty = the arena's configured class for that side. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival")
 	TObjectPtr<UIJPPaddleClass> PaddleClass;
+
+	/**
+	 * The rival's own ability, one no player class has; it takes the class skill's slot.
+	 * Empty = the class's skill (which the AI doesn't use).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival")
+	TObjectPtr<UIJPAbility> RivalSkill;
 
 	/** How they play (reaction, error, aim). Empty = the game mode's AIProfile. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival")

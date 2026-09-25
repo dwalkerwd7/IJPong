@@ -51,6 +51,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones", meta = (ClampMin = "0.1"))
 	float ArmRise = 1.5f;
 
+	/** A rival ability winding up: a low buzz that says "something's coming". */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones")
+	FIJPTone Warn = { 150.f, 0.3f, 0.2f };
+
 	/**
 	 * Chat-bubble babble: each letter typed plays this, its pitch shifted by the letter and scaled
 	 * by the speaker's voice (UIJPSpeechBubbleComponent::SetVoicePitch).

@@ -54,6 +54,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Abilities")
 	bool IsArmed() const;
 
+	/** The slot's ability was triggered and is winding up (its Telegraph) before it takes effect. */
+	UFUNCTION(BlueprintPure, Category = "Abilities")
+	bool IsWindingUp(EIJPAbilitySlot Slot) const;
+
+	/** The paddle's glow should show: something is armed or winding up. */
+	bool ShouldShowCue() const;
+
 	/** The owning paddle just returned Ball. */
 	void HandleBallHit(AIJPBall& Ball);
 
@@ -68,12 +75,17 @@ protected:
 private:
 	/** The rising two-note chirp that confirms a skill is armed. */
 	void PlayArmChirp();
+	void PlayWarning();
+	/** Run the slot's ability now (after any wind-up). */
+	void Fire(int32 Index);
 
 	/** One entry per EIJPAbilitySlot. */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UIJPAbility>> Abilities;
 
 	TArray<float> Cooldowns;
+	/** Time left in each slot's wind-up (0 = none). */
+	TArray<float> WindUps;
 	TArray<float> CooldownScales;
 	FTimerHandle ChirpTimer;
 };

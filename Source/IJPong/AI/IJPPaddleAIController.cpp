@@ -1,6 +1,7 @@
 // It's Just Pong
 
 #include "AI/IJPPaddleAIController.h"
+#include "Abilities/IJPAbilityComponent.h"
 #include "AI/IJPAIProfile.h"
 #include "Core/IJPTypes.h"
 #include "Gameplay/IJPArena.h"
@@ -65,6 +66,22 @@ void AIJPPaddleAIController::Tick(float DeltaSeconds)
 	}
 
 	Steer(*Paddle);
+	UseAbilities(*Paddle);
+}
+
+void AIJPPaddleAIController::UseAbilities(AIJPPaddle& Paddle) const
+{
+	// Each ability knows its own moment; the AI just presses the button when it says so.
+	UIJPAbilityComponent* Abilities = Paddle.GetAbilities();
+	for (int32 i = 0; i < static_cast<int32>(EIJPAbilitySlot::Count); ++i)
+	{
+		const EIJPAbilitySlot Slot = static_cast<EIJPAbilitySlot>(i);
+		const UIJPAbility* Ability = Abilities->GetAbility(Slot);
+		if (Ability && Abilities->IsReady(Slot) && Ability->WantsAIUse())
+		{
+			Abilities->TryActivate(Slot);
+		}
+	}
 }
 
 const AIJPBall* AIJPPaddleAIController::PickIncomingBall(const AIJPPaddle& Paddle) const
