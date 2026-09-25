@@ -26,6 +26,7 @@ class UIJPToneSynthComponent;
 class UIJPEra;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FIJPArenaBallGoalSignature, AIJPBall*, Ball, EIJPSide, DefendingSide);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FIJPArenaBallReturnedSignature, AIJPBall*, Ball, AIJPPaddle*, Paddle);
 
 /**
  * The Pong playfield: walls, goals, net, score digits and the camera that frames it.
@@ -134,6 +135,10 @@ public:
 	/** Any ball went into a goal. DefendingSide concedes; Ball says what it was worth. */
 	UPROPERTY(BlueprintAssignable, Category = "Arena")
 	FIJPArenaBallGoalSignature OnBallGoal;
+
+	/** A paddle returned a ball (its rally count already includes this hit). */
+	UPROPERTY(BlueprintAssignable, Category = "Arena")
+	FIJPArenaBallReturnedSignature OnBallReturned;
 
 	UIJPToneSynthComponent* GetTones() const { return Tones; }
 	UIJPCRTComponent* GetCRT() const { return CRT; }

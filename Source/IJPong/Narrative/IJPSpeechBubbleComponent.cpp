@@ -77,18 +77,21 @@ void UIJPSpeechBubbleComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 
 	if (ShownChars < FullText.Len())
 	{
-		// Typewriter: a blip for every other letter typed (every letter would buzz).
+		// Typewriter with babble: a syllable for the last letter typed this frame (one voice, like the cabinet).
 		RevealTime += DeltaTime;
 		const int32 Target = FMath::Min(FMath::FloorToInt(RevealTime * CharsPerSecond), FullText.Len());
-		bool bBlip = false;
+		TCHAR Spoken = 0;
 		for (int32 i = ShownChars; i < Target; ++i)
 		{
-			bBlip |= !FChar::IsWhitespace(FullText[i]) && i % 2 == 0;
+			if (FChar::IsAlnum(FullText[i]))
+			{
+				Spoken = FullText[i];
+			}
 		}
 		SetShownChars(Target);
-		if (bBlip)
+		if (Spoken)
 		{
-			Blip();
+			Babble(Spoken);
 		}
 		return;
 	}
@@ -227,7 +230,7 @@ void UIJPSpeechBubbleComponent::SetShownChars(int32 Chars)
 	Text->SetText(FText::FromString(GetShownText()));
 }
 
-void UIJPSpeechBubbleComponent::Blip() const
+void UIJPSpeechBubbleComponent::Babble(TCHAR Letter) const
 {
 	const AIJPPaddle* Paddle = GetPaddle();
 	AIJPArena* Arena = Paddle ? Paddle->GetArena() : nullptr;
@@ -236,12 +239,15 @@ void UIJPSpeechBubbleComponent::Blip() const
 		return;
 	}
 
-	// Same voice for everyone in 1972, but the opponent's a little lower so the two read apart.
-	FIJPTone Tone = Arena->GetToneSet().Talk;
-	if (Paddle->GetSide() == EIJPSide::Right)
-	{
-		Tone.Frequency *= 0.8f;
-	}
+	// Each letter always gets the same pitch, so a word always "sounds" the same; vowels sit a
+	// little higher, like stressed syllables. The speaker's voice scales the whole thing.
+	const UIJPToneSet& ToneSet = Arena->GetToneSet();
+	const TCHAR Lower = FChar::ToLower(Letter);
+	const bool bVowel = FCString::Strchr(TEXT("aeiou"), Lower) != nullptr;
+	const float Step = static_cast<float>((static_cast<int32>(Lower) * 7) % 9) / 8.f; // 0..1, scrambled by letter
+	const float Semitones = FMath::Lerp(-ToneSet.TalkRange, ToneSet.TalkRange, Step) + (bVowel ? 2.f : 0.f);
+	FIJPTone Tone = ToneSet.Talk;
+	Tone.Frequency *= VoicePitch * FMath::Pow(2.f, Semitones / 12.f);
 	Arena->GetTones()->PlayTone(Tone);
 }
 

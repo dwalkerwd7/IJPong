@@ -51,7 +51,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones", meta = (ClampMin = "0.1"))
 	float ArmRise = 1.5f;
 
-	/** The blip of chat-bubble text typing out (the opponent's is pitched a little lower). */
+	/**
+	 * Chat-bubble babble: each letter typed plays this, its pitch shifted by the letter and scaled
+	 * by the speaker's voice (UIJPSpeechBubbleComponent::SetVoicePitch).
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones")
-	FIJPTone Talk = { 660.f, 0.015f, 0.1f };
+	FIJPTone Talk = { 440.f, 0.045f, 0.1f };
+
+	/** How far babble wanders from the voice's pitch, in semitones either way. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones", meta = (ClampMin = "0", ClampMax = "12"))
+	float TalkRange = 4.f;
 };

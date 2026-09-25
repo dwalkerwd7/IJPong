@@ -10,7 +10,9 @@
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPPaddleClass.h"
 #include "Gameplay/IJPRival.h"
+#include "Narrative/IJPBanterComponent.h"
 #include "Narrative/IJPConversation.h"
+#include "Narrative/IJPSpeechBubbleComponent.h"
 #include "Narrative/IJPConversationPlayer.h"
 
 AIJPGameModeBase::AIJPGameModeBase()
@@ -22,6 +24,7 @@ AIJPGameModeBase::AIJPGameModeBase()
 
 	Match = CreateDefaultSubobject<UIJPMatchComponent>(TEXT("Match"));
 	Conversations = CreateDefaultSubobject<UIJPConversationPlayer>(TEXT("Conversations"));
+	Banter = CreateDefaultSubobject<UIJPBanterComponent>(TEXT("Banter"));
 }
 
 void AIJPGameModeBase::StartPlay()
@@ -57,6 +60,11 @@ void AIJPGameModeBase::StartPlay()
 
 	Match->OnMatchEnded.AddDynamic(this, &AIJPGameModeBase::HandleMatchEnded);
 	Conversations->OnFinished.AddDynamic(this, &AIJPGameModeBase::HandleConversationFinished);
+	Banter->Bind(Arena, Match);
+	if (AIJPPaddle* Opponent = Arena->GetPaddle(IJP::Opposite(PlayerSide)))
+	{
+		Opponent->GetSpeechBubble()->SetVoicePitch(DefaultOpponentVoice);
+	}
 
 	OnArenaReady();
 }
@@ -132,6 +140,8 @@ void AIJPGameModeBase::SetRival(const UIJPRival* InRival)
 		{
 			AI->SetProfile(GetAIProfileFor(RivalSide));
 		}
+		// Their voice in the chat bubbles.
+		Paddle->GetSpeechBubble()->SetVoicePitch(Rival ? Rival->VoicePitch : DefaultOpponentVoice);
 	}
 }
 

@@ -115,7 +115,8 @@ void UIJPMatchComponent::HandleGoal(AIJPBall* ScoringBall, EIJPSide DefendingSid
 
 	const EIJPSide Scorer = IJP::Opposite(DefendingSide);
 	int32& ScorerScore = Scorer == EIJPSide::Left ? LeftScore : RightScore;
-	ScorerScore += ScoringBall ? ScoringBall->GetType().Points : 1;
+	const int32 Points = ScoringBall ? ScoringBall->GetType().Points : 1;
+	ScorerScore += Points;
 	UpdateScoreDisplay();
 
 	if (!GetRules().IsEndless() && ScorerScore >= GetRules().WinTarget)
@@ -125,6 +126,7 @@ void UIJPMatchComponent::HandleGoal(AIJPBall* ScoringBall, EIJPSide DefendingSid
 	}
 
 	Arena->FlashScore(Scorer);
+	OnPointScored.Broadcast(Scorer, Points);
 
 	// Serve again only once the court is empty, and only if a serve isn't already on its way
 	// (a ball launched during the wait before a serve can score first).

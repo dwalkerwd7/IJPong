@@ -11,6 +11,7 @@ class AIJPArena;
 class AIJPBall;
 class AIJPPaddleAIController;
 class UIJPAIProfile;
+class UIJPBanterComponent;
 class UIJPConversation;
 class UIJPConversationPlayer;
 class UIJPMatchComponent;
@@ -67,6 +68,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Game")
 	UIJPConversationPlayer* GetConversations() const { return Conversations; }
 
+	UIJPBanterComponent* GetBanter() const { return Banter; }
+
+	/** The opponent's voice when no rival is set (a multiple of the tone set's Talk pitch). */
+	static constexpr float DefaultOpponentVoice = 0.8f;
+
 	/** Set how well the opponent plays (0..1) on the arena, and on its AI now. */
 	UFUNCTION(BlueprintCallable, Category = "Game")
 	void SetOpponentSkill(float Skill);
@@ -104,6 +110,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game|Components")
 	TObjectPtr<UIJPConversationPlayer> Conversations;
+
+	/** The current rival's mid-rally reactions. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game|Components")
+	TObjectPtr<UIJPBanterComponent> Banter;
 
 private:
 	UFUNCTION()

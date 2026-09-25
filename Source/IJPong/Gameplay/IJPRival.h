@@ -10,6 +10,44 @@ class UIJPAIProfile;
 class UIJPConversation;
 class UIJPPaddleClass;
 
+/** A moment in play a rival can react to. */
+UENUM(BlueprintType)
+enum class EIJPBanterEvent : uint8
+{
+	/** The rival scored (any goal). */
+	RivalScored,
+	/** The player scored (any goal). */
+	PlayerScored,
+	/** The rival scored the match's first goal (used instead of RivalScored when it has lines). */
+	RivalScoredFirst,
+	/** The player scored the match's first goal (used instead of PlayerScored when it has lines). */
+	PlayerScoredFirst,
+	/** The rival just reached match point (takes priority over goal lines). */
+	RivalMatchPoint,
+	/** The player just reached match point (takes priority over goal lines). */
+	PlayerMatchPoint,
+	/** A rally reached LongRallyReturns returns. */
+	LongRally
+};
+
+/** What a rival may say at one kind of moment. */
+USTRUCT(BlueprintType)
+struct FIJPBanterLines
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Banter")
+	EIJPBanterEvent Event = EIJPBanterEvent::RivalScored;
+
+	/** One is picked at random. Mostly one rival line; a player reply can follow in the same conversation. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Banter")
+	TArray<TObjectPtr<UIJPConversation>> Conversations;
+
+	/** Chance to speak when the moment happens (0..1). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Banter", meta = (ClampMin = "0", ClampMax = "1"))
+	float Chance = 0.5f;
+};
+
 /**
  * A named opponent: a paddle class, a playing style, and the conversations that carry the story.
  * How hard they play is not theirs to decide: that's authored per arena (OpponentSkill).
@@ -42,4 +80,26 @@ public:
 	/** Played after the rival loses (one at random). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Conversations")
 	TArray<TObjectPtr<UIJPConversation>> Loss;
+
+	/** The rival's voice when their chat bubble babbles: a multiple of the tone set's Talk pitch. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival", meta = (ClampMin = "0.25", ClampMax = "4"))
+	float VoicePitch = 0.8f;
+
+	/** Mid-rally reactions (see UIJPBanterComponent). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Banter")
+	TArray<FIJPBanterLines> Banter;
+
+	/** At least this long between two banter lines. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Banter", meta = (ClampMin = "0", Units = "s"))
+	float BanterCooldown = 8.f;
+
+	/** Returns in one rally that count as a long rally. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Banter", meta = (ClampMin = "1"))
+	int32 LongRallyReturns = 8;
+
+	/** The lines for Event, or null if the rival has none. */
+	const FIJPBanterLines* FindBanter(EIJPBanterEvent Event) const
+	{
+		return Banter.FindByPredicate([Event](const FIJPBanterLines& Lines) { return Lines.Event == Event && !Lines.Conversations.IsEmpty(); });
+	}
 };

@@ -117,7 +117,16 @@ bool FIJPRunOverTest::RunTest(const FString& Parameters)
 	Test.RunFor(1.f);
 	UTEST_FALSE("The match stopped: no serve", Mode->GetArena()->GetBall()->IsInPlay());
 
-	UTEST_TRUE("Confirm starts a new run", Mode->HandleUIConfirm());
+	// Confirm moves on: through the class's skill tree if it has one (pick START RUN at its end).
+	UTEST_TRUE("Confirm moves on", Mode->HandleUIConfirm());
+	if (Mode->GetPhase() == EIJPRunPhase::Tree)
+	{
+		for (int32 i = 0; i < 64; ++i)
+		{
+			Mode->HandleUIStep(1);
+		}
+		Mode->HandleUIConfirm();
+	}
 	UTEST_EQUAL("Running again", Run->GetState(), EIJPRunState::Running);
 	UTEST_EQUAL("On the map", Mode->GetPhase(), EIJPRunPhase::Map);
 	return true;

@@ -344,6 +344,7 @@ void AIJPArena::HandleBallPaddleHit(AIJPBall* HitBall, AIJPPaddle* Paddle)
 	Tones->PlayTone(GetToneSet().PaddleHit);
 	Paddle->Flicker();
 	Paddle->GetAbilities()->HandleBallHit(*HitBall);
+	OnBallReturned.Broadcast(HitBall, Paddle);
 }
 
 void AIJPArena::HandleBallBounce()

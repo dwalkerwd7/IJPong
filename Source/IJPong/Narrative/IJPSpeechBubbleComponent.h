@@ -49,6 +49,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Speech Bubble")
 	FString GetShownText() const { return FullText.Left(ShownChars); }
 
+	/** The speaker's voice: a multiple of the tone set's Talk pitch (1 = as set, 0.8 = lower). */
+	UFUNCTION(BlueprintCallable, Category = "Speech Bubble")
+	void SetVoicePitch(float Scale) { VoicePitch = FMath::Max(Scale, 0.1f); }
+
+	UFUNCTION(BlueprintPure, Category = "Speech Bubble")
+	float GetVoicePitch() const { return VoicePitch; }
+
 	/** The line was typed out, held, and taken down. */
 	UPROPERTY(BlueprintAssignable, Category = "Speech Bubble")
 	FIJPLineFinishedSignature OnLineFinished;
@@ -85,7 +92,8 @@ private:
 	void BuildBox();
 	void FollowPaddle();
 	void SetShownChars(int32 Chars);
-	void Blip() const;
+	/** One syllable of babble for Letter. */
+	void Babble(TCHAR Letter) const;
 	void Finish();
 
 	UPROPERTY(Transient)
@@ -107,5 +115,6 @@ private:
 	int32 ShownChars = 0;
 	float RevealTime = 0.f;
 	float HoldLeft = 0.f;
+	float VoicePitch = 1.f;
 	bool bTalking = false;
 };

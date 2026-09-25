@@ -13,6 +13,7 @@ class UIJPBallType;
 class UIJPMatchRules;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FIJPMatchEndedSignature, EIJPSide, Winner);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FIJPPointScoredSignature, EIJPSide, Scorer, int32, Points);
 
 /**
  * Runs one match at a time on an arena: serve -> rally -> goal -> score -> serve, until a side
@@ -77,6 +78,10 @@ public:
 
 	/** The rules in play: the ones passed to StartMatch, or UIJPMatchRules' defaults. */
 	const UIJPMatchRules& GetRules() const;
+
+	/** A goal was counted and the match goes on (the scores are already updated). A match-winning goal sends OnMatchEnded instead. */
+	UPROPERTY(BlueprintAssignable, Category = "Match")
+	FIJPPointScoredSignature OnPointScored;
 
 	/** A side reached the win target. */
 	UPROPERTY(BlueprintAssignable, Category = "Match")
