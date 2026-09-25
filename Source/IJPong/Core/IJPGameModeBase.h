@@ -11,7 +11,10 @@ class AIJPArena;
 class AIJPBall;
 class AIJPPaddleAIController;
 class UIJPAIProfile;
+class UIJPConversation;
+class UIJPConversationPlayer;
 class UIJPMatchComponent;
+class UIJPMatchRules;
 class UIJPRival;
 
 /**
@@ -50,6 +53,20 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Game")
 	const UIJPRival* GetRival() const { return Rival; }
 
+	/**
+	 * Start a new match on the arena. If the rival has pre-match conversations, one plays first and
+	 * the first serve waits for it. Null Rules uses UIJPMatchRules' defaults.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Game")
+	void BeginMatch(const UIJPMatchRules* Rules);
+
+	/** Play a conversation in the paddles' chat bubbles now, replacing any in progress. Doesn't pause play. */
+	UFUNCTION(BlueprintCallable, Category = "Game")
+	void PlayConversation(const UIJPConversation* Conversation);
+
+	UFUNCTION(BlueprintPure, Category = "Game")
+	UIJPConversationPlayer* GetConversations() const { return Conversations; }
+
 	/** The side the local player plays. */
 	static constexpr EIJPSide PlayerSide = EIJPSide::Left;
 
@@ -74,7 +91,16 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game|Components")
 	TObjectPtr<UIJPMatchComponent> Match;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game|Components")
+	TObjectPtr<UIJPConversationPlayer> Conversations;
+
 private:
+	UFUNCTION()
+	void HandleMatchEnded(EIJPSide Winner);
+
+	UFUNCTION()
+	void HandleConversationFinished(const UIJPConversation* Conversation);
+
 	/** The AI profile for Side's AI: the rival's on the opponent's side, else the configured one. */
 	const UIJPAIProfile* GetAIProfileFor(EIJPSide Side) const;
 

@@ -43,4 +43,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones")
 	FIJPTone Goal = { 122.f, 0.35f, 0.3f };
+
+	/** The blip of chat-bubble text typing out (the opponent's is pitched a little lower). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones")
+	FIJPTone Talk = { 660.f, 0.015f, 0.1f };
 };

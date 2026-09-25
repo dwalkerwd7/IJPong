@@ -11,6 +11,7 @@
 class AIJPArena;
 class UBoxComponent;
 class UIJPAbilityComponent;
+class UIJPSpeechBubbleComponent;
 class UIJPPaddleClass;
 class UIJPPaddleProfile;
 class UStaticMeshComponent;
@@ -100,6 +101,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	UIJPAbilityComponent* GetAbilities() const { return Abilities; }
 
+	UFUNCTION(BlueprintPure, Category = "Paddle")
+	UIJPSpeechBubbleComponent* GetSpeechBubble() const { return SpeechBubble; }
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Layout")
 	float VisualDepth = 10.f;
@@ -116,6 +120,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
 	TObjectPtr<UIJPAbilityComponent> Abilities;
+
+	/** What this paddle says (rival banter, the player's replies). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
+	TObjectPtr<UIJPSpeechBubbleComponent> SpeechBubble;
 
 private:
 	void ApplyLayout();

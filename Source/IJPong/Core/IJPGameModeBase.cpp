@@ -10,6 +10,8 @@
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPPaddleClass.h"
 #include "Gameplay/IJPRival.h"
+#include "Narrative/IJPConversation.h"
+#include "Narrative/IJPConversationPlayer.h"
 
 AIJPGameModeBase::AIJPGameModeBase()
 {
@@ -19,6 +21,7 @@ AIJPGameModeBase::AIJPGameModeBase()
 	DefaultPawnClass = nullptr;
 
 	Match = CreateDefaultSubobject<UIJPMatchComponent>(TEXT("Match"));
+	Conversations = CreateDefaultSubobject<UIJPConversationPlayer>(TEXT("Conversations"));
 }
 
 void AIJPGameModeBase::StartPlay()
@@ -52,6 +55,9 @@ void AIJPGameModeBase::StartPlay()
 	}
 	SpawnAIPaddle(IJP::Opposite(PlayerSide));
 
+	Match->OnMatchEnded.AddDynamic(this, &AIJPGameModeBase::HandleMatchEnded);
+	Conversations->OnFinished.AddDynamic(this, &AIJPGameModeBase::HandleConversationFinished);
+
 	OnArenaReady();
 }
 
@@ -59,6 +65,37 @@ void AIJPGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController*
 {
 	// No Super: the default implementation spawns a DefaultPawn. The player takes a paddle instead.
 	PossessPlayerPaddle(NewPlayer);
+}
+
+void AIJPGameModeBase::BeginMatch(const UIJPMatchRules* Rules)
+{
+	Conversations->Stop();
+	const UIJPConversation* PreMatch = Rival ? UIJPConversation::PickRandom(Rival->PreMatch) : nullptr;
+	Match->StartMatch(Arena, Rules, PreMatch != nullptr);
+	if (PreMatch)
+	{
+		// HandleConversationFinished releases the serve.
+		PlayConversation(PreMatch);
+	}
+}
+
+void AIJPGameModeBase::PlayConversation(const UIJPConversation* Conversation)
+{
+	Conversations->Play(Conversation, Arena, PlayerSide);
+}
+
+void AIJPGameModeBase::HandleMatchEnded(EIJPSide Winner)
+{
+	if (Rival)
+	{
+		// Played over the winner's blinking score; nothing waits for it.
+		PlayConversation(UIJPConversation::PickRandom(Winner == PlayerSide ? Rival->Loss : Rival->Win));
+	}
+}
+
+void AIJPGameModeBase::HandleConversationFinished(const UIJPConversation* Conversation)
+{
+	Match->ReleaseServe();
 }
 
 void AIJPGameModeBase::SetRival(const UIJPRival* InRival)

@@ -2,6 +2,7 @@
 
 #include "Gameplay/IJPPaddle.h"
 #include "Abilities/IJPAbilityComponent.h"
+#include "Narrative/IJPSpeechBubbleComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -27,6 +28,9 @@ AIJPPaddle::AIJPPaddle()
 	IJP::ConfigureAsVisualOnly(Visual);
 
 	Abilities = CreateDefaultSubobject<UIJPAbilityComponent>(TEXT("Abilities"));
+
+	SpeechBubble = CreateDefaultSubobject<UIJPSpeechBubbleComponent>(TEXT("SpeechBubble"));
+	SpeechBubble->SetupAttachment(Collision);
 
 	// The arena camera is the view; the paddle never owns one.
 	bFindCameraComponentWhenViewTarget = false;

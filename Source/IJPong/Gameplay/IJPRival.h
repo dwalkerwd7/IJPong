@@ -7,10 +7,11 @@
 #include "IJPRival.generated.h"
 
 class UIJPAIProfile;
+class UIJPConversation;
 class UIJPPaddleClass;
 
 /**
- * A named opponent: a paddle class, a playing style, and a few lines that carry the story.
+ * A named opponent: a paddle class, a playing style, and the conversations that carry the story.
  * How hard they play is not theirs to decide: that's authored per arena (OpponentSkill).
  */
 UCLASS(BlueprintType)
@@ -30,15 +31,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival")
 	TObjectPtr<UIJPAIProfile> AIProfile;
 
-	/** Said before a match; one is picked. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Lines", meta = (MultiLine = "true"))
-	TArray<FText> PreMatchLines;
+	/** Played before a match (one at random); the first serve waits for it. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Conversations")
+	TArray<TObjectPtr<UIJPConversation>> PreMatch;
 
-	/** Said after the rival wins. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Lines", meta = (MultiLine = "true"))
-	TArray<FText> WinLines;
+	/** Played after the rival wins (one at random). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Conversations")
+	TArray<TObjectPtr<UIJPConversation>> Win;
 
-	/** Said after the rival loses. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Lines", meta = (MultiLine = "true"))
-	TArray<FText> LossLines;
+	/** Played after the rival loses (one at random). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Conversations")
+	TArray<TObjectPtr<UIJPConversation>> Loss;
 };

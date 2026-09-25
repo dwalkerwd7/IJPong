@@ -122,6 +122,12 @@ public:
 	/** The colour a ball of Type is drawn in the current era. */
 	FLinearColor GetBallColour(const UIJPBallType* Type) const;
 
+	/** The era palette on screen now. */
+	const FIJPPalette& GetPalette() const { return CurrentPalette; }
+
+	/** Material for text in the arena (chat bubbles): unlit, coloured by the text's own colour. */
+	UMaterialInterface* GetTextMaterial() const { return TextMaterial.LoadSynchronous(); }
+
 	/** The plain material every piece is made from (before palette colours). */
 	UMaterialInterface* GetBaseMaterial() const { return PongMaterial.Get(); }
 
@@ -240,6 +246,10 @@ protected:
 	/** Flat unlit material for every piece, with a "Color" vector parameter the era's palette sets. From DefaultGame.ini. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Arena|Look")
 	TSoftObjectPtr<UMaterialInterface> PongMaterial;
+
+	/** Unlit text material (M_PongText via DefaultGame.ini). */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Arena|Look")
+	TSoftObjectPtr<UMaterialInterface> TextMaterial;
 
 	/** The beeps for ball events on this arena only, ignoring the era. Empty = the era's tone set. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Audio")

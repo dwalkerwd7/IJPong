@@ -30,12 +30,17 @@ void AIJPTestGameMode::OnArenaReady()
 	{
 		PlayerPaddle->GetAbilities()->Equip(EIJPAbilitySlot::RunAbility, PlayerRunAbility.LoadSynchronous());
 	}
+	if (Rivals.IsValidIndex(StartingRival))
+	{
+		RivalIndex = StartingRival;
+		SetRival(Rivals[RivalIndex].LoadSynchronous());
+	}
 	RestartMatch();
 }
 
 void AIJPTestGameMode::RestartMatch(const UIJPMatchRules* Rules)
 {
-	GetMatch()->StartMatch(GetArena(), Rules ? Rules : MatchRules.LoadSynchronous());
+	BeginMatch(Rules ? Rules : MatchRules.LoadSynchronous());
 }
 
 void AIJPTestGameMode::ServeNow()
@@ -147,6 +152,8 @@ void AIJPTestGameMode::CycleRival(int32 Direction)
 	RivalIndex = ((RivalIndex + 1 + Direction) % Count + Count) % Count - 1;
 	const UIJPRival* Next = Rivals.IsValidIndex(RivalIndex) ? Rivals[RivalIndex].LoadSynchronous() : nullptr;
 	SetRival(Next);
+	// A fresh match, so the new rival gets to say hello.
+	RestartMatch();
 	ShowMessage(3, FString::Printf(TEXT("Opponent: %s"), Next ? *Next->DisplayName.ToString() : TEXT("no rival")));
 }
 

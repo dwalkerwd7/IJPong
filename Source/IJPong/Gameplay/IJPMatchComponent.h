@@ -31,9 +31,17 @@ public:
 	/**
 	 * Start a fresh match: scores to zero, first serve after the rules' delay.
 	 * Abandons any match or rally in progress. Null Rules uses UIJPMatchRules' defaults.
+	 * bHoldServe: the ball blinks at the centre but waits for ReleaseServe() (e.g. a pre-match conversation).
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Match")
-	void StartMatch(AIJPArena* InArena, const UIJPMatchRules* InRules);
+	void StartMatch(AIJPArena* InArena, const UIJPMatchRules* InRules, bool bHoldServe = false);
+
+	/** Let a held serve go: it follows after the rules' serve delay. */
+	UFUNCTION(BlueprintCallable, Category = "Match")
+	void ReleaseServe();
+
+	UFUNCTION(BlueprintPure, Category = "Match")
+	bool IsServeHeld() const { return bServeHeld; }
 
 	/** Serve immediately toward a random side, abandoning any rally in progress. Does nothing once the match is over. */
 	UFUNCTION(BlueprintCallable, Category = "Match")
@@ -98,6 +106,7 @@ private:
 	EIJPMatchPhase Phase = EIJPMatchPhase::None;
 	EIJPSide NextServeSide = EIJPSide::Left;
 	EIJPSide Winner = EIJPSide::Left;
+	bool bServeHeld = false;
 	int32 LeftScore = 0;
 	int32 RightScore = 0;
 };

@@ -13,10 +13,11 @@ namespace
 	EIJPSide RandomSide() { return FMath::RandBool() ? EIJPSide::Left : EIJPSide::Right; }
 }
 
-void UIJPMatchComponent::StartMatch(AIJPArena* InArena, const UIJPMatchRules* InRules)
+void UIJPMatchComponent::StartMatch(AIJPArena* InArena, const UIJPMatchRules* InRules, bool bHoldServe)
 {
 	Arena = InArena;
 	Rules = InRules;
+	bServeHeld = bHoldServe;
 
 	if (!GetBall())
 	{
@@ -56,10 +57,24 @@ AIJPBall* UIJPMatchComponent::LaunchExtraBall(const UIJPBallType* Type)
 	return Extra;
 }
 
+void UIJPMatchComponent::ReleaseServe()
+{
+	if (!bServeHeld)
+	{
+		return;
+	}
+	bServeHeld = false;
+	if (Phase == EIJPMatchPhase::Serve && !GetWorld()->GetTimerManager().IsTimerActive(ServeTimer))
+	{
+		ScheduleServe(NextServeSide);
+	}
+}
+
 void UIJPMatchComponent::ServeNow()
 {
 	if (!IsOver() && GetBall())
 	{
+		bServeHeld = false;
 		GetWorld()->GetTimerManager().ClearTimer(ServeTimer);
 		Arena->ResetBalls();
 		Serve(RandomSide());
@@ -117,6 +132,12 @@ void UIJPMatchComponent::ScheduleServe(EIJPSide Toward)
 	// The main ball blinks as what's about to be served first.
 	GetBall()->SetType(GetServedType(0));
 	GetBall()->BlinkAtCentre();
+	if (bServeHeld)
+	{
+		// ReleaseServe() starts the countdown. Cancel any from before (e.g. a match restarted mid-countdown).
+		GetWorld()->GetTimerManager().ClearTimer(ServeTimer);
+		return;
+	}
 	GetWorld()->GetTimerManager().SetTimer(ServeTimer, this, &UIJPMatchComponent::ServeBall, FMath::Max(GetRules().ServeDelay, UE_KINDA_SMALL_NUMBER));
 }
 

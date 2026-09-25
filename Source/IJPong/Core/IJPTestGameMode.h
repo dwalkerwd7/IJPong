@@ -53,7 +53,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Test")
 	void CyclePlayerClass(int32 Direction);
 
-	/** Step the opponent through Rivals, with "no rival" (the arena's own class) between the last and the first. */
+	/**
+	 * Step the opponent through Rivals, with "no rival" (the arena's own class) between the last and
+	 * the first, and start a new match against them.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Test")
 	void CycleRival(int32 Direction);
 
@@ -82,6 +85,10 @@ protected:
 	/** Rivals the rival key steps through. Set in DefaultGame.ini. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Test|Classes")
 	TArray<TSoftObjectPtr<UIJPRival>> Rivals;
+
+	/** Rival faced when play starts: an index into Rivals. -1 = none. Set in DefaultGame.ini. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Test|Classes")
+	int32 StartingRival = -1;
 
 	/** Types the add-ball key picks from. Set in DefaultGame.ini; empty = the arena's default type. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Test|Balls")
