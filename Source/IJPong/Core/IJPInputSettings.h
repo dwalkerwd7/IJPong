@@ -38,13 +38,13 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Input")
 	TSoftObjectPtr<UInputAction> AimAction;
 
-	/** Axis2D: mouse movement, which nudges the aim up and down. */
+	/** Axis1D: turn the aim up (+) or down (-) while held (keyboard W / S). */
 	UPROPERTY(Config, EditAnywhere, Category = "Input")
-	TSoftObjectPtr<UInputAction> AimMouseAction;
+	TSoftObjectPtr<UInputAction> AimKeysAction;
 
-	/** Degrees of aim per unit of mouse movement. */
-	UPROPERTY(Config, EditAnywhere, Category = "Input", meta = (ClampMin = "0"))
-	float MouseAimSensitivity = 0.5f;
+	/** How fast held aim keys turn the aim, in degrees per second. */
+	UPROPERTY(Config, EditAnywhere, Category = "Input", meta = (ClampMin = "0", Units = "deg"))
+	float KeyAimSpeed = 120.f;
 
 	/** Digital: use the paddle's run ability. */
 	UPROPERTY(Config, EditAnywhere, Category = "Input")

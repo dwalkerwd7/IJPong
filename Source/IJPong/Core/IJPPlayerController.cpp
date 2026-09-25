@@ -68,9 +68,10 @@ void AIJPPlayerController::SetupInputComponent()
 	{
 		EnhancedInput->BindAction(Aim, ETriggerEvent::Triggered, this, &AIJPPlayerController::HandleAim);
 	}
-	if (UInputAction* AimMouse = Settings->AimMouseAction.LoadSynchronous())
+	if (UInputAction* AimKeys = Settings->AimKeysAction.LoadSynchronous())
 	{
-		EnhancedInput->BindAction(AimMouse, ETriggerEvent::Triggered, this, &AIJPPlayerController::HandleAimMouse);
+		// Triggered every frame a key is held: the aim turns at a steady rate.
+		EnhancedInput->BindAction(AimKeys, ETriggerEvent::Triggered, this, &AIJPPlayerController::HandleAimKeys);
 	}
 	if (UInputAction* UIStep = Settings->UIStepAction.LoadSynchronous())
 	{
@@ -137,11 +138,11 @@ void AIJPPlayerController::HandleAim(const FInputActionValue& Value)
 	}
 }
 
-void AIJPPlayerController::HandleAimMouse(const FInputActionValue& Value)
+void AIJPPlayerController::HandleAimKeys(const FInputActionValue& Value)
 {
 	if (AIJPPaddle* Paddle = GetPawn<AIJPPaddle>())
 	{
-		Paddle->AddAimAngle(Value.Get<FVector2D>().Y * GetDefault<UIJPInputSettings>()->MouseAimSensitivity);
+		Paddle->AddAimAngle(Value.Get<float>() * GetDefault<UIJPInputSettings>()->KeyAimSpeed * GetWorld()->GetDeltaSeconds());
 	}
 }
 

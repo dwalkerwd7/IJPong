@@ -30,7 +30,7 @@ private:
 	void HandleClassSkill();
 	void HandleClassSkillReleased();
 	void HandleAim(const FInputActionValue& Value);
-	void HandleAimMouse(const FInputActionValue& Value);
+	void HandleAimKeys(const FInputActionValue& Value);
 	void HandleUIStep(const FInputActionValue& Value);
 	void HandleRunAbility();
 };

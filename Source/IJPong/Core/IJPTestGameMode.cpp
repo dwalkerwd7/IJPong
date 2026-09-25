@@ -235,5 +235,5 @@ void AIJPTestGameMode::GetDebugLines(TArray<FString>& OutLines) const
 	}
 
 	OutLines.Add(TEXT("R new match   F serve now   T AI vs AI   B add ball"));
-	OutLines.Add(TEXT("- / = opponent skill   [ / ] era   C class   V rival   . (period) hide this"));
+	OutLines.Add(TEXT("- / = opponent skill   [ / ] era   N class   V rival   . (period) hide this"));
 }
