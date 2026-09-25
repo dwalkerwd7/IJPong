@@ -24,6 +24,7 @@ public:
 
 	virtual void Activate() override { bArmed = true; }
 	virtual bool IsActive() const override { return bArmed; }
+	virtual bool IsArmed() const override { return bArmed; }
 	virtual void OnBallHit(AIJPBall& Ball) override;
 	virtual void Deactivate() override { bArmed = false; }
 

@@ -7,6 +7,8 @@
 #include "Abilities/IJPAbility_Grow.h"
 #include "Abilities/IJPAbility_Smash.h"
 #include "Abilities/IJPAbilityComponent.h"
+#include "Audio/IJPToneSet.h"
+#include "Audio/IJPToneSynthComponent.h"
 #include "Core/IJPTypes.h"
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPBall.h"
@@ -114,6 +116,45 @@ bool FIJPCooldownTest::RunTest(const FString& Parameters)
 	Test.RunFor(1.1f);
 	UTEST_TRUE("Ready again", Abilities->IsReady(EIJPAbilitySlot::RunAbility));
 	UTEST_TRUE("Second use", Abilities->TryActivate(EIJPAbilitySlot::RunAbility));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPArmedCueTest, "IJPong.Ability.ArmedSkillPulsesAndChirps", IJPAbilityTests::Flags)
+bool FIJPArmedCueTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPArena* Arena = Test.GetArena();
+	AIJPBall* Ball = Arena->GetBall();
+	AIJPPaddle* Left = Arena->GetPaddle(EIJPSide::Left);
+	UIJPAbilityComponent* Abilities = Left->GetAbilities();
+	UIJPToneSynthComponent* Tones = Arena->GetTones();
+	const UIJPToneSet& ToneSet = Arena->GetToneSet();
+	Abilities->Equip(EIJPAbilitySlot::ClassSkill, NewObject<UIJPAbility_Smash>(GetTransientPackage()));
+	Abilities->Equip(EIJPAbilitySlot::RunAbility, IJPAbilityTests::MakeGrow(1.f, 5.f));
+	Arena->GetPaddle(EIJPSide::Right)->GetController()->UnPossess();
+	Test.RunFor(1.1f);
+
+	// A timed effect isn't "armed": no cue.
+	UTEST_TRUE("Grow on", Abilities->TryActivate(EIJPAbilitySlot::RunAbility));
+	Test.Step();
+	UTEST_FALSE("No cue for a timed effect", Left->IsArmedCueShown());
+
+	// Arming: a two-note rising chirp and a pulsing halo.
+	UTEST_TRUE("Smash armed", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
+	UTEST_TRUE("First note", Tones->GetLastTone() == ToneSet.Arm);
+	Test.Step();
+	UTEST_TRUE("Cue up", Left->IsArmedCueShown());
+	const float Bright = Left->GetArmedCueStrength();
+	Test.RunFor(1.f / 6.f); // half a pulse at 3 Hz
+	const float Dim = Left->GetArmedCueStrength();
+	UTEST_TRUE("It pulses", Bright - Dim > 0.2f);
+	UTEST_TRUE("Second note, higher", Tones->GetLastTone().Frequency > ToneSet.Arm.Frequency);
+
+	// The smashed return uses it up, and the cue goes.
+	Ball->Serve(EIJPSide::Left, 0.f);
+	UTEST_TRUE("Returned", IJPAbilityTests::RunUntil(Test, 2.f, [Ball] { return Ball->GetRallyHits() >= 1; }));
+	Test.Step();
+	UTEST_FALSE("Cue gone after the hit", Left->IsArmedCueShown());
 	return true;
 }
 

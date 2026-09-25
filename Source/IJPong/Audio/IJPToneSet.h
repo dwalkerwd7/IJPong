@@ -44,6 +44,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones")
 	FIJPTone Goal = { 122.f, 0.35f, 0.3f };
 
+	/** Arming a skill (Smash, Curve shot, Split): this, then a second note ArmRise times higher. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones")
+	FIJPTone Arm = { 740.f, 0.04f, 0.15f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones", meta = (ClampMin = "0.1"))
+	float ArmRise = 1.5f;
+
 	/** The blip of chat-bubble text typing out (the opponent's is pitched a little lower). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones")
 	FIJPTone Talk = { 660.f, 0.015f, 0.1f };

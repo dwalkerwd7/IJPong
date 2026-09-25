@@ -55,6 +55,9 @@ public:
 	/** Still doing something: armed, or a timed effect running. */
 	virtual bool IsActive() const { return false; }
 
+	/** Waiting to change the paddle's next hit (Smash, Curve shot, Split). The paddle shows a cue while any is. */
+	virtual bool IsArmed() const { return false; }
+
 	/** Every frame while equipped. */
 	virtual void TickAbility(float DeltaSeconds) {}
 

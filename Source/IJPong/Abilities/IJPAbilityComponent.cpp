@@ -1,7 +1,12 @@
 // It's Just Pong
 
 #include "Abilities/IJPAbilityComponent.h"
+#include "Audio/IJPToneSet.h"
+#include "Audio/IJPToneSynthComponent.h"
+#include "Engine/World.h"
+#include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPPaddle.h"
+#include "TimerManager.h"
 
 namespace
 {
@@ -58,6 +63,10 @@ bool UIJPAbilityComponent::TryActivate(EIJPAbilitySlot Slot)
 	UIJPAbility* Ability = Abilities[Index];
 	Ability->Activate();
 	Cooldowns[Index] = Ability->Cooldown;
+	if (Ability->IsArmed())
+	{
+		PlayArmChirp();
+	}
 	OnActivated.Broadcast(Slot, Ability);
 	return true;
 }
@@ -76,6 +85,41 @@ bool UIJPAbilityComponent::IsReady(EIJPAbilitySlot Slot) const
 {
 	const UIJPAbility* Ability = GetAbility(Slot);
 	return Ability && GetCooldownRemaining(Slot) <= 0.f && Ability->CanActivate();
+}
+
+bool UIJPAbilityComponent::IsArmed() const
+{
+	for (const UIJPAbility* Ability : Abilities)
+	{
+		if (Ability && Ability->IsArmed())
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void UIJPAbilityComponent::PlayArmChirp()
+{
+	const AIJPPaddle* Paddle = GetPaddle();
+	AIJPArena* Arena = Paddle ? Paddle->GetArena() : nullptr;
+	if (!Arena)
+	{
+		return;
+	}
+
+	const UIJPToneSet& ToneSet = Arena->GetToneSet();
+	FIJPTone Second = ToneSet.Arm;
+	Second.Frequency *= ToneSet.ArmRise;
+	Arena->GetTones()->PlayTone(ToneSet.Arm);
+	TWeakObjectPtr<AIJPArena> WeakArena = Arena;
+	GetWorld()->GetTimerManager().SetTimer(ChirpTimer, [WeakArena, Second]
+	{
+		if (WeakArena.IsValid())
+		{
+			WeakArena->GetTones()->PlayTone(Second);
+		}
+	}, FMath::Max(ToneSet.Arm.Duration, UE_KINDA_SMALL_NUMBER), false);
 }
 
 void UIJPAbilityComponent::HandleBallHit(AIJPBall& Ball)

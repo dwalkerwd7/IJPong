@@ -46,6 +46,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Abilities")
 	bool IsReady(EIJPAbilitySlot Slot) const;
 
+	/** Any equipped ability is armed, waiting for the paddle's next hit. */
+	UFUNCTION(BlueprintPure, Category = "Abilities")
+	bool IsArmed() const;
+
 	/** The owning paddle just returned Ball. */
 	void HandleBallHit(AIJPBall& Ball);
 
@@ -58,9 +62,13 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
+	/** The rising two-note chirp that confirms a skill is armed. */
+	void PlayArmChirp();
+
 	/** One entry per EIJPAbilitySlot. */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UIJPAbility>> Abilities;
 
 	TArray<float> Cooldowns;
+	FTimerHandle ChirpTimer;
 };

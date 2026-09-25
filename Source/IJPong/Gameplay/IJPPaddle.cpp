@@ -9,6 +9,7 @@
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPPaddleClass.h"
 #include "Gameplay/IJPPaddleProfile.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "UObject/ConstructorHelpers.h"
 
 AIJPPaddle::AIJPPaddle()
@@ -26,6 +27,14 @@ AIJPPaddle::AIJPPaddle()
 	Visual->SetStaticMesh(CubeMesh.Object);
 	Visual->CastShadow = false;
 	IJP::ConfigureAsVisualOnly(Visual);
+
+	// Just behind the paddle (which fills -VisualDepth/2..+VisualDepth/2 in depth), hidden until armed.
+	ArmedHalo = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ArmedHalo"));
+	ArmedHalo->SetupAttachment(Collision);
+	ArmedHalo->SetStaticMesh(CubeMesh.Object);
+	ArmedHalo->CastShadow = false;
+	ArmedHalo->SetVisibility(false);
+	IJP::ConfigureAsVisualOnly(ArmedHalo);
 
 	Abilities = CreateDefaultSubobject<UIJPAbilityComponent>(TEXT("Abilities"));
 
@@ -55,6 +64,12 @@ void AIJPPaddle::InitPaddle(AIJPArena* InArena, EIJPSide InSide, float InLaneX, 
 	PendingInput = 0.f;
 
 	Visual->SetMaterial(0, InArena->GetPaletteMaterial(InSide == EIJPSide::Left ? EIJPPaletteRole::LeftPaddle : EIJPPaletteRole::RightPaddle));
+	// The halo has its own instance: it pulses without touching the paddle's shared colour.
+	if (UMaterialInterface* Base = InArena->GetBaseMaterial())
+	{
+		ArmedHaloMaterial = UMaterialInstanceDynamic::Create(Base, this);
+		ArmedHalo->SetMaterial(0, ArmedHaloMaterial);
+	}
 	SetPaddleClass(InClass);
 }
 
@@ -130,6 +145,9 @@ void AIJPPaddle::ApplyLayout()
 
 	const float CubeSize = 100.f; // /Engine/BasicShapes/Cube is 100 units, centred.
 	Visual->SetRelativeScale3D(FVector(Size.X / CubeSize, VisualDepth / CubeSize, Size.Y / CubeSize));
+	const FVector2D HaloSize = Size + FVector2D(ArmedHaloMargin * 2.f);
+	ArmedHalo->SetRelativeLocation(FVector(0.f, -VisualDepth * 0.5f - 1.f, 0.f));
+	ArmedHalo->SetRelativeScale3D(FVector(HaloSize.X / CubeSize, 1.f / CubeSize, HaloSize.Y / CubeSize));
 }
 
 void AIJPPaddle::Flicker()
@@ -141,6 +159,38 @@ void AIJPPaddle::Flicker()
 bool AIJPPaddle::IsVisualShown() const
 {
 	return Visual->IsVisible();
+}
+
+bool AIJPPaddle::IsArmedCueShown() const
+{
+	return ArmedHalo->IsVisible();
+}
+
+void AIJPPaddle::UpdateArmedCue(float DeltaSeconds)
+{
+	const bool bArmed = Abilities->IsArmed();
+	if (bArmed != ArmedHalo->IsVisible())
+	{
+		ArmedHalo->SetVisibility(bArmed);
+		ArmedTime = 0.f;
+	}
+	if (!bArmed || !Arena.IsValid())
+	{
+		ArmedCueStrength = 0.f;
+		return;
+	}
+
+	// Breathe between the dim and bright ends, starting bright so arming shows at once.
+	ArmedTime += DeltaSeconds;
+	const float Wave = 0.5f + 0.5f * FMath::Cos(2.f * PI * ArmedPulseRate * ArmedTime);
+	ArmedCueStrength = FMath::Lerp(ArmedPulseRange.X, ArmedPulseRange.Y, Wave);
+	if (ArmedHaloMaterial)
+	{
+		static const FName ColorParam(TEXT("Color"));
+		const FIJPPalette& Palette = Arena->GetPalette();
+		const FLinearColor PaddleColour = Side == EIJPSide::Left ? Palette.LeftPaddle : Palette.RightPaddle;
+		ArmedHaloMaterial->SetVectorParameterValue(ColorParam, PaddleColour * ArmedCueStrength);
+	}
 }
 
 void AIJPPaddle::AddMoveInput(float Value)
@@ -200,6 +250,8 @@ void AIJPPaddle::Tick(float DeltaSeconds)
 		Velocity = 0.f;
 		DashTimeLeft = 0.f;
 	}
+
+	UpdateArmedCue(DeltaSeconds);
 
 	UpdateTransform();
 }

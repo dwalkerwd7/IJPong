@@ -12,6 +12,7 @@ class AIJPArena;
 class UBoxComponent;
 class UIJPAbilityComponent;
 class UIJPSpeechBubbleComponent;
+class UMaterialInstanceDynamic;
 class UIJPPaddleClass;
 class UIJPPaddleProfile;
 class UStaticMeshComponent;
@@ -56,6 +57,14 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	bool IsVisualShown() const;
+
+	/** The armed cue (a pulsing halo) is up: a skill is waiting for this paddle's next hit. */
+	UFUNCTION(BlueprintPure, Category = "Paddle")
+	bool IsArmedCueShown() const;
+
+	/** The halo's current brightness, as a fraction of the paddle's colour (0 when hidden). */
+	UFUNCTION(BlueprintPure, Category = "Paddle")
+	float GetArmedCueStrength() const { return ArmedCueStrength; }
 
 	/** Accumulates move input for this frame (+1 = up the screen). Consumed on the paddle's next tick. */
 	UFUNCTION(BlueprintCallable, Category = "Paddle")
@@ -108,6 +117,17 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Layout")
 	float VisualDepth = 10.f;
 
+	/** How far the armed halo reaches past the paddle's edges. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Presentation", meta = (ClampMin = "0"))
+	float ArmedHaloMargin = 4.f;
+
+	/** Armed halo pulses per second, and its dimmest and brightest (fractions of the paddle's colour). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Presentation", meta = (ClampMin = "0.1", Units = "Hz"))
+	float ArmedPulseRate = 3.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Presentation", meta = (ClampMin = "0", ClampMax = "1"))
+	FVector2D ArmedPulseRange = FVector2D(0.15f, 0.5f);
+
 	/** Thickness of the ball-blocking box toward the camera; matches the arena's blockers. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Layout")
 	float BlockerDepth = 200.f;
@@ -121,6 +141,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
 	TObjectPtr<UIJPAbilityComponent> Abilities;
 
+	/** The glow behind the paddle while a skill is armed. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
+	TObjectPtr<UStaticMeshComponent> ArmedHalo;
+
 	/** What this paddle says (rival banter, the player's replies). */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
 	TObjectPtr<UIJPSpeechBubbleComponent> SpeechBubble;
@@ -128,6 +152,7 @@ protected:
 private:
 	void ApplyLayout();
 	void UpdateTransform();
+	void UpdateArmedCue(float DeltaSeconds);
 	/** Keep the paddle between the walls. True if it had to move. */
 	bool ClampToWalls();
 
@@ -146,4 +171,9 @@ private:
 	float LastMoveSign = 1.f;
 	float DashVelocity = 0.f;
 	float DashTimeLeft = 0.f;
+	float ArmedTime = 0.f;
+	float ArmedCueStrength = 0.f;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> ArmedHaloMaterial;
 };
