@@ -62,6 +62,15 @@ void AIJPPlayerController::SetupInputComponent()
 	if (UInputAction* ClassSkill = Settings->ClassSkillAction.LoadSynchronous())
 	{
 		EnhancedInput->BindAction(ClassSkill, ETriggerEvent::Started, this, &AIJPPlayerController::HandleClassSkill);
+		EnhancedInput->BindAction(ClassSkill, ETriggerEvent::Completed, this, &AIJPPlayerController::HandleClassSkillReleased);
+	}
+	if (UInputAction* Aim = Settings->AimAction.LoadSynchronous())
+	{
+		EnhancedInput->BindAction(Aim, ETriggerEvent::Triggered, this, &AIJPPlayerController::HandleAim);
+	}
+	if (UInputAction* AimMouse = Settings->AimMouseAction.LoadSynchronous())
+	{
+		EnhancedInput->BindAction(AimMouse, ETriggerEvent::Triggered, this, &AIJPPlayerController::HandleAimMouse);
 	}
 	if (UInputAction* UIStep = Settings->UIStepAction.LoadSynchronous())
 	{
@@ -106,6 +115,33 @@ void AIJPPlayerController::HandleClassSkill()
 	if (AIJPPaddle* Paddle = GetPawn<AIJPPaddle>())
 	{
 		Paddle->GetAbilities()->TryActivate(EIJPAbilitySlot::ClassSkill);
+	}
+}
+
+void AIJPPlayerController::HandleClassSkillReleased()
+{
+	if (AIJPPaddle* Paddle = GetPawn<AIJPPaddle>())
+	{
+		Paddle->GetAbilities()->Release(EIJPAbilitySlot::ClassSkill);
+	}
+}
+
+void AIJPPlayerController::HandleAim(const FInputActionValue& Value)
+{
+	// A stick points where to aim; ignore it near the centre so letting go doesn't snap the aim.
+	const FVector2D Stick = Value.Get<FVector2D>();
+	AIJPPaddle* Paddle = GetPawn<AIJPPaddle>();
+	if (Paddle && Stick.SizeSquared() > 0.3f * 0.3f)
+	{
+		Paddle->SetAimDirection(Stick);
+	}
+}
+
+void AIJPPlayerController::HandleAimMouse(const FInputActionValue& Value)
+{
+	if (AIJPPaddle* Paddle = GetPawn<AIJPPaddle>())
+	{
+		Paddle->AddAimAngle(Value.Get<FVector2D>().Y * GetDefault<UIJPInputSettings>()->MouseAimSensitivity);
 	}
 }
 

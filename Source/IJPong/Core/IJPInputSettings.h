@@ -34,6 +34,18 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Input")
 	TSoftObjectPtr<UInputAction> ClassSkillAction;
 
+	/** Axis2D: aim with a stick (right stick), a direction on screen. */
+	UPROPERTY(Config, EditAnywhere, Category = "Input")
+	TSoftObjectPtr<UInputAction> AimAction;
+
+	/** Axis2D: mouse movement, which nudges the aim up and down. */
+	UPROPERTY(Config, EditAnywhere, Category = "Input")
+	TSoftObjectPtr<UInputAction> AimMouseAction;
+
+	/** Degrees of aim per unit of mouse movement. */
+	UPROPERTY(Config, EditAnywhere, Category = "Input", meta = (ClampMin = "0"))
+	float MouseAimSensitivity = 0.5f;
+
 	/** Digital: use the paddle's run ability. */
 	UPROPERTY(Config, EditAnywhere, Category = "Input")
 	TSoftObjectPtr<UInputAction> RunAbilityAction;

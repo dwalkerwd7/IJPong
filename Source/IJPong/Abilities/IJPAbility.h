@@ -77,6 +77,9 @@ public:
 	 */
 	virtual bool WantsAIUse() const { return false; }
 
+	/** The slot's button was let go (the player's; the AI never holds one). */
+	virtual void OnButtonReleased() {}
+
 	/** Just equipped (Init done). */
 	virtual void OnEquipped() {}
 

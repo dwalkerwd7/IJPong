@@ -108,6 +108,20 @@ public:
 	bool IsPiercing() const { return bPiercing; }
 
 	/**
+	 * Stick to Holder's face where it touches now, following the paddle, until Release. Still in
+	 * play (no goal, no serve), just not moving. For abilities like the Catcher's catch.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Ball")
+	void Hold(AIJPPaddle* Holder);
+
+	/** Let go of a held ball, flying off at InVelocity (plane space). */
+	UFUNCTION(BlueprintCallable, Category = "Ball")
+	void Release(const FVector2D& InVelocity);
+
+	UFUNCTION(BlueprintPure, Category = "Ball")
+	bool IsHeld() const { return HeldBy.IsValid(); }
+
+	/**
 	 * Jump to NewPosition (plane space) mid-flight, keeping everything else: speed, direction, curve,
 	 * boost, rally. For rival abilities like Warp. Does nothing out of play.
 	 */
@@ -232,5 +246,8 @@ private:
 	float CurveBend = 0.f;
 	int32 RallyHits = 0;
 	bool bPiercing = false;
+	/** The paddle holding the ball (Hold), and where on it. */
+	TWeakObjectPtr<AIJPPaddle> HeldBy;
+	FVector2D HoldOffset = FVector2D::ZeroVector;
 	bool bInPlay = false;
 };

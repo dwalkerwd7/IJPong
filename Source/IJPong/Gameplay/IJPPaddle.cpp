@@ -36,6 +36,13 @@ AIJPPaddle::AIJPPaddle()
 	ArmedHalo->SetVisibility(false);
 	IJP::ConfigureAsVisualOnly(ArmedHalo);
 
+	AimLine = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AimLine"));
+	AimLine->SetupAttachment(Collision);
+	AimLine->SetStaticMesh(CubeMesh.Object);
+	AimLine->CastShadow = false;
+	AimLine->SetVisibility(false);
+	IJP::ConfigureAsVisualOnly(AimLine);
+
 	Abilities = CreateDefaultSubobject<UIJPAbilityComponent>(TEXT("Abilities"));
 
 	SpeechBubble = CreateDefaultSubobject<UIJPSpeechBubbleComponent>(TEXT("SpeechBubble"));
@@ -64,6 +71,7 @@ void AIJPPaddle::InitPaddle(AIJPArena* InArena, EIJPSide InSide, float InLaneX, 
 	PendingInput = 0.f;
 
 	Visual->SetMaterial(0, InArena->GetPaletteMaterial(InSide == EIJPSide::Left ? EIJPPaletteRole::LeftPaddle : EIJPPaletteRole::RightPaddle));
+	AimLine->SetMaterial(0, Visual->GetMaterial(0));
 	// The halo has its own instance: it pulses without touching the paddle's shared colour.
 	if (UMaterialInterface* Base = InArena->GetBaseMaterial())
 	{
@@ -166,6 +174,40 @@ void AIJPPaddle::Flicker()
 bool AIJPPaddle::IsVisualShown() const
 {
 	return Visual->IsVisible();
+}
+
+void AIJPPaddle::SetAimDirection(const FVector2D& Direction)
+{
+	const float TowardNet = -IJP::SideSign(Side);
+	SetAimAngle(FMath::RadiansToDegrees(FMath::Atan2(Direction.Y, Direction.X * TowardNet)));
+}
+
+FVector2D AIJPPaddle::AimAngleToDirection(float Degrees) const
+{
+	const float Radians = FMath::DegreesToRadians(Degrees);
+	return FVector2D(-IJP::SideSign(Side) * FMath::Cos(Radians), FMath::Sin(Radians));
+}
+
+void AIJPPaddle::ShowAim(const FVector2D& From, float Degrees, float Length)
+{
+	// Same local axes as the arena (X = plane X, Z = plane Y), just in front of the paddle.
+	const float CubeSize = 100.f;
+	const FVector2D Direction = AimAngleToDirection(Degrees);
+	const FVector2D Centre = From + Direction * Length * 0.5f - GetPlanePosition();
+	AimLine->SetRelativeLocation(FVector(Centre.X, VisualDepth * 0.5f + 1.f, Centre.Y));
+	AimLine->SetRelativeRotation(FRotator(FMath::RadiansToDegrees(FMath::Atan2(Direction.Y, Direction.X)), 0.f, 0.f));
+	AimLine->SetRelativeScale3D(FVector(Length / CubeSize, 1.f / CubeSize, AimLineThickness / CubeSize));
+	AimLine->SetVisibility(true);
+}
+
+void AIJPPaddle::HideAim()
+{
+	AimLine->SetVisibility(false);
+}
+
+bool AIJPPaddle::IsAimShown() const
+{
+	return AimLine->IsVisible();
 }
 
 bool AIJPPaddle::IsArmedCueShown() const

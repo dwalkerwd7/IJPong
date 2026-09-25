@@ -123,6 +123,14 @@ void UIJPAbilityComponent::PlayWarning()
 	}
 }
 
+void UIJPAbilityComponent::Release(EIJPAbilitySlot Slot)
+{
+	if (UIJPAbility* Ability = GetAbility(Slot))
+	{
+		Ability->OnButtonReleased();
+	}
+}
+
 void UIJPAbilityComponent::LockSlot(EIJPAbilitySlot Slot, float Seconds)
 {
 	float& Lock = Locks[static_cast<int32>(Slot)];

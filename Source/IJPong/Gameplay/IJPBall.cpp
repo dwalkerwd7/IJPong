@@ -113,6 +113,7 @@ void AIJPBall::Serve(EIJPSide Toward, float AngleDeg)
 	Accumulator = 0.f;
 	RallyHits = 0;
 	bPiercing = false;
+	HeldBy.Reset();
 	bInPlay = true;
 
 	SetActorHiddenInGame(false);
@@ -142,6 +143,33 @@ void AIJPBall::Curve(float DegreesPerSecond, float Duration, float BendUp)
 		CurveTimeLeft = Duration;
 		CurveBend = BendUp >= 0.f ? 1.f : -1.f;
 	}
+}
+
+void AIJPBall::Hold(AIJPPaddle* Holder)
+{
+	if (!bInPlay || !Holder)
+	{
+		return;
+	}
+	HeldBy = Holder;
+	HoldOffset = Position - Holder->GetPlanePosition();
+	Velocity = FVector2D::ZeroVector;
+	CurveTimeLeft = 0.f;
+	Accumulator = 0.f;
+}
+
+void AIJPBall::Release(const FVector2D& InVelocity)
+{
+	if (!HeldBy.IsValid())
+	{
+		return;
+	}
+	HeldBy.Reset();
+	Velocity = InVelocity;
+	Speed = InVelocity.Size();
+	// An aimed shot may be steeper than a bounce could make it; walls mustn't flatten it.
+	const float AngleDeg = FMath::RadiansToDegrees(FMath::Atan2(FMath::Abs(InVelocity.Y), FMath::Abs(InVelocity.X)));
+	AngleLimitDeg = FMath::Max(AngleLimitDeg, AngleDeg);
 }
 
 void AIJPBall::Warp(const FVector2D& NewPosition)
@@ -189,6 +217,7 @@ void AIJPBall::Launch(const FVector2D& InPosition, const FVector2D& InVelocity)
 	Accumulator = 0.f;
 	RallyHits = 0;
 	bPiercing = false;
+	HeldBy.Reset();
 	bInPlay = true;
 
 	SetActorHiddenInGame(false);
@@ -216,6 +245,7 @@ void AIJPBall::ResetBall()
 	CurveTimeLeft = 0.f;
 	Accumulator = 0.f;
 	RallyHits = 0;
+	HeldBy.Reset();
 	bInPlay = false;
 
 	SetActorHiddenInGame(true);
@@ -231,6 +261,16 @@ void AIJPBall::Tick(float DeltaSeconds)
 
 	if (!bInPlay || !Arena.IsValid())
 	{
+		return;
+	}
+
+	// Held: riding on the paddle's face, clamped to its length (it may shrink).
+	if (const AIJPPaddle* Holder = HeldBy.Get())
+	{
+		const float MaxOffsetY = FMath::Max(Holder->GetSize().Y * 0.5f - GetSize() * 0.5f, 0.f);
+		HoldOffset.Y = FMath::Clamp(HoldOffset.Y, -MaxOffsetY, MaxOffsetY);
+		Position = PreviousPosition = Holder->GetPlanePosition() + HoldOffset;
+		UpdateDrawnTransform(1.f);
 		return;
 	}
 

@@ -35,6 +35,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
 	void SetCooldownScale(EIJPAbilitySlot Slot, float Scale);
 
+	/** Let go of the slot's button (for abilities that act on release, like the catch). */
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+	void Release(EIJPAbilitySlot Slot);
+
 	/** Press the slot's button. True if the ability activated. */
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
 	bool TryActivate(EIJPAbilitySlot Slot);

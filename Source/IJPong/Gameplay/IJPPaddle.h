@@ -134,6 +134,32 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	UIJPAbilityComponent* GetAbilities() const { return Abilities; }
 
+	/** Where this paddle aims: degrees from straight at the other goal, + = up the screen. For the Catcher. */
+	UFUNCTION(BlueprintCallable, Category = "Paddle|Aim")
+	void SetAimAngle(float Degrees) { AimAngle = FMath::Clamp(Degrees, -89.f, 89.f); }
+
+	/** Nudge the aim (e.g. from mouse movement). */
+	UFUNCTION(BlueprintCallable, Category = "Paddle|Aim")
+	void AddAimAngle(float Degrees) { SetAimAngle(AimAngle + Degrees); }
+
+	/** Aim along a direction on screen (plane space: X right, Y up), e.g. a stick. Backwards clamps to straight up/down. */
+	UFUNCTION(BlueprintCallable, Category = "Paddle|Aim")
+	void SetAimDirection(const FVector2D& Direction);
+
+	UFUNCTION(BlueprintPure, Category = "Paddle|Aim")
+	float GetAimAngle() const { return AimAngle; }
+
+	/** Plane direction for an aim angle from this paddle (toward the other goal). */
+	FVector2D AimAngleToDirection(float Degrees) const;
+
+	/** Show the aim line from From (plane space) at Degrees (as GetAimAngle), Length long. */
+	void ShowAim(const FVector2D& From, float Degrees, float Length);
+
+	void HideAim();
+
+	UFUNCTION(BlueprintPure, Category = "Paddle|Aim")
+	bool IsAimShown() const;
+
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	UIJPSpeechBubbleComponent* GetSpeechBubble() const { return SpeechBubble; }
 
@@ -169,6 +195,13 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
 	TObjectPtr<UStaticMeshComponent> ArmedHalo;
 
+	/** A thin line showing where a held ball will go (the Catcher). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
+	TObjectPtr<UStaticMeshComponent> AimLine;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Presentation", meta = (ClampMin = "0.5"))
+	float AimLineThickness = 2.f;
+
 	/** What this paddle says (rival banter, the player's replies). */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
 	TObjectPtr<UIJPSpeechBubbleComponent> SpeechBubble;
@@ -195,6 +228,7 @@ private:
 	float RunSpeedScale = 1.f;
 	float SpeedScale = 1.f;
 	float ReturnAngleBonus = 0.f;
+	float AimAngle = 0.f;
 	/** +1 or -1: the way the paddle was last steered. */
 	float LastMoveSign = 1.f;
 	float DashVelocity = 0.f;
