@@ -137,6 +137,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Look", meta = (EditCondition = "bShowSprites"))
 	bool bClassicBallSprites = false;
 
+	/**
+	 * How quickly rivals react in this era, as a multiple of their AI profile's reaction time at the
+	 * fight's skill (1 = as tuned; 0.75 = a quarter quicker). Later eras react faster.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Rivals", meta = (ClampMin = "0.1", ClampMax = "2"))
+	float AIReactionScale = 1.f;
+
 	/** Scenery behind the court (eras with sprites): one picked at random for each fight. Empty = a plain screen. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Look", meta = (EditCondition = "bShowSprites"))
 	TArray<TObjectPtr<UIJPBackdrop>> Backdrops;

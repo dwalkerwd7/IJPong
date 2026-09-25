@@ -225,4 +225,20 @@ bool FIJPGoalKeepsPaddleMovingTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPEraReactionTest, "IJPong.AI.LaterErasReactFaster", IJPMultiBallTests::Flags)
+bool FIJPEraReactionTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPArena* Arena = Test.GetArena();
+	AIJPPaddleAIController* AI = Cast<AIJPPaddleAIController>(Arena->GetPaddle(EIJPSide::Right)->GetController());
+	UTEST_NOT_NULL("Right paddle has an AI", AI);
+	const float Tuned = AI->GetReactionTime();
+
+	UIJPEra* Later = NewObject<UIJPEra>(GetTransientPackage());
+	Later->AIReactionScale = 0.75f;
+	UIJPEraSubsystem::Get(Arena)->SetEra(Later);
+	UTEST_EQUAL_TOLERANCE("A quarter quicker", AI->GetReactionTime(), Tuned * 0.75f, 0.0001f);
+	return true;
+}
+
 #endif

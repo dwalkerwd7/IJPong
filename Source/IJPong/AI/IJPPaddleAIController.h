@@ -53,6 +53,10 @@ public:
 
 	void ClearReadTarget();
 
+	/** Seconds between its looks at the ball: its profile's reaction time at its skill, times the era's AIReactionScale. */
+	UFUNCTION(BlueprintPure, Category = "AI")
+	float GetReactionTime() const;
+
 	bool HasReadTarget() const { return bHasReadTarget; }
 
 	/** Where the paddle is currently heading (plane Y). */

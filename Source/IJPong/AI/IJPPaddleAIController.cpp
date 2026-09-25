@@ -1,6 +1,8 @@
 // It's Just Pong
 
 #include "AI/IJPPaddleAIController.h"
+#include "Era/IJPEraSubsystem.h"
+#include "Era/IJPEra.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "AI/IJPAIProfile.h"
 #include "Core/IJPTypes.h"
@@ -69,11 +71,18 @@ void AIJPPaddleAIController::Tick(float DeltaSeconds)
 	else if (DecisionTimer <= 0.f)
 	{
 		Decide(*Paddle, PickIncomingBall(*Paddle));
-		DecisionTimer = FMath::Max(DecisionTimer + GetProfile().ReactionTime.At(Skill), 0.f);
+		DecisionTimer = FMath::Max(DecisionTimer + GetReactionTime(), 0.f);
 	}
 
 	Steer(*Paddle);
 	UseAbilities(*Paddle);
+}
+
+float AIJPPaddleAIController::GetReactionTime() const
+{
+	// The profile's time at this skill, quickened (or slowed) by the era.
+	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
+	return GetProfile().ReactionTime.At(Skill) * (Era ? Era->AIReactionScale : 1.f);
 }
 
 void AIJPPaddleAIController::ClearReadTarget()
