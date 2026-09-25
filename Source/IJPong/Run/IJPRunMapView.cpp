@@ -8,6 +8,8 @@
 #include "Engine/StaticMesh.h"
 #include "Gameplay/IJPArena.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Meta/IJPMetaSubsystem.h"
+#include "Meta/IJPSkillTree.h"
 #include "Presentation/IJPCRTComponent.h"
 #include "Run/IJPActConfig.h"
 #include "Run/IJPRunSubsystem.h"
@@ -143,7 +145,13 @@ void AIJPRunMapView::Init(AIJPArena* InArena)
 	Header->SetRelativeLocation(FVector(0.f, TextDepth, HalfScreen.Y - 28.f));
 	Footer->SetRelativeLocation(FVector(0.f, TextDepth, -HalfScreen.Y + 24.f));
 
-	CursorBlinker.Start(this, 0.25f, 0, true, [this](bool bShow) { Cursor->SetVisibility(bShow && (bShowingCards ? NumCards > 0 : !Reachable.IsEmpty())); });
+	InfoText = MakeText(CardTextSize);
+	StartText = MakeText(TextSize);
+	CursorBlinker.Start(this, 0.25f, 0, true, [this](bool bShow)
+	{
+		const bool bHasPick = ShownTree ? !TreeOrder.IsEmpty() : bShowingCards ? NumCards > 0 : !Reachable.IsEmpty();
+		Cursor->SetVisibility(bShow && bHasPick);
+	});
 	Refresh();
 }
 
@@ -157,6 +165,7 @@ void AIJPRunMapView::Refresh()
 	ApplyColours();
 	ClearDrawing();
 	bShowingCards = false;
+	ShownTree = nullptr;
 
 	const FIJPRunMap& Map = Run->GetMap();
 	Reachable = Run->GetReachableNodes();
@@ -216,6 +225,7 @@ void AIJPRunMapView::ShowCards(const FString& Heading, const TArray<FCard>& Card
 	ApplyColours();
 	ClearDrawing();
 	bShowingCards = true;
+	ShownTree = nullptr;
 	NumCards = Cards.Num();
 	SelectedCard = 0;
 
@@ -250,7 +260,12 @@ void AIJPRunMapView::ShowCards(const FString& Heading, const TArray<FCard>& Card
 
 void AIJPRunMapView::Step(int32 Direction)
 {
-	if (bShowingCards)
+	if (ShownTree)
+	{
+		TreeSelected = FMath::Clamp(TreeSelected + Direction, 0, FMath::Max(TreeOrder.Num() - 1, 0));
+		ShowTree(ShownTree, false); // the info line follows the pick
+	}
+	else if (bShowingCards)
 	{
 		SelectedCard = FMath::Clamp(SelectedCard + Direction, 0, FMath::Max(NumCards - 1, 0));
 		PlaceCursor();
@@ -276,6 +291,128 @@ void AIJPRunMapView::ClearDrawing()
 	{
 		Text->SetVisibility(false);
 	}
+	for (UTextRenderComponent* Text : { InfoText.Get(), StartText.Get() })
+	{
+		if (Text)
+		{
+			Text->SetVisibility(false);
+		}
+	}
+}
+
+void AIJPRunMapView::ShowTree(const UIJPSkillTree* Tree, bool bResetPick)
+{
+	const UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(this);
+	if (!Tree || !Meta || !Arena.IsValid())
+	{
+		return;
+	}
+	ApplyColours();
+	ClearDrawing();
+	bShowingCards = false;
+	ShownTree = Tree;
+
+	// Pick order: branch by branch, top down, then START RUN.
+	TreeOrder.Reset();
+	for (int32 Branch = 0; Branch < 3; ++Branch)
+	{
+		TArray<int32> InBranch;
+		for (int32 i = 0; i < Tree->Nodes.Num(); ++i)
+		{
+			if (Tree->Nodes[i].Branch == Branch)
+			{
+				InBranch.Add(i);
+			}
+		}
+		InBranch.Sort([Tree](int32 A, int32 B) { return Tree->GetDepth(A) < Tree->GetDepth(B); });
+		TreeOrder.Append(InBranch);
+	}
+	TreeOrder.Add(INDEX_NONE);
+	TreeSelected = bResetPick ? 0 : FMath::Clamp(TreeSelected, 0, TreeOrder.Num() - 1);
+
+	// The root: the class skill itself, always owned.
+	const FIJPPalette& Palette = Arena->GetPalette();
+	while (Glyphs.Num() < Tree->Nodes.Num() + 1)
+	{
+		Glyphs.Add(MakeText(GlyphSize));
+	}
+	auto PlaceGlyph = [&](UTextRenderComponent* Text, const TCHAR* Letter, const FVector2D& At, float Scale)
+	{
+		Text->SetText(FText::FromString(Letter));
+		Text->SetTextRenderColor(Scaled(Palette.Score, Scale).ToFColor(true));
+		Text->SetRelativeLocation(FVector(At.X, TextDepth, At.Y));
+		Text->SetVisibility(true);
+	};
+	const FVector2D RootAt = TreeRootPosition();
+	AddFrame(BrightPieces, RootAt, NodeSize * 1.2f, NodeSize * 1.2f);
+	PlaceGlyph(Glyphs[0], TEXT("S"), RootAt, 1.f);
+
+	// Bright: owned. Mid: can buy now. Dim: not yet.
+	for (int32 i = 0; i < Tree->Nodes.Num(); ++i)
+	{
+		const FIJPSkillNode& Node = Tree->Nodes[i];
+		const bool bOwned = Meta->IsOwned(Tree, i);
+		const bool bBuyable = Meta->CanBuy(Tree, i);
+		UInstancedStaticMeshComponent* Pieces = bOwned ? BrightPieces : bBuyable ? MidPieces : DimPieces;
+		const int32 Parent = Tree->FindNode(Node.Parent);
+		const FVector2D From = Parent == INDEX_NONE ? RootAt : TreeNodePosition(Parent);
+		const FVector2D At = TreeNodePosition(i);
+		AddDashes(Meta->IsOwned(Tree, i) ? MidPieces : DimPieces, From, At);
+		const float Size = Node.IsKeystone() ? NodeSize * 1.3f : NodeSize;
+		AddFrame(Pieces, At, Size, Size);
+		PlaceGlyph(Glyphs[i + 1], Node.IsKeystone() ? TEXT("K") : TEXT("+"), At, bOwned ? 1.f : bBuyable ? MidScale : DimScale);
+	}
+
+	// START RUN, bottom centre.
+	const FVector2D Start = TreeStartPosition();
+	AddFrame(BrightPieces, Start, 170.f, 36.f);
+	StartText->SetText(FText::FromString(TEXT("START RUN")));
+	StartText->SetTextRenderColor(Palette.Score.ToFColor(true));
+	StartText->SetRelativeLocation(FVector(Start.X, TextDepth, Start.Y));
+	StartText->SetVisibility(true);
+
+	// About the pick, above START RUN.
+	const int32 Picked = GetSelectedTreeNode();
+	FString Info = TEXT("START THE NEXT RUN");
+	if (Picked != INDEX_NONE)
+	{
+		const FIJPSkillNode& Node = Tree->Nodes[Picked];
+		const FString Price = Node.BossTokens > 0
+			? FString::Printf(TEXT("%d BOSS TOKEN%s"), Node.BossTokens, Node.BossTokens == 1 ? TEXT("") : TEXT("S"))
+			: FString::Printf(TEXT("%d SKILL PT%s"), Node.SkillPoints, Node.SkillPoints == 1 ? TEXT("") : TEXT("S"));
+		const FString Status = Meta->IsOwned(Tree, Picked) ? FString(TEXT("OWNED")) : Meta->CanBuy(Tree, Picked) ? Price : Price + TEXT(" - LOCKED");
+		Info = FString::Printf(TEXT("%s: %s\n%s"), *Node.DisplayName.ToString().ToUpper(), *Node.Description.ToString(), *Status);
+	}
+	InfoText->SetText(FText::FromString(Info));
+	InfoText->SetTextRenderColor(Palette.Score.ToFColor(true));
+	InfoText->SetRelativeLocation(FVector(0.f, TextDepth, Start.Y + 62.f));
+	InfoText->SetVisibility(true);
+
+	Header->SetText(FText::FromString(FString::Printf(TEXT("%s    SKILL PTS %d    BOSS TOKENS %d"),
+		*Tree->DisplayName.ToString().ToUpper(), Meta->GetSkillPoints(), Meta->GetBossTokens())));
+	PlaceCursor();
+}
+
+int32 AIJPRunMapView::GetSelectedTreeNode() const
+{
+	return TreeOrder.IsValidIndex(TreeSelected) ? TreeOrder[TreeSelected] : INDEX_NONE;
+}
+
+FVector2D AIJPRunMapView::TreeRootPosition() const
+{
+	return FVector2D(0.f, HalfScreen.Y - 80.f);
+}
+
+FVector2D AIJPRunMapView::TreeNodePosition(int32 Node) const
+{
+	// Branches as three columns under the root; each step down the branch a row lower.
+	const FIJPSkillNode& Data = ShownTree->Nodes[Node];
+	return FVector2D((Data.Branch - 1) * 220.f, TreeRootPosition().Y - (ShownTree->GetDepth(Node) + 1) * 58.f);
+}
+
+FVector2D AIJPRunMapView::TreeStartPosition() const
+{
+	return FVector2D(0.f, -HalfScreen.Y + 72.f);
 }
 
 FVector2D AIJPRunMapView::CardSize() const
@@ -397,7 +534,21 @@ void AIJPRunMapView::PlaceCursor()
 {
 	Cursor->ClearInstances();
 	bool bHasPick = false;
-	if (bShowingCards)
+	if (ShownTree)
+	{
+		bHasPick = !TreeOrder.IsEmpty();
+		const int32 Node = GetSelectedTreeNode();
+		if (Node == INDEX_NONE)
+		{
+			AddFrame(Cursor, TreeStartPosition(), 182.f, 48.f);
+		}
+		else
+		{
+			const float Size = (ShownTree->Nodes[Node].IsKeystone() ? NodeSize * 1.3f : NodeSize) + 12.f;
+			AddFrame(Cursor, TreeNodePosition(Node), Size, Size);
+		}
+	}
+	else if (bShowingCards)
 	{
 		bHasPick = NumCards > 0;
 		if (bHasPick)

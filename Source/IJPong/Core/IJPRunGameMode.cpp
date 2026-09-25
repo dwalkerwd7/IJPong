@@ -7,8 +7,10 @@
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPPaddle.h"
+#include "Gameplay/IJPPaddleClass.h"
 #include "Gameplay/IJPRival.h"
 #include "Meta/IJPMetaSubsystem.h"
+#include "Meta/IJPSkillTree.h"
 #include "GameFramework/PlayerController.h"
 #include "Narrative/IJPConversationPlayer.h"
 #include "Run/IJPActConfig.h"
@@ -58,7 +60,7 @@ void AIJPRunGameMode::StartNewRun(const UIJPActConfig* Act, int32 Seed, int32 In
 
 bool AIJPRunGameMode::HandleUIStep(int32 Direction)
 {
-	if (Phase != EIJPRunPhase::Map && Phase != EIJPRunPhase::Reward)
+	if (Phase != EIJPRunPhase::Map && Phase != EIJPRunPhase::Reward && Phase != EIJPRunPhase::Tree)
 	{
 		return false;
 	}
@@ -84,9 +86,33 @@ bool AIJPRunGameMode::HandleUIConfirm()
 		return true;
 	}
 	case EIJPRunPhase::Ended:
-		// Same act and health as the run that just ended, on a fresh map.
-		StartNewRun(RunAct, INDEX_NONE, RunStartingHealth);
+		if (const UIJPSkillTree* Tree = GetPlayerTree())
+		{
+			// Between runs: grow the class first.
+			Phase = EIJPRunPhase::Tree;
+			MapView->ShowTree(Tree, true);
+			MapView->SetFooter(TEXT("A / D  CHOOSE    SPACE  BUY / START"));
+			SetViewTarget(MapView);
+		}
+		else
+		{
+			StartNewRun(RunAct, INDEX_NONE, RunStartingHealth);
+		}
 		return true;
+	case EIJPRunPhase::Tree:
+	{
+		const int32 Node = MapView->GetSelectedTreeNode();
+		if (Node == INDEX_NONE)
+		{
+			// START RUN: same act and health as the run that just ended, on a fresh map.
+			StartNewRun(RunAct, INDEX_NONE, RunStartingHealth);
+		}
+		else if (UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(this); Meta && Meta->Buy(GetPlayerTree(), Node))
+		{
+			MapView->ShowTree(GetPlayerTree(), false);
+		}
+		return true;
+	}
 	default:
 		// Mid-match the button is the class skill again.
 		return false;
@@ -212,12 +238,28 @@ void AIJPRunGameMode::ApplyLoadout()
 		return;
 	}
 
+	// This run's pickups, plus what the class's skill tree gives every run.
 	const FIJPRunLoadout& Loadout = Run->GetLoadout();
-	Paddle->SetRunScales(1.f + Loadout.PaddleLengthBonus, 1.f + Loadout.PaddleSpeedBonus);
+	const UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(this);
+	const FIJPTreeBonuses Tree = Meta ? Meta->GetBonuses(GetPlayerTree()) : FIJPTreeBonuses();
+
+	Paddle->SetRunScales(1.f + Loadout.PaddleLengthBonus + Tree.PaddleLength, 1.f + Loadout.PaddleSpeedBonus + Tree.PaddleSpeed);
+	Paddle->SetReturnAngleBonus(Tree.ReturnAngle);
 	UIJPAbilityComponent* Abilities = Paddle->GetAbilities();
-	Abilities->SetCooldownScale(EIJPAbilitySlot::ClassSkill, FMath::Max(1.f - Loadout.ClassSkillCooldownCut, 0.1f));
+	Abilities->SetCooldownScale(EIJPAbilitySlot::ClassSkill, FMath::Max(1.f - Loadout.ClassSkillCooldownCut - Tree.SkillCooldownCut, 0.1f));
+	if (UIJPAbility* ClassSkill = Abilities->GetAbility(EIJPAbilitySlot::ClassSkill))
+	{
+		ClassSkill->SetUpgrades(Tree.SkillUpgrades);
+	}
 	Abilities->Equip(EIJPAbilitySlot::RunAbility, Loadout.RunAbility);
 	GetMatch()->SetExtraServedBalls(Loadout.ExtraServedBalls);
+}
+
+const UIJPSkillTree* AIJPRunGameMode::GetPlayerTree() const
+{
+	const AIJPPaddle* Paddle = GetArena() ? GetArena()->GetPaddle(PlayerSide) : nullptr;
+	const UIJPPaddleClass* PaddleClass = Paddle ? Paddle->GetPaddleClass() : nullptr;
+	return PaddleClass ? PaddleClass->SkillTree.Get() : nullptr;
 }
 
 void AIJPRunGameMode::ShowRewards()

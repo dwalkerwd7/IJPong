@@ -69,6 +69,17 @@ public:
 
 	AIJPPaddle* GetPaddle() const;
 
+	/**
+	 * Named upgrades on this equipped copy (from the class's skill tree). Each ability reads the
+	 * names it knows (e.g. Smash: Power, Curve, ExtraHits, Split); unknown names are ignored.
+	 */
+	void SetUpgrades(const TMap<FName, float>& InUpgrades) { Upgrades = InUpgrades; }
+
+	/** An upgrade's value, 0 if not set. */
+	float GetUpgrade(FName Name) const { return Upgrades.FindRef(Name); }
+
 private:
+	TMap<FName, float> Upgrades;
+
 	TWeakObjectPtr<UIJPAbilityComponent> Owner;
 };

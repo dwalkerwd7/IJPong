@@ -114,6 +114,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Paddle")
 	void SetRunScales(float Length, float Speed);
 
+	/** Degrees added to how steeply this paddle can return the ball (e.g. from a skill tree). */
+	UFUNCTION(BlueprintCallable, Category = "Paddle")
+	void SetReturnAngleBonus(float Degrees) { ReturnAngleBonus = Degrees; }
+
+	UFUNCTION(BlueprintPure, Category = "Paddle")
+	float GetReturnAngleBonus() const { return ReturnAngleBonus; }
+
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	UIJPAbilityComponent* GetAbilities() const { return Abilities; }
 
@@ -176,6 +183,7 @@ private:
 	float LengthScale = 1.f;
 	float RunLengthScale = 1.f;
 	float RunSpeedScale = 1.f;
+	float ReturnAngleBonus = 0.f;
 	/** +1 or -1: the way the paddle was last steered. */
 	float LastMoveSign = 1.f;
 	float DashVelocity = 0.f;

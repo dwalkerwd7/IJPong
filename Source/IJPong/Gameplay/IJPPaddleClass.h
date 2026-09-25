@@ -8,6 +8,7 @@
 
 class UIJPAbility;
 class UIJPPaddleProfile;
+class UIJPSkillTree;
 
 /**
  * A paddle class: who the paddle is. Its base stats (a profile), its fixed class skill, and later
@@ -30,4 +31,8 @@ public:
 	/** Always in the class-skill slot. Empty = none. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Class")
 	TObjectPtr<UIJPAbility> ClassSkill;
+
+	/** Grown between runs with the meta currencies. Empty = no tree yet. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Class")
+	TObjectPtr<UIJPSkillTree> SkillTree;
 };

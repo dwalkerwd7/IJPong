@@ -5,6 +5,7 @@
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "Meta/IJPMetaSave.h"
+#include "Meta/IJPSkillTree.h"
 
 void UIJPMetaSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -45,6 +46,69 @@ void UIJPMetaSubsystem::AddCurrency(int32 SkillPoints, int32 BossTokens)
 	SaveData->BossTokens = FMath::Max(SaveData->BossTokens + BossTokens, 0);
 	Save();
 	OnMetaChanged.Broadcast();
+}
+
+FString UIJPMetaSubsystem::NodeKey(const UIJPSkillTree& Tree, int32 Node)
+{
+	return Tree.GetName() + TEXT("/") + Tree.Nodes[Node].Id.ToString();
+}
+
+bool UIJPMetaSubsystem::IsOwned(const UIJPSkillTree* Tree, int32 Node) const
+{
+	return Tree && Tree->Nodes.IsValidIndex(Node) && SaveData->OwnedNodes.Contains(NodeKey(*Tree, Node));
+}
+
+bool UIJPMetaSubsystem::CanBuy(const UIJPSkillTree* Tree, int32 Node) const
+{
+	if (!Tree || !Tree->Nodes.IsValidIndex(Node) || IsOwned(Tree, Node))
+	{
+		return false;
+	}
+	const FIJPSkillNode& Data = Tree->Nodes[Node];
+	const int32 Parent = Tree->FindNode(Data.Parent);
+	const bool bParentOwned = Data.Parent.IsNone() || IsOwned(Tree, Parent);
+	return bParentOwned && SaveData->SkillPoints >= Data.SkillPoints && SaveData->BossTokens >= Data.BossTokens;
+}
+
+bool UIJPMetaSubsystem::Buy(const UIJPSkillTree* Tree, int32 Node)
+{
+	if (!CanBuy(Tree, Node))
+	{
+		return false;
+	}
+	const FIJPSkillNode& Data = Tree->Nodes[Node];
+	SaveData->SkillPoints -= Data.SkillPoints;
+	SaveData->BossTokens -= Data.BossTokens;
+	SaveData->OwnedNodes.Add(NodeKey(*Tree, Node));
+	Save();
+	OnMetaChanged.Broadcast();
+	return true;
+}
+
+FIJPTreeBonuses UIJPMetaSubsystem::GetBonuses(const UIJPSkillTree* Tree) const
+{
+	FIJPTreeBonuses Bonuses;
+	if (!Tree)
+	{
+		return Bonuses;
+	}
+	for (int32 i = 0; i < Tree->Nodes.Num(); ++i)
+	{
+		if (!IsOwned(Tree, i))
+		{
+			continue;
+		}
+		const FIJPSkillNode& Node = Tree->Nodes[i];
+		switch (Node.Effect)
+		{
+		case EIJPTreeEffect::PaddleLength:  Bonuses.PaddleLength += Node.Amount; break;
+		case EIJPTreeEffect::PaddleSpeed:   Bonuses.PaddleSpeed += Node.Amount; break;
+		case EIJPTreeEffect::SkillCooldown: Bonuses.SkillCooldownCut += Node.Amount; break;
+		case EIJPTreeEffect::ReturnAngle:   Bonuses.ReturnAngle += Node.Amount; break;
+		case EIJPTreeEffect::SkillUpgrade:  Bonuses.SkillUpgrades.FindOrAdd(Node.UpgradeName) += Node.Amount; break;
+		}
+	}
+	return Bonuses;
 }
 
 void UIJPMetaSubsystem::ResetProgress()

@@ -106,6 +106,7 @@ void AIJPBall::Serve(EIJPSide Toward, float AngleDeg)
 	Position = PreviousPosition = FVector2D::ZeroVector;
 	Speed = GetType().BaseSpeed;
 	UnboostedSpeed = 0.f;
+	AngleLimitDeg = MaxBounceAngleDeg;
 	CurveTimeLeft = 0.f;
 	FreezeLeft = 0.f;
 	Velocity = FVector2D(IJP::SideSign(Toward) * FMath::Cos(AngleRad), FMath::Sin(AngleRad)) * Speed;
@@ -184,6 +185,7 @@ void AIJPBall::ResetBall()
 	Velocity = FVector2D::ZeroVector;
 	Speed = 0.f;
 	UnboostedSpeed = 0.f;
+	AngleLimitDeg = MaxBounceAngleDeg;
 	CurveTimeLeft = 0.f;
 	Accumulator = 0.f;
 	RallyHits = 0;
@@ -234,7 +236,7 @@ void AIJPBall::Substep(float StepSeconds)
 		// Turn toward the bend. Rotating counter-clockwise lifts a ball moving right and drops one
 		// moving left, so the sign depends on which way it's going.
 		const float Turn = FMath::DegreesToRadians(CurveRate * StepSeconds) * CurveBend * FMath::Sign(Velocity.X);
-		Velocity = FIJPPongMath::ClampAngle(Velocity.GetRotated(FMath::RadiansToDegrees(Turn)), MaxBounceAngleDeg);
+		Velocity = FIJPPongMath::ClampAngle(Velocity.GetRotated(FMath::RadiansToDegrees(Turn)), AngleLimitDeg);
 		CurveTimeLeft -= StepSeconds;
 	}
 
@@ -310,7 +312,7 @@ void AIJPBall::HandleHit(const FHitResult& Hit)
 	{
 		CurveBend = -CurveBend;
 	}
-	Velocity = FIJPPongMath::ClampAngle(FIJPPongMath::Reflect(Velocity, Normal), MaxBounceAngleDeg);
+	Velocity = FIJPPongMath::ClampAngle(FIJPPongMath::Reflect(Velocity, Normal), AngleLimitDeg);
 	OnBounce.Broadcast();
 }
 
@@ -332,7 +334,8 @@ bool AIJPBall::TryPaddleBounce(AIJPPaddle* Paddle, const FVector2D& Normal)
 	const float RallySpeed = UnboostedSpeed > 0.f ? UnboostedSpeed : Speed;
 	UnboostedSpeed = 0.f;
 	Speed = FMath::Min(RallySpeed + GetType().SpeedPerHit, GetType().MaxSpeed);
-	Velocity = FIJPPongMath::ComputePaddleBounce(Offset, Speed, MaxBounceAngleDeg, -GoalDir);
+	AngleLimitDeg = FMath::Min(MaxBounceAngleDeg + Paddle->GetReturnAngleBonus(), 85.f);
+	Velocity = FIJPPongMath::ComputePaddleBounce(Offset, Speed, AngleLimitDeg, -GoalDir);
 	++RallyHits;
 	OnPaddleHit.Broadcast(this, Paddle);
 	return true;

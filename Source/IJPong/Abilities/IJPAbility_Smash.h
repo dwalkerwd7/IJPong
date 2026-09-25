@@ -9,6 +9,8 @@
 /**
  * Arm the paddle: its next return leaves much faster. One shot only: the hit after that goes
  * back to the rally's normal speed (see AIJPBall::Boost).
+ * Skill-tree upgrades it reads: Power (added to the multiplier), Curve (the smash bends),
+ * ExtraHits (that many more returns are smashed per activation), Split (the smash fans into two).
  */
 UCLASS()
 class IJPONG_API UIJPAbility_Smash : public UIJPAbility
@@ -22,12 +24,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Smash", meta = (ClampMin = "1"))
 	float SpeedMultiplier = 1.6f;
 
-	virtual void Activate() override { bArmed = true; }
-	virtual bool IsActive() const override { return bArmed; }
-	virtual bool IsArmed() const override { return bArmed; }
+	virtual void Activate() override;
+	virtual bool IsActive() const override { return HitsLeft > 0; }
+	virtual bool IsArmed() const override { return HitsLeft > 0; }
 	virtual void OnBallHit(AIJPBall& Ball) override;
-	virtual void Deactivate() override { bArmed = false; }
+	virtual void Deactivate() override { HitsLeft = 0; }
 
 private:
-	bool bArmed = false;
+	/** Returns still to be smashed on this activation. */
+	int32 HitsLeft = 0;
 };

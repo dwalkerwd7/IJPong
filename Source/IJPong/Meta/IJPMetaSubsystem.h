@@ -7,6 +7,8 @@
 #include "IJPMetaSubsystem.generated.h"
 
 class UIJPMetaSave;
+class UIJPSkillTree;
+struct FIJPTreeBonuses;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FIJPMetaChangedSignature);
 
@@ -36,6 +38,22 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Meta")
 	void AddCurrency(int32 SkillPoints, int32 BossTokens);
 
+	// --- Skill trees ---
+
+	UFUNCTION(BlueprintPure, Category = "Meta")
+	bool IsOwned(const UIJPSkillTree* Tree, int32 Node) const;
+
+	/** Not owned yet, its parent is (or it hangs from the root), and it's affordable. */
+	UFUNCTION(BlueprintPure, Category = "Meta")
+	bool CanBuy(const UIJPSkillTree* Tree, int32 Node) const;
+
+	/** Pay for and own a node (and save). False if it can't be bought now. */
+	UFUNCTION(BlueprintCallable, Category = "Meta")
+	bool Buy(const UIJPSkillTree* Tree, int32 Node);
+
+	/** What the owned nodes of Tree add up to. */
+	FIJPTreeBonuses GetBonuses(const UIJPSkillTree* Tree) const;
+
 	/** Wipe all progress (and the save). */
 	UFUNCTION(BlueprintCallable, Category = "Meta")
 	void ResetProgress();
@@ -54,6 +72,7 @@ protected:
 
 private:
 	FString GetSlot() const;
+	static FString NodeKey(const UIJPSkillTree& Tree, int32 Node);
 	void Save() const;
 
 	UPROPERTY(Transient)

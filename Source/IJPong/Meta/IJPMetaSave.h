@@ -20,4 +20,8 @@ public:
 	/** Earned by beating bosses. Spent on the skill trees. */
 	UPROPERTY()
 	int32 BossTokens = 0;
+
+	/** Skill-tree nodes bought, as "<tree asset name>/<node id>". */
+	UPROPERTY()
+	TArray<FString> OwnedNodes;
 };

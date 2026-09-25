@@ -26,6 +26,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Curve", meta = (ClampMin = "0", Units = "s"))
 	float Duration = 0.9f;
 
+	/** Bend Ball the way Paddle was moving (or against its slope if the paddle was still), like a curve shot. */
+	static void CurveReturn(AIJPBall& Ball, const AIJPPaddle& Paddle, float DegreesPerSecond, float Duration);
+
 	virtual void Activate() override { bArmed = true; }
 	virtual bool IsActive() const override { return bArmed; }
 	virtual bool IsArmed() const override { return bArmed; }

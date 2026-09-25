@@ -190,6 +190,8 @@ private:
 	/** The speed before a Boost, which the next paddle hit builds on. 0 = not boosted. */
 	float UnboostedSpeed = 0.f;
 	float Accumulator = 0.f;
+	/** Steepest angle this shot may travel at: MaxBounceAngleDeg plus the last paddle's bonus. */
+	float AngleLimitDeg = 60.f;
 	float FreezeLeft = 0.f;
 	float TimeScale = 1.f;
 	float CurveRate = 0.f;

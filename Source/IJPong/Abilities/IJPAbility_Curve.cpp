@@ -12,10 +12,14 @@ void UIJPAbility_Curve::OnBallHit(AIJPBall& Ball)
 		return;
 	}
 	bArmed = false;
+	CurveReturn(Ball, *Paddle, DegreesPerSecond, Duration);
+}
 
+void UIJPAbility_Curve::CurveReturn(AIJPBall& Ball, const AIJPPaddle& Paddle, float DegreesPerSecond, float Duration)
+{
 	// Bend the way the paddle was moving, like spin. Standing still, bend against the ball's own
 	// slope (or upward for a flat shot), so it still visibly curves.
-	const float PaddleVelocity = Paddle->GetPlaneVelocity();
+	const float PaddleVelocity = Paddle.GetPlaneVelocity();
 	const float BallSlope = Ball.GetPlaneVelocity().Y;
 	const float BendUp = FMath::Abs(PaddleVelocity) > 1.f ? FMath::Sign(PaddleVelocity)
 		: FMath::Abs(BallSlope) > 1.f ? -FMath::Sign(BallSlope) : 1.f;

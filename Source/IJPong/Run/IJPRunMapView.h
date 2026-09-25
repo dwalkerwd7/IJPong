@@ -14,6 +14,7 @@ class UInstancedStaticMeshComponent;
 class UMaterialInstanceDynamic;
 class UStaticMeshComponent;
 class UTextRenderComponent;
+class UIJPSkillTree;
 
 /**
  * The run's map, drawn like everything else in the game: boxes and glyph letters on a 4:3 tube
@@ -50,6 +51,19 @@ public:
 
 	/** The picked card, 0 = leftmost. */
 	int32 GetSelectedCard() const { return SelectedCard; }
+
+	/**
+	 * Show a class's skill tree (ownership and prices from UIJPMetaSubsystem) instead of the map:
+	 * the class skill as the root at the top, three branches hanging below, and a START RUN box.
+	 * The pick steps through the nodes branch by branch, then START. Refresh() goes back to the map.
+	 */
+	void ShowTree(const UIJPSkillTree* Tree, bool bResetPick);
+
+	UFUNCTION(BlueprintPure, Category = "Map")
+	bool IsShowingTree() const { return ShownTree != nullptr; }
+
+	/** The picked tree node (index into the tree), or INDEX_NONE when START RUN is picked. */
+	int32 GetSelectedTreeNode() const;
 
 	/** Move the pick one node (or card) left (-1) or right (+1). */
 	void Step(int32 Direction);
@@ -123,6 +137,9 @@ private:
 	void ClearDrawing();
 	FVector2D CardCentre(int32 Card) const;
 	FVector2D CardSize() const;
+	FVector2D TreeNodePosition(int32 Node) const;
+	FVector2D TreeRootPosition() const;
+	FVector2D TreeStartPosition() const;
 
 	TWeakObjectPtr<AIJPArena> Arena;
 	FVector2D HalfScreen = FVector2D(400.f, 300.f);
@@ -145,6 +162,20 @@ private:
 
 	TArray<int32> Reachable;
 	int32 Selected = 0;
+	UPROPERTY(Transient)
+	TObjectPtr<const UIJPSkillTree> ShownTree;
+
+	/** Tree nodes in pick order (branch by branch, top down), then INDEX_NONE for START RUN. */
+	TArray<int32> TreeOrder;
+	int32 TreeSelected = 0;
+
+	/** The picked node's name, text and price; and START RUN's label. */
+	UPROPERTY(Transient)
+	TObjectPtr<UTextRenderComponent> InfoText;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextRenderComponent> StartText;
+
 	int32 NumCards = 0;
 	int32 SelectedCard = 0;
 	bool bShowingCards = false;

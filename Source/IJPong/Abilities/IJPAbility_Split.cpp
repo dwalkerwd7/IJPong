@@ -14,7 +14,11 @@ void UIJPAbility_Split::OnBallHit(AIJPBall& Ball)
 		return;
 	}
 	bArmed = false;
+	FanOut(Ball, *Arena, SpreadDeg);
+}
 
+void UIJPAbility_Split::FanOut(AIJPBall& Ball, AIJPArena& Arena, float Spread)
+{
 	// Fan the return out: this ball turns half the spread one way, a new one the other way.
 	const FVector2D Velocity = Ball.GetPlaneVelocity();
 	const float Speed = Velocity.Size();
@@ -26,9 +30,9 @@ void UIJPAbility_Split::OnBallHit(AIJPBall& Ball)
 		return FVector2D(DirX * FMath::Cos(Clamped), FMath::Sin(Clamped)) * Speed;
 	};
 
-	Ball.SetPlaneVelocity(Heading(Angle + SpreadDeg * 0.5f));
-	if (AIJPBall* Twin = Arena->AddBall(&Ball.GetType()))
+	Ball.SetPlaneVelocity(Heading(Angle + Spread * 0.5f));
+	if (AIJPBall* Twin = Arena.AddBall(&Ball.GetType()))
 	{
-		Twin->Launch(Ball.GetPlanePosition(), Heading(Angle - SpreadDeg * 0.5f));
+		Twin->Launch(Ball.GetPlanePosition(), Heading(Angle - Spread * 0.5f));
 	}
 }
