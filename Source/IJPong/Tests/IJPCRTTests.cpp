@@ -37,7 +37,7 @@ bool FIJPCRTArenaTest::RunTest(const FString& Parameters)
 	AIJPArena* Arena = Test.GetArena();
 	UIJPCRTComponent* CRT = Arena->GetCRT();
 	UTEST_NOT_NULL("Arena has a CRT component", CRT);
-	UTEST_NOT_NULL("Configured CRT material loaded", CRT->GetCRTMaterial());
+	UTEST_NOT_NULL("Era's CRT material loaded", CRT->GetCRTMaterial());
 
 	UCameraComponent* Camera = Arena->GetCamera();
 	UTEST_EQUAL("On the arena camera at full weight", IJPCRTTests::BlendWeight(Camera, CRT->GetCRTMaterial()), 1.f);

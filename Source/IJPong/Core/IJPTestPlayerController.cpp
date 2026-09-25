@@ -52,6 +52,8 @@ void AIJPTestPlayerController::SetupInputComponent()
 	Bind(Settings->DebugSkillDownAction, &AIJPTestPlayerController::HandleSkillDown);
 	Bind(Settings->DebugSkillUpAction, &AIJPTestPlayerController::HandleSkillUp);
 	Bind(Settings->DebugToggleOverlayAction, &AIJPTestPlayerController::HandleToggleOverlay);
+	Bind(Settings->DebugEraPrevAction, &AIJPTestPlayerController::HandleEraPrev);
+	Bind(Settings->DebugEraNextAction, &AIJPTestPlayerController::HandleEraNext);
 }
 
 AIJPTestGameMode* AIJPTestPlayerController::GetTestGameMode() const
@@ -96,6 +98,22 @@ void AIJPTestPlayerController::HandleSkillUp()
 	if (AIJPTestGameMode* GameMode = GetTestGameMode())
 	{
 		GameMode->AdjustOpponentSkill(0.1f);
+	}
+}
+
+void AIJPTestPlayerController::HandleEraPrev()
+{
+	if (AIJPTestGameMode* GameMode = GetTestGameMode())
+	{
+		GameMode->CycleEra(-1);
+	}
+}
+
+void AIJPTestPlayerController::HandleEraNext()
+{
+	if (AIJPTestGameMode* GameMode = GetTestGameMode())
+	{
+		GameMode->CycleEra(1);
 	}
 }
 

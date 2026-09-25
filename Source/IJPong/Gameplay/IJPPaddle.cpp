@@ -48,7 +48,7 @@ void AIJPPaddle::InitPaddle(AIJPArena* InArena, EIJPSide InSide, float InLaneX, 
 	Velocity = 0.f;
 	PendingInput = 0.f;
 
-	Visual->SetMaterial(0, InArena->GetPongMaterial());
+	Visual->SetMaterial(0, InArena->GetPaletteMaterial(InSide == EIJPSide::Left ? EIJPPaletteRole::LeftPaddle : EIJPPaletteRole::RightPaddle));
 	UpdateTransform();
 }
 

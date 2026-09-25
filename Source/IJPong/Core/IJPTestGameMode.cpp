@@ -6,6 +6,8 @@
 #include "Core/IJPTestPlayerController.h"
 #include "Engine/Engine.h"
 #include "EngineUtils.h"
+#include "Era/IJPEra.h"
+#include "Era/IJPEraSubsystem.h"
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPMatchRules.h"
@@ -92,12 +94,39 @@ void AIJPTestGameMode::AdjustOpponentSkill(float Delta)
 	}
 }
 
+void AIJPTestGameMode::CycleEra(int32 Direction)
+{
+	UIJPEraSubsystem* Eras = UIJPEraSubsystem::Get(this);
+	if (!Eras || Eras->GetNumEras() == 0)
+	{
+		return;
+	}
+
+	// From an era that isn't in the list (set by code), start counting from the first.
+	const int32 Current = FMath::Max(Eras->GetEraIndex(), 0);
+	Eras->SetEraIndex((Current + Direction % Eras->GetNumEras() + Eras->GetNumEras()) % Eras->GetNumEras());
+
+	const FString Name = Eras->GetEra()->DisplayName.ToString();
+	UE_LOG(LogIJPong, Log, TEXT("Era: %s"), *Name);
+	if (GEngine)
+	{
+		// Same key each time, so repeated presses replace the message instead of stacking.
+		GEngine->AddOnScreenDebugMessage(static_cast<uint64>(GetUniqueID()) + 1, 2.f, FColor::White, FString::Printf(TEXT("Era: %s"), *Name));
+	}
+}
+
 void AIJPTestGameMode::GetDebugLines(TArray<FString>& OutLines) const
 {
 	const AIJPArena* ArenaPtr = GetArena();
 	OutLines.Add(TEXT("TEST MODE"));
 	OutLines.Add(FString::Printf(TEXT("Opponent skill: %.2f"), ArenaPtr ? ArenaPtr->GetOpponentSkill() : 0.f));
 	OutLines.Add(FString::Printf(TEXT("Your paddle: %s"), IsPlayerSideAI() ? TEXT("AI") : TEXT("you")));
+
+	const UIJPEraSubsystem* Eras = UIJPEraSubsystem::Get(this);
+	const UIJPEra* Era = Eras ? Eras->GetEra() : nullptr;
+	OutLines.Add(Era
+		? FString::Printf(TEXT("Era: %s (%d/%d)"), *Era->DisplayName.ToString(), Eras->GetEraIndex() + 1, Eras->GetNumEras())
+		: FString(TEXT("Era: none")));
 
 	const UIJPMatchComponent* MatchPtr = GetMatch();
 	if (MatchPtr->IsOver())
@@ -114,5 +143,5 @@ void AIJPTestGameMode::GetDebugLines(TArray<FString>& OutLines) const
 	}
 
 	OutLines.Add(TEXT("R new match   F serve now   T AI vs AI"));
-	OutLines.Add(TEXT("- / = opponent skill   . (period) hide this"));
+	OutLines.Add(TEXT("- / = opponent skill   [ / ] era   . (period) hide this"));
 }

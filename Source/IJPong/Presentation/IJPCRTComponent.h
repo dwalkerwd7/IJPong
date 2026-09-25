@@ -7,6 +7,7 @@
 #include "IJPCRTComponent.generated.h"
 
 class UCameraComponent;
+class UIJPEra;
 class UMaterialInstanceDynamic;
 class UMaterialInterface;
 
@@ -14,8 +15,10 @@ class UMaterialInterface;
  * Puts the CRT post-process look on every camera of the actor it's added to: the arena, a plain
  * CameraActor, a menu backdrop camera, a CineCamera... Applied at BeginPlay, removed at EndPlay.
  * Each component gets its own dynamic material instance, so its look can be changed at runtime.
+ * The look follows the current era (UIJPEraSubsystem) and swaps live when the era changes,
+ * unless CRTMaterial overrides it for this component.
  */
-UCLASS(Config = Game, ClassGroup = (IJPong), meta = (BlueprintSpawnableComponent))
+UCLASS(ClassGroup = (IJPong), meta = (BlueprintSpawnableComponent))
 class IJPONG_API UIJPCRTComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -48,14 +51,20 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	/** Post-process material for the look. Default from DefaultGame.ini; can be overridden per component. */
-	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "CRT")
+	/** Post-process material for this component only, ignoring the era. Empty = follow the era's CRT. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "CRT")
 	TSoftObjectPtr<UMaterialInterface> CRTMaterial;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "CRT")
 	bool bEnabled = true;
 
 private:
+	UFUNCTION()
+	void HandleEraChanged(const UIJPEra* NewEra);
+
+	/** Replace the look on every camera with a fresh instance of Base (null = no CRT). */
+	void SetBaseMaterial(UMaterialInterface* Base);
+	void RemoveFromCameras();
 	void SetFlash(float Value);
 	void ApplyWeight(float Weight);
 	void GetCameras(TArray<UCameraComponent*>& OutCameras) const;

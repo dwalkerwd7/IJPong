@@ -44,7 +44,7 @@ void AIJPBall::InitBall(AIJPArena* InArena)
 {
 	check(InArena);
 	Arena = InArena;
-	Visual->SetMaterial(0, InArena->GetPongMaterial());
+	Visual->SetMaterial(0, InArena->GetPaletteMaterial(EIJPPaletteRole::Ball));
 	ResetBall();
 }
 

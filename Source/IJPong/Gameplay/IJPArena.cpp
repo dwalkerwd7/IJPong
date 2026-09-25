@@ -7,12 +7,15 @@
 #include "Components/BoxComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
+#include "Era/IJPEra.h"
+#include "Era/IJPEraSubsystem.h"
 #include "Gameplay/IJPBall.h"
 #include "Gameplay/IJPGoalComponent.h"
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPPaddleProfile.h"
 #include "Gameplay/IJPSevenSegmentComponent.h"
 #include "Presentation/IJPCRTComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -21,8 +24,6 @@ AIJPArena::AIJPArena()
 	PrimaryActorTick.bCanEverTick = false;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeMesh(TEXT("/Engine/BasicShapes/Cube.Cube"));
-	static ConstructorHelpers::FObjectFinder<UMaterialInterface> UnlitMaterial(TEXT("/Engine/EngineMaterials/EmissiveMeshMaterial.EmissiveMeshMaterial"));
-	PongMaterial = UnlitMaterial.Object;
 	PaddleClass = AIJPPaddle::StaticClass();
 	BallClass = AIJPBall::StaticClass();
 
@@ -45,11 +46,23 @@ AIJPArena::AIJPArena()
 	RightGoal->SetupAttachment(Root);
 	RightGoal->DefendingSide = EIJPSide::Right;
 
-	Visuals = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("Visuals"));
-	Visuals->SetupAttachment(Root);
-	Visuals->SetStaticMesh(CubeMesh.Object);
-	Visuals->CastShadow = false;
-	IJP::ConfigureAsVisualOnly(Visuals);
+	Background = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Background"));
+	Background->SetupAttachment(Root);
+	Background->SetStaticMesh(CubeMesh.Object);
+	Background->CastShadow = false;
+	IJP::ConfigureAsVisualOnly(Background);
+
+	WallVisuals = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("WallVisuals"));
+	WallVisuals->SetupAttachment(Root);
+	WallVisuals->SetStaticMesh(CubeMesh.Object);
+	WallVisuals->CastShadow = false;
+	IJP::ConfigureAsVisualOnly(WallVisuals);
+
+	NetVisuals = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("NetVisuals"));
+	NetVisuals->SetupAttachment(Root);
+	NetVisuals->SetStaticMesh(CubeMesh.Object);
+	NetVisuals->CastShadow = false;
+	IJP::ConfigureAsVisualOnly(NetVisuals);
 
 	LeftScore = CreateDefaultSubobject<UIJPSevenSegmentComponent>(TEXT("LeftScore"));
 	LeftScore->SetupAttachment(Root);
@@ -109,41 +122,60 @@ void AIJPArena::OnConstruction(const FTransform& Transform)
 	RightGoal->SetRelativeLocation(FVector(GoalCentreX, 0.f, 0.f));
 	RightGoal->SetBoxExtent(GoalExtent);
 
-	Visuals->ClearInstances();
-	Visuals->SetMaterial(0, PongMaterial);
+	// The base material in the editor; BeginPlay swaps in the palette's instances.
+	UMaterialInterface* BaseMaterial = PongMaterial.LoadSynchronous();
+	for (UPrimitiveComponent* Piece : TArray<UPrimitiveComponent*>{ Background, WallVisuals, NetVisuals, LeftScore, RightScore })
+	{
+		Piece->SetMaterial(0, BaseMaterial);
+	}
+
+	WallVisuals->ClearInstances();
 	if (bShowWalls)
 	{
 		const FVector2D WallSize(HalfExtents.X * 2.f, WallThickness);
-		AddVisualBox(FVector2D(0.f, WallCentreY), WallSize);
-		AddVisualBox(FVector2D(0.f, -WallCentreY), WallSize);
+		AddVisualBox(WallVisuals, FVector2D(0.f, WallCentreY), WallSize);
+		AddVisualBox(WallVisuals, FVector2D(0.f, -WallCentreY), WallSize);
 	}
 
 	// Net: dashes centred on the middle, stepping outward until they would touch a wall.
+	NetVisuals->ClearInstances();
 	const float Step = NetDashSize.Y + NetDashGap;
 	for (float Y = 0.f; Y + NetDashSize.Y * 0.5f <= HalfExtents.Y; Y += Step)
 	{
-		AddVisualBox(FVector2D(0.f, Y), NetDashSize);
+		AddVisualBox(NetVisuals, FVector2D(0.f, Y), NetDashSize);
 		if (Y > 0.f)
 		{
-			AddVisualBox(FVector2D(0.f, -Y), NetDashSize);
+			AddVisualBox(NetVisuals, FVector2D(0.f, -Y), NetDashSize);
 		}
 	}
 
 	const float ScoreZ = HalfExtents.Y - ScoreOffset.Y - LeftScore->DigitSize.Y * 0.5f;
 	LeftScore->SetRelativeLocation(FVector(-ScoreOffset.X, 0.f, ScoreZ));
-	LeftScore->SetMaterial(0, PongMaterial);
 	RightScore->SetRelativeLocation(FVector(ScoreOffset.X, 0.f, ScoreZ));
-	RightScore->SetMaterial(0, PongMaterial);
 
 	// Frame the playfield plus walls and margin; width follows from the screen's aspect ratio.
 	const float ScreenHeight = 2.f * (OuterHalfY + ScreenMargin);
 	Camera->AspectRatio = ScreenAspectRatio;
 	Camera->OrthoWidth = ScreenHeight * ScreenAspectRatio;
+
+	// Background: a thin slab just behind every piece, filling exactly what the camera frames.
+	const float CubeSize = 100.f; // /Engine/BasicShapes/Cube is 100 units, centred.
+	Background->SetRelativeLocation(FVector(0.f, -VisualDepth, 0.f));
+	Background->SetRelativeScale3D(FVector(Camera->OrthoWidth / CubeSize, 1.f / CubeSize, ScreenHeight / CubeSize));
 }
 
 void AIJPArena::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Before the paddles and ball spawn, so they pick up the palette's materials.
+	CreatePaletteMaterials();
+	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
+	ApplyPalette(Era ? Era->Palette : FIJPPalette());
+	if (UIJPEraSubsystem* Eras = UIJPEraSubsystem::Get(this))
+	{
+		Eras->OnEraChanged.AddDynamic(this, &AIJPArena::HandleEraChanged);
+	}
 
 	LeftPaddle = SpawnPaddle(EIJPSide::Left);
 	RightPaddle = SpawnPaddle(EIJPSide::Right);
@@ -171,6 +203,11 @@ void AIJPArena::BeginPlay()
 
 void AIJPArena::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (UIJPEraSubsystem* Eras = UIJPEraSubsystem::Get(this))
+	{
+		Eras->OnEraChanged.RemoveAll(this);
+	}
+
 	// The arena spawned the paddles and ball, so it takes them with it.
 	for (AActor* Spawned : { static_cast<AActor*>(LeftPaddle.Get()), static_cast<AActor*>(RightPaddle.Get()), static_cast<AActor*>(Ball.Get()) })
 	{
@@ -208,7 +245,53 @@ AIJPPaddle* AIJPArena::SpawnPaddle(EIJPSide Side)
 
 const UIJPToneSet& AIJPArena::GetToneSet() const
 {
-	return LoadedToneSet ? *LoadedToneSet : *GetDefault<UIJPToneSet>();
+	if (LoadedToneSet)
+	{
+		return *LoadedToneSet;
+	}
+	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
+	return Era && Era->ToneSet ? *Era->ToneSet : *GetDefault<UIJPToneSet>();
+}
+
+UMaterialInterface* AIJPArena::GetPaletteMaterial(EIJPPaletteRole PaletteRole) const
+{
+	const int32 Index = static_cast<int32>(PaletteRole);
+	return PaletteMaterials.IsValidIndex(Index) ? PaletteMaterials[Index].Get() : PongMaterial.Get();
+}
+
+void AIJPArena::CreatePaletteMaterials()
+{
+	PaletteMaterials.Reset();
+	UMaterialInterface* Base = PongMaterial.LoadSynchronous();
+	if (!Base)
+	{
+		UE_LOG(LogIJPong, Warning, TEXT("%s has no PongMaterial; the era's palette can't be shown."), *GetName());
+		return;
+	}
+
+	for (int32 i = 0; i < static_cast<int32>(EIJPPaletteRole::Count); ++i)
+	{
+		PaletteMaterials.Add(UMaterialInstanceDynamic::Create(Base, this));
+	}
+	Background->SetMaterial(0, GetPaletteMaterial(EIJPPaletteRole::Background));
+	WallVisuals->SetMaterial(0, GetPaletteMaterial(EIJPPaletteRole::Walls));
+	NetVisuals->SetMaterial(0, GetPaletteMaterial(EIJPPaletteRole::Net));
+	LeftScore->SetMaterial(0, GetPaletteMaterial(EIJPPaletteRole::Score));
+	RightScore->SetMaterial(0, GetPaletteMaterial(EIJPPaletteRole::Score));
+}
+
+void AIJPArena::ApplyPalette(const FIJPPalette& Palette)
+{
+	static const FName ColorParam(TEXT("Color"));
+	for (int32 i = 0; i < PaletteMaterials.Num(); ++i)
+	{
+		PaletteMaterials[i]->SetVectorParameterValue(ColorParam, Palette.Get(static_cast<EIJPPaletteRole>(i)));
+	}
+}
+
+void AIJPArena::HandleEraChanged(const UIJPEra* NewEra)
+{
+	ApplyPalette(NewEra ? NewEra->Palette : FIJPPalette());
 }
 
 void AIJPArena::HandleBallPaddleHit(AIJPPaddle* Paddle)
@@ -295,9 +378,9 @@ FVector2D AIJPArena::WorldDirToPlane(const FVector& WorldDir) const
 	return FVector2D(Local.X, Local.Z);
 }
 
-void AIJPArena::AddVisualBox(const FVector2D& Centre, const FVector2D& Size)
+void AIJPArena::AddVisualBox(UInstancedStaticMeshComponent* Target, const FVector2D& Centre, const FVector2D& Size)
 {
 	const float CubeSize = 100.f; // /Engine/BasicShapes/Cube is 100 units, centred.
 	const FVector Scale(Size.X / CubeSize, VisualDepth / CubeSize, Size.Y / CubeSize);
-	Visuals->AddInstance(FTransform(FQuat::Identity, FVector(Centre.X, 0.f, Centre.Y), Scale));
+	Target->AddInstance(FTransform(FQuat::Identity, FVector(Centre.X, 0.f, Centre.Y), Scale));
 }

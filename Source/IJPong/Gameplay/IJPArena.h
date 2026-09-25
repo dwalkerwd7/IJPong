@@ -5,12 +5,15 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Core/IJPTypes.h"
+#include "Era/IJPEra.h"
 #include "IJPArena.generated.h"
 
 class UBoxComponent;
 class UCameraComponent;
 class UInstancedStaticMeshComponent;
 class UMaterialInterface;
+class UMaterialInstanceDynamic;
+class UStaticMeshComponent;
 class AIJPBall;
 class AIJPPaddle;
 class UIJPPaddleProfile;
@@ -19,11 +22,13 @@ class UIJPGoalComponent;
 class UIJPSevenSegmentComponent;
 class UIJPToneSet;
 class UIJPToneSynthComponent;
+class UIJPEra;
 
 /**
  * The Pong playfield: walls, goals, net, score digits and the camera that frames it.
  * Owns the mapping between arena plane space (2D, see IJPTypes.h) and world space, so the
  * whole game can be placed and oriented anywhere in a level.
+ * Coloured and voiced by the current era (UIJPEraSubsystem), following era changes live.
  */
 UCLASS(Config = Game)
 class IJPONG_API AIJPArena : public AActor
@@ -98,10 +103,14 @@ public:
 	/** Choose a side's paddle. Takes effect when the paddles spawn at BeginPlay. */
 	void SetPaddleProfile(EIJPSide Side, UIJPPaddleProfile* Profile);
 
-	/** The tone set in use: the configured asset, or UIJPToneSet's defaults if none loaded. */
+	/** The tone set in use: this arena's override, else the era's, else UIJPToneSet's defaults. */
 	const UIJPToneSet& GetToneSet() const;
 
-	UMaterialInterface* GetPongMaterial() const { return PongMaterial; }
+	/**
+	 * The material that paints one palette role. From BeginPlay it's this arena's own instance,
+	 * recoloured whenever the era changes, so whatever uses it follows the era for free.
+	 */
+	UMaterialInterface* GetPaletteMaterial(EIJPPaletteRole PaletteRole) const;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Layout")
@@ -173,11 +182,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Spawning")
 	TSubclassOf<AIJPBall> BallClass;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Look")
-	TObjectPtr<UMaterialInterface> PongMaterial;
+	/** Flat unlit material for every piece, with a "Color" vector parameter the era's palette sets. From DefaultGame.ini. */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Arena|Look")
+	TSoftObjectPtr<UMaterialInterface> PongMaterial;
 
-	/** The beeps for ball events. Default from DefaultGame.ini; empty uses UIJPToneSet's defaults. */
-	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Arena|Audio")
+	/** The beeps for ball events on this arena only, ignoring the era. Empty = the era's tone set. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Arena|Audio")
 	TSoftObjectPtr<UIJPToneSet> ToneSet;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
@@ -195,9 +205,17 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<UIJPGoalComponent> RightGoal;
 
-	/** Walls and net dashes, one cube instance each. */
+	/** The screen behind the playfield, filling the camera's frame. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
-	TObjectPtr<UInstancedStaticMeshComponent> Visuals;
+	TObjectPtr<UStaticMeshComponent> Background;
+
+	/** One cube instance per visible wall. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<UInstancedStaticMeshComponent> WallVisuals;
+
+	/** One cube instance per net dash. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<UInstancedStaticMeshComponent> NetVisuals;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<UIJPSevenSegmentComponent> LeftScore;
@@ -227,8 +245,16 @@ private:
 
 	UFUNCTION()
 	void HandleBallGoal(EIJPSide DefendingSide);
+
+	UFUNCTION()
+	void HandleEraChanged(const UIJPEra* NewEra);
+
+	/** Give each palette role its own material instance and put them on the arena's pieces. */
+	void CreatePaletteMaterials();
+	void ApplyPalette(const FIJPPalette& Palette);
+
 	FTransform GetPlaneTransform() const;
-	void AddVisualBox(const FVector2D& Centre, const FVector2D& Size);
+	void AddVisualBox(UInstancedStaticMeshComponent* Target, const FVector2D& Centre, const FVector2D& Size);
 
 	UPROPERTY(Transient)
 	TObjectPtr<AIJPPaddle> LeftPaddle;
@@ -241,4 +267,8 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<const UIJPToneSet> LoadedToneSet;
+
+	/** One per EIJPPaletteRole, created at BeginPlay. */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UMaterialInstanceDynamic>> PaletteMaterials;
 };

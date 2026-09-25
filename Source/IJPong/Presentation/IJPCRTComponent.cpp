@@ -3,6 +3,8 @@
 #include "Presentation/IJPCRTComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Core/IJPTypes.h"
+#include "Era/IJPEra.h"
+#include "Era/IJPEraSubsystem.h"
 #include "GameFramework/Actor.h"
 #include "Materials/MaterialInstanceDynamic.h"
 
@@ -54,16 +56,48 @@ void UIJPCRTComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	UMaterialInterface* Base = CRTMaterial.LoadSynchronous();
+	if (!CRTMaterial.IsNull())
+	{
+		SetBaseMaterial(CRTMaterial.LoadSynchronous());
+		return;
+	}
+
+	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
+	SetBaseMaterial(Era ? Era->CRTMaterial.Get() : nullptr);
+	if (UIJPEraSubsystem* Eras = UIJPEraSubsystem::Get(this))
+	{
+		Eras->OnEraChanged.AddDynamic(this, &UIJPCRTComponent::HandleEraChanged);
+	}
+}
+
+void UIJPCRTComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (UIJPEraSubsystem* Eras = UIJPEraSubsystem::Get(this))
+	{
+		Eras->OnEraChanged.RemoveAll(this);
+	}
+	RemoveFromCameras();
+
+	Super::EndPlay(EndPlayReason);
+}
+
+void UIJPCRTComponent::HandleEraChanged(const UIJPEra* NewEra)
+{
+	SetBaseMaterial(NewEra ? NewEra->CRTMaterial.Get() : nullptr);
+}
+
+void UIJPCRTComponent::SetBaseMaterial(UMaterialInterface* Base)
+{
+	RemoveFromCameras();
 	if (!Base)
 	{
-		UE_LOG(LogIJPong, Warning, TEXT("%s: no CRT material set; no CRT look."), *GetPathName());
 		return;
 	}
 
 	// Applied only at runtime: editing the cameras' settings in the editor would save a transient
 	// material instance into the level.
 	MaterialInstance = UMaterialInstanceDynamic::Create(Base, this);
+	MaterialInstance->SetScalarParameterValue(FlashParam, CurrentFlash); // a pulse in progress carries over
 	TArray<UCameraComponent*> Cameras;
 	GetCameras(Cameras);
 	for (UCameraComponent* Camera : Cameras)
@@ -72,23 +106,23 @@ void UIJPCRTComponent::BeginPlay()
 	}
 }
 
-void UIJPCRTComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void UIJPCRTComponent::RemoveFromCameras()
 {
-	if (MaterialInstance)
+	if (!MaterialInstance)
 	{
-		TArray<UCameraComponent*> Cameras;
-		GetCameras(Cameras);
-		for (UCameraComponent* Camera : Cameras)
-		{
-			Camera->PostProcessSettings.WeightedBlendables.Array.RemoveAll([this](const FWeightedBlendable& Blendable)
-			{
-				return Blendable.Object == MaterialInstance;
-			});
-		}
-		MaterialInstance = nullptr;
+		return;
 	}
 
-	Super::EndPlay(EndPlayReason);
+	TArray<UCameraComponent*> Cameras;
+	GetCameras(Cameras);
+	for (UCameraComponent* Camera : Cameras)
+	{
+		Camera->PostProcessSettings.WeightedBlendables.Array.RemoveAll([this](const FWeightedBlendable& Blendable)
+		{
+			return Blendable.Object == MaterialInstance;
+		});
+	}
+	MaterialInstance = nullptr;
 }
 
 void UIJPCRTComponent::SetCRTEnabled(bool bEnable)

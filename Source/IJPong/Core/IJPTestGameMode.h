@@ -11,8 +11,8 @@ class UIJPMatchRules;
 /**
  * Match after match for trying out a level, with the rules from config (MatchRules).
  * Also has test tools (bound to debug keys by AIJPTestPlayerController): start a new match,
- * serve now, hand the player's paddle to an AI to watch the level play itself, and nudge the
- * opponent's skill up and down.
+ * serve now, hand the player's paddle to an AI to watch the level play itself, nudge the
+ * opponent's skill up and down, and step through the eras.
  */
 UCLASS()
 class IJPONG_API AIJPTestGameMode : public AIJPGameModeBase
@@ -40,6 +40,10 @@ public:
 	/** Nudge the arena's opponent skill (clamped 0..1) and apply it live to every AI paddle. Shows the new value on screen. */
 	UFUNCTION(BlueprintCallable, Category = "Test")
 	void AdjustOpponentSkill(float Delta);
+
+	/** Step Direction eras through the configured list, wrapping at both ends. Shows the new era on screen. */
+	UFUNCTION(BlueprintCallable, Category = "Test")
+	void CycleEra(int32 Direction);
 
 	/** The debug overlay's text: the test tools' current state and the key legend. */
 	void GetDebugLines(TArray<FString>& OutLines) const;
