@@ -144,6 +144,17 @@ void AIJPBall::Curve(float DegreesPerSecond, float Duration, float BendUp)
 	}
 }
 
+void AIJPBall::Warp(const FVector2D& NewPosition)
+{
+	if (!bInPlay)
+	{
+		return;
+	}
+	// Both, so the drawn position doesn't smear across the jump.
+	Position = PreviousPosition = NewPosition;
+	UpdateDrawnTransform(1.f);
+}
+
 void AIJPBall::Dampen(float CurveScale, float BoostScale)
 {
 	if (!bInPlay)

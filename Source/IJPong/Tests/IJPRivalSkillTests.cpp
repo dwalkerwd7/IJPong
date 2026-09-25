@@ -12,6 +12,7 @@
 #include "Abilities/IJPAbility_Smash.h"
 #include "Abilities/IJPAbility_Magnet.h"
 #include "Abilities/IJPAbility_Snare.h"
+#include "Abilities/IJPAbility_Warp.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Audio/IJPToneSet.h"
 #include "Audio/IJPToneSynthComponent.h"
@@ -395,6 +396,65 @@ bool FIJPJammerAITest::RunTest(const FString& Parameters)
 	// Ready again, ball coming at you: jammed.
 	PlayerAbilities->Equip(EIJPAbilitySlot::ClassSkill, NewObject<UIJPAbility_Grow>(GetTransientPackage()));
 	UTEST_TRUE("Jams", IJPRivalSkillTests::RunUntil(Test, 0.2f, [Abilities] { return Abilities->IsWindingUp(EIJPAbilitySlot::ClassSkill); }));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPWarpTest, "IJPong.RivalSkill.WarpMirrorsTheBallsHeight", IJPRivalSkillTests::Flags)
+bool FIJPWarpTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = IJPRivalSkillTests::GetMode(Test);
+	AIJPArena* Arena = Mode->GetArena();
+	AIJPPaddle* RivalPaddle = Arena->GetPaddle(EIJPSide::Right);
+	UIJPRival* Rival = NewObject<UIJPRival>(GetTransientPackage());
+	UIJPAbility_Warp* Warp = NewObject<UIJPAbility_Warp>(Rival);
+	Warp->Telegraph = 0.1f;
+	Warp->Cooldown = 0.2f;
+	Warp->MinJump = 120.f;
+	Rival->RivalSkill = Warp;
+	Mode->SetRival(Rival);
+	RivalPaddle->GetController()->UnPossess();
+	UIJPAbilityComponent* Abilities = RivalPaddle->GetAbilities();
+	AIJPBall* Ball = Arena->GetBall();
+
+	// High on the way to the player: it reappears as far below, same speed and heading.
+	Ball->Launch(FVector2D(-50.f, 100.f), FVector2D(-300.f, 0.f));
+	Ball->Boost(1.5f);
+	UTEST_TRUE("Triggered", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
+	UTEST_TRUE("Warped", IJPRivalSkillTests::RunUntil(Test, 0.3f, [Ball] { return Ball->GetPlanePosition().Y < 0.f; }));
+	UTEST_EQUAL_TOLERANCE("Mirrored height", static_cast<float>(Ball->GetPlanePosition().Y), -100.f, 0.5f);
+	UTEST_EQUAL_TOLERANCE("Same velocity", static_cast<float>(Ball->GetPlaneVelocity().X), -450.f, 0.5f);
+	UTEST_TRUE("Still the smash it was", Ball->IsBoosted() && Ball->IsInPlay());
+
+	// Near the middle, mirroring would barely move it: it jumps at least MinJump.
+	Test.RunFor(0.2f);
+	Ball->Launch(FVector2D(-50.f, 10.f), FVector2D(-300.f, 0.f));
+	UTEST_TRUE("Triggered again", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
+	UTEST_TRUE("Warped again", IJPRivalSkillTests::RunUntil(Test, 0.3f, [Ball] { return Ball->GetPlanePosition().Y < 0.f; }));
+	UTEST_EQUAL_TOLERANCE("A real jump", static_cast<float>(Ball->GetPlanePosition().Y), -110.f, 0.5f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPWarpAITest, "IJPong.RivalSkill.WarpFiresAsTheBallCrossesTheNet", IJPRivalSkillTests::Flags)
+bool FIJPWarpAITest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = IJPRivalSkillTests::GetMode(Test);
+	AIJPArena* Arena = Mode->GetArena();
+	UIJPRival* Rival = NewObject<UIJPRival>(GetTransientPackage());
+	Rival->RivalSkill = NewObject<UIJPAbility_Warp>(Rival);
+	Mode->SetRival(Rival);
+	UIJPAbilityComponent* Abilities = Arena->GetPaddle(EIJPSide::Right)->GetAbilities();
+	AIJPBall* Ball = Arena->GetBall();
+
+	// Coming at the rival: not a warp moment.
+	Ball->Launch(FVector2D(-30.f, 0.f), FVector2D(300.f, 0.f));
+	Test.RunFor(0.3f);
+	UTEST_EQUAL("Held back", Abilities->GetCooldownRemaining(EIJPAbilitySlot::ClassSkill), 0.f);
+
+	// Crossing the net toward the player: warp it.
+	Ball->Launch(FVector2D(0.f, 50.f), FVector2D(-300.f, 0.f));
+	UTEST_TRUE("Warps", IJPRivalSkillTests::RunUntil(Test, 0.3f, [Abilities] { return Abilities->IsWindingUp(EIJPAbilitySlot::ClassSkill); }));
 	return true;
 }
 

@@ -107,6 +107,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ball")
 	bool IsPiercing() const { return bPiercing; }
 
+	/**
+	 * Jump to NewPosition (plane space) mid-flight, keeping everything else: speed, direction, curve,
+	 * boost, rally. For rival abilities like Warp. Does nothing out of play.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Ball")
+	void Warp(const FVector2D& NewPosition);
+
 	/** Put the ball in play at Position with Velocity (plane space), e.g. a copy split off another ball. */
 	UFUNCTION(BlueprintCallable, Category = "Ball")
 	void Launch(const FVector2D& InPosition, const FVector2D& InVelocity);
