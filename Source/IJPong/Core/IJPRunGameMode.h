@@ -11,6 +11,7 @@
 class AIJPBall;
 class AIJPRunMapView;
 class UIJPActConfig;
+struct FIJPEncounter;
 
 UENUM(BlueprintType)
 enum class EIJPRunPhase : uint8
@@ -93,6 +94,8 @@ protected:
 
 private:
 	void EnterSelectedNode();
+	/** Play Encounter's match. PlayerHealth > 0: the player's health in it (losses still come off the run); 0 = the run's. */
+	void BeginFight(const FIJPEncounter& Encounter, float PlayerHealth = 0.f);
 	/** Put what the run has gathered on the player's paddle and serves. */
 	void ApplyLoadout();
 	void ShowRewards();

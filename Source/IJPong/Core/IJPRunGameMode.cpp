@@ -187,13 +187,23 @@ bool AIJPRunGameMode::HandleUIConfirm()
 		return true;
 	}
 	case EIJPRunPhase::Event:
+	{
 		// The options, left to right; one that can't be afforded does nothing.
-		if (UIJPRunSubsystem::Get(this)->ChooseEventOption(MapView->GetSelectedCard()))
+		UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
+		if (Run->ChooseEventOption(MapView->GetSelectedCard()))
 		{
-			Phase = EIJPRunPhase::EventResult;
-			ShowEventResult();
+			if (const FIJPEventOption* Twist = Run->GetEventMatch())
+			{
+				BeginFight(Twist->Match, Twist->PlayerHealth);
+			}
+			else
+			{
+				Phase = EIJPRunPhase::EventResult;
+				ShowEventResult();
+			}
 		}
 		return true;
+	}
 	case EIJPRunPhase::EventResult:
 		Phase = EIJPRunPhase::Map;
 		ShowMap();
@@ -275,15 +285,28 @@ void AIJPRunGameMode::EnterSelectedNode()
 		ShowMap();
 		return;
 	}
+	BeginFight(*Encounter);
+}
 
-	// A fight: the act's rival and difficulty for this kind of node.
-	const UIJPRival* NodeRival = Encounter->Rivals.IsEmpty() ? nullptr : Encounter->Rivals[FMath::RandHelper(Encounter->Rivals.Num())].Get();
-	SetRival(NodeRival);
-	SetOpponentSkill(Encounter->Skill);
+void AIJPRunGameMode::BeginFight(const FIJPEncounter& Encounter, float PlayerHealth)
+{
+	// The encounter's rival (or, for an event's match without one, the act's usual) and difficulty.
+	const UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
+	const TArray<TObjectPtr<UIJPRival>>& Rivals = Encounter.Rivals.IsEmpty() ? Run->GetAct()->Match.Rivals : Encounter.Rivals;
+	SetRival(Rivals.IsEmpty() ? nullptr : Rivals[FMath::RandHelper(Rivals.Num())].Get());
+	SetOpponentSkill(Encounter.Skill);
 	ApplyLoadout();
-	BeginMatch(Encounter->Rules);
-	// The rival starts full (the rules' health); the player fights on what's left of the run's.
-	GetMatch()->SetHealth(PlayerSide, Run->GetHealth(), Run->GetMaxHealth());
+	BeginMatch(Encounter.Rules);
+	// The rival starts full (the rules' health); the player fights on what's left of the run's, or on
+	// the event's own health (what's lost still comes off the run).
+	if (PlayerHealth > 0.f)
+	{
+		GetMatch()->SetHealth(PlayerSide, FMath::Min(PlayerHealth, Run->GetHealth()), PlayerHealth);
+	}
+	else
+	{
+		GetMatch()->SetHealth(PlayerSide, Run->GetHealth(), Run->GetMaxHealth());
+	}
 	Phase = EIJPRunPhase::Playing;
 	ShowArena();
 }
@@ -337,6 +360,7 @@ void AIJPRunGameMode::FinishNode()
 	UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
 	const int32 StageBefore = Run->GetStageIndex();
 	const UIJPEra* EraBefore = Run->GetStageEra();
+	const bool bEventMatch = Run->GetEventMatch() != nullptr;
 	Run->CompleteNode(bLastMatchWon);
 	GetMatch()->StopMatch();
 	GetConversations()->Stop();
@@ -346,6 +370,12 @@ void AIJPRunGameMode::FinishNode()
 	if (bNextAct && Run->GetStageEra() && Run->GetStageEra() != EraBefore)
 	{
 		BeginEraChange(Run->GetStageEra());
+	}
+	else if (Run->GetState() == EIJPRunState::Running && bEventMatch)
+	{
+		// An event's match: what came of it.
+		Phase = EIJPRunPhase::EventResult;
+		ShowEventResult();
 	}
 	else if (Run->GetState() == EIJPRunState::Running && Run->HasOffer())
 	{

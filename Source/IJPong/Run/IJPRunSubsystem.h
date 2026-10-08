@@ -12,6 +12,8 @@ class UIJPActConfig;
 class UIJPEra;
 class UIJPBallType;
 class UIJPEvent;
+struct FIJPEventOption;
+struct FIJPEventOutcome;
 class UIJPReward;
 
 UENUM(BlueprintType)
@@ -213,6 +215,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Run")
 	bool ChooseEventOption(int32 Index);
 
+	/** The option whose match is being played (chosen, not yet finished), or null. CompleteNode settles it. */
+	const FIJPEventOption* GetEventMatch() const;
+
 	/** The result text and summary of the last option chosen, and whether it went the good way. */
 	const FString& GetEventResult() const { return EventResult; }
 	bool WasEventSuccess() const { return bEventSuccess; }
@@ -282,6 +287,14 @@ private:
 
 	FString EventResult;
 	bool bEventSuccess = false;
+
+	/** The event and option of a match in progress. */
+	UPROPERTY(Transient)
+	TObjectPtr<const UIJPEvent> MatchEvent;
+	int32 MatchOption = INDEX_NONE;
+
+	/** Apply an option's outcome and write up the result. */
+	void SettleEvent(const FIJPEventOutcome& Outcome, bool bSuccess);
 
 	UPROPERTY(Transient)
 	FIJPRunLoadout Loadout;

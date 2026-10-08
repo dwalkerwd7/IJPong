@@ -39,6 +39,8 @@ void UIJPRunSubsystem::StartRun(const TArray<FIJPRunStage>& InStages, int32 Seed
 	ShopStock.Reset();
 	bInShop = false;
 	CurrentEvent = nullptr;
+	MatchEvent = nullptr;
+	MatchOption = INDEX_NONE;
 	SeenEvents.Reset();
 	EventResult.Reset();
 	Loadout = FIJPRunLoadout();
@@ -119,6 +121,20 @@ void UIJPRunSubsystem::CompleteNode(bool bWon)
 	}
 	bInNode = false;
 
+	// An event's match: its outcome, won or lost (unless losing it ended the run).
+	if (const FIJPEventOption* Option = GetEventMatch())
+	{
+		const FIJPEventOption Settled = *Option;
+		MatchEvent = nullptr;
+		MatchOption = INDEX_NONE;
+		if (State == EIJPRunState::Running)
+		{
+			SettleEvent(bWon ? Settled.Success : Settled.Failure, bWon);
+		}
+		OnRunChanged.Broadcast();
+		return;
+	}
+
 	const EIJPNodeType Type = Map.Nodes[CurrentNode].Type;
 	if (bWon && State == EIJPRunState::Running)
 	{
@@ -198,19 +214,38 @@ bool UIJPRunSubsystem::ChooseEventOption(int32 Index)
 		return false;
 	}
 	const FIJPEventOption& Option = CurrentEvent->Options[Index];
-	bEventSuccess = Option.Chance >= 1.f || Random.FRand() < Option.Chance;
-	const FIJPEventOutcome& Outcome = bEventSuccess ? Option.Success : Option.Failure;
+	if (Option.bMatch)
+	{
+		// Played like a fight node; CompleteNode settles it.
+		MatchEvent = CurrentEvent;
+		MatchOption = Index;
+		CurrentEvent = nullptr;
+		bInNode = true;
+		OnRunChanged.Broadcast();
+		return true;
+	}
+	const bool bSuccess = Option.Chance >= 1.f || Random.FRand() < Option.Chance;
 	CurrentEvent = nullptr; // before applying, so the map is free again whatever the outcome grants
-	Outcome.Apply(*this);
+	SettleEvent(bSuccess ? Option.Success : Option.Failure, bSuccess);
+	OnRunChanged.Broadcast();
+	return true;
+}
 
+const FIJPEventOption* UIJPRunSubsystem::GetEventMatch() const
+{
+	return MatchEvent && MatchEvent->Options.IsValidIndex(MatchOption) ? &MatchEvent->Options[MatchOption] : nullptr;
+}
+
+void UIJPRunSubsystem::SettleEvent(const FIJPEventOutcome& Outcome, bool bSuccess)
+{
+	bEventSuccess = bSuccess;
+	Outcome.Apply(*this);
 	const FString Summary = Outcome.Summary();
 	EventResult = Outcome.Text.ToString();
 	if (!Summary.IsEmpty())
 	{
 		EventResult += (EventResult.IsEmpty() ? TEXT("") : TEXT("\n\n")) + Summary;
 	}
-	OnRunChanged.Broadcast();
-	return true;
 }
 
 void UIJPRunSubsystem::AddCoins(int32 Amount)

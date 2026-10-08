@@ -51,7 +51,7 @@ FString FIJPEventOutcome::Summary() const
 bool FIJPEventOption::CanChoose(const UIJPRunSubsystem& Run) const
 {
 	// The coins it could cost must be in hand.
-	const int32 WorstCoins = FMath::Min(Success.Coins, Chance < 1.f ? Failure.Coins : 0);
+	const int32 WorstCoins = FMath::Min(Success.Coins, Chance < 1.f || bMatch ? Failure.Coins : 0);
 	return Run.GetCoins() >= -FMath::Min(WorstCoins, 0);
 }
 
@@ -62,6 +62,12 @@ FString FIJPEventOption::CardText() const
 		return Description.ToString();
 	}
 	const FString Win = Success.Summary();
+	if (bMatch)
+	{
+		const FString Lose = Failure.Summary();
+		return FString::Printf(TEXT("A MATCH\nWIN: %s\nLOSE: %s"),
+			Win.IsEmpty() ? TEXT("NOTHING") : *Win.Replace(TEXT("\n"), TEXT(" ")), Lose.IsEmpty() ? TEXT("NOTHING") : *Lose.Replace(TEXT("\n"), TEXT(" ")));
+	}
 	if (Chance >= 1.f)
 	{
 		return Win.IsEmpty() ? FString(TEXT("NOTHING")) : Win;

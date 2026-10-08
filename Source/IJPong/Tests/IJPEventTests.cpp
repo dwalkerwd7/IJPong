@@ -1,4 +1,4 @@
-// It's Just Pong
+﻿// It's Just Pong
 
 #include "Misc/AutomationTest.h"
 
@@ -7,6 +7,7 @@
 #include "Core/IJPRunGameMode.h"
 #include "Core/IJPTypes.h"
 #include "Engine/World.h"
+#include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPMatchRules.h"
 #include "Run/IJPActConfig.h"
@@ -42,6 +43,27 @@ namespace IJPEventTests
 		Dear.Label = FText::FromString(TEXT("DEAR"));
 		Dear.Success.Coins = -50;
 
+		FIJPEventOption& Leave = Event->Options.AddDefaulted_GetRef();
+		Leave.Label = FText::FromString(TEXT("LEAVE"));
+		return Event;
+	}
+
+	/** A twist match: two balls served, the rival on 3 health, you on 1. Win +20 coins, lose -10 (if you have them). */
+	UIJPEvent* MakeTwistEvent()
+	{
+		UIJPEvent* Event = NewObject<UIJPEvent>(GetTransientPackage());
+		Event->Title = FText::FromString(TEXT("HOUSE RULES"));
+		FIJPEventOption& Play = Event->Options.AddDefaulted_GetRef();
+		Play.Label = FText::FromString(TEXT("PLAY"));
+		Play.bMatch = true;
+		UIJPMatchRules* Twist = NewObject<UIJPMatchRules>(Event);
+		Twist->StartingHealth = 3.f;
+		Twist->ServeDelay = 0.2f;
+		Twist->ServedBalls = { nullptr, nullptr };
+		Play.Match.Rules = Twist;
+		Play.PlayerHealth = 1.f;
+		Play.Success.Coins = 20;
+		Play.Failure.Coins = -10;
 		FIJPEventOption& Leave = Event->Options.AddDefaulted_GetRef();
 		Leave.Label = FText::FromString(TEXT("LEAVE"));
 		return Event;
@@ -138,6 +160,61 @@ bool FIJPEventScreenTest::RunTest(const FString& Parameters)
 	UTEST_EQUAL("Paid", Run->GetCoins(), 5);
 	Mode->HandleUIConfirm();
 	UTEST_EQUAL("Back to the map", Mode->GetPhase(), EIJPRunPhase::Map);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPEventTwistTest, "IJPong.Run.EventTwistMatchPaysOnAWinAndCostsOnALoss", IJPEventTests::Flags)
+bool FIJPEventTwistTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test(FTransform::Identity, nullptr, AIJPRunGameMode::StaticClass());
+	AIJPRunGameMode* Mode = Cast<AIJPRunGameMode>(Test.GetWorld()->GetAuthGameMode());
+	UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(Test.GetWorld());
+	UIJPMatchComponent* Match = Mode->GetMatch();
+	Mode->PostMatchDelay = 0.1f;
+	UIJPActConfig* Act = IJPEventTests::MakeEventAct();
+	Act->Events = { IJPEventTests::MakeTwistEvent() };
+	Mode->StartNewRun(Act, 1, 5);
+	const auto WaitFor = [&](EIJPRunPhase Phase)
+	{
+		for (int32 i = 0; i < 60 && Mode->GetPhase() != Phase; ++i)
+		{
+			Test.Step();
+		}
+		return Mode->GetPhase() == Phase;
+	};
+
+	// Win the first match (10 coins), then into the event and its match.
+	Mode->HandleUIConfirm();
+	Match->ApplyDamage(EIJPSide::Right, 1.f);
+	UTEST_TRUE("Back on the map", WaitFor(EIJPRunPhase::Map));
+	Mode->HandleUIConfirm();
+	UTEST_EQUAL("Event screen", Mode->GetPhase(), EIJPRunPhase::Event);
+	Mode->HandleUIConfirm();
+	UTEST_EQUAL("Playing the twist", Mode->GetPhase(), EIJPRunPhase::Playing);
+	UTEST_EQUAL_TOLERANCE("You on 1", Match->GetHealth(EIJPSide::Left), 1.f, KINDA_SMALL_NUMBER);
+	UTEST_EQUAL_TOLERANCE("The rival on the twist's 3", Match->GetHealth(EIJPSide::Right), 3.f, KINDA_SMALL_NUMBER);
+	UTEST_EQUAL_TOLERANCE("The run's health untouched", Run->GetHealth(), 5.f, KINDA_SMALL_NUMBER);
+	Test.RunFor(0.3f);
+	UTEST_EQUAL("Two balls served", Mode->GetArena()->GetNumBallsInPlay(), 2);
+
+	// Won: paid, and the result.
+	Match->ApplyDamage(EIJPSide::Right, 3.f);
+	UTEST_TRUE("The result", WaitFor(EIJPRunPhase::EventResult));
+	UTEST_TRUE("Won", Run->WasEventSuccess());
+	UTEST_EQUAL("Paid", Run->GetCoins(), 30);
+	Mode->HandleUIConfirm();
+	UTEST_EQUAL("Map", Mode->GetPhase(), EIJPRunPhase::Map);
+
+	// The second event: lost. One goal is the match; the run loses that much and pays up, and goes on.
+	Mode->HandleUIConfirm();
+	Mode->HandleUIConfirm();
+	UTEST_EQUAL("Playing again", Mode->GetPhase(), EIJPRunPhase::Playing);
+	Match->ApplyDamage(EIJPSide::Left, 1.f);
+	UTEST_TRUE("The result", WaitFor(EIJPRunPhase::EventResult));
+	UTEST_FALSE("Lost", Run->WasEventSuccess());
+	UTEST_EQUAL_TOLERANCE("The goal came off the run", Run->GetHealth(), 4.f, KINDA_SMALL_NUMBER);
+	UTEST_EQUAL("Paid up", Run->GetCoins(), 20);
+	UTEST_EQUAL("Still running", Run->GetState(), EIJPRunState::Running);
 	return true;
 }
 

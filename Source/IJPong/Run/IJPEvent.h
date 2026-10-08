@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "Run/IJPActConfig.h"
 #include "IJPEvent.generated.h"
 
 class UIJPReward;
@@ -56,14 +57,29 @@ struct FIJPEventOption
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Event", meta = (MultiLine = "true"))
 	FText Description;
 
-	/** Chance of Success; otherwise Failure. 1 = a sure thing. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Event", meta = (ClampMin = "0", ClampMax = "1"))
+	/** Chance of Success; otherwise Failure. 1 = a sure thing. Ignored for a match. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Event", meta = (ClampMin = "0", ClampMax = "1", EditCondition = "!bMatch"))
 	float Chance = 1.f;
+
+	/**
+	 * A match with a twist first: Success if you win it, Failure if you lose. The twist is the match's
+	 * (its rules: the balls served, the health), never your paddle's.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Event")
+	bool bMatch = false;
+
+	/** Who and how: Rivals empty = one of the act's Match rivals. Its Coins are ignored (pay in Success). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Event", meta = (EditCondition = "bMatch"))
+	FIJPEncounter Match;
+
+	/** Your health in that match (e.g. 1 for sudden death); 0 = the run's, as in any fight. What you lose still comes off the run. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Event", meta = (ClampMin = "0", EditCondition = "bMatch"))
+	float PlayerHealth = 0.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Event")
 	FIJPEventOutcome Success;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Event", meta = (EditCondition = "Chance < 1"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Event", meta = (EditCondition = "Chance < 1 || bMatch"))
 	FIJPEventOutcome Failure;
 
 	/** What a sure cost asks of the run up front (a paid option needs the coins). */
