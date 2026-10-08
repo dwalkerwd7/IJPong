@@ -30,6 +30,7 @@ class UIJPBonusTargetComponent;
 class UIJPScreenShakeComponent;
 class UIJPDriftingBlockComponent;
 class UIJPLightTrailComponent;
+class UIJPBulletTimeComponent;
 class UIJPBackdrop;
 struct FIJPPortraits;
 class AIJPSpellStrike;
@@ -139,6 +140,12 @@ public:
 	/** Every ball moves this many times faster, until the next match (a boss's TILT). 1 = normal. */
 	void SetBallSpeedScale(float Scale) { BallSpeedScale = FMath::Max(Scale, 0.f); }
 	float GetBallSpeedScale() const { return BallSpeedScale; }
+
+	/** What the balls' clock runs at now: the speed scale, slowed by any bullet time. */
+	float GetBallTimeFactor() const;
+
+	/** Bullet time on near-goals (the era's twist). */
+	UIJPBulletTimeComponent* GetBulletTime() const { return BulletTime; }
 
 	/** Whose faces Side's portrait shows (unset = no portrait). */
 	void SetPortraits(EIJPSide Side, const FIJPPortraits& Portraits);
@@ -420,6 +427,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<UIJPLightTrailComponent> LightTrails;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<UIJPBulletTimeComponent> BulletTime;
 
 	/** The era's bloom on the camera. */
 	void ApplyBloom(const UIJPEra* Era);

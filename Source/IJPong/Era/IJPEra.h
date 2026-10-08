@@ -188,6 +188,28 @@ struct FIJPLightTrails
 	float PieceLength = 24.f;
 };
 
+/** The Matrix era's twist: when a ball is about to beat a paddle, the balls slow to a crawl for a moment (paddles don't). */
+USTRUCT(BlueprintType)
+struct FIJPBulletTime
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bullet Time")
+	bool bEnabled = false;
+
+	/** Balls move at this fraction of their speed while it lasts. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bullet Time", meta = (ClampMin = "0.05", ClampMax = "1"))
+	float TimeScale = 0.25f;
+
+	/** How long it lasts, in real time. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bullet Time", meta = (ClampMin = "0", Units = "s"))
+	float Duration = 0.7f;
+
+	/** It starts when a ball will reach the paddle's lane within this long, where the paddle isn't. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bullet Time", meta = (ClampMin = "0", Units = "s"))
+	float Lead = 0.2f;
+};
+
 /**
  * One era of the game's history: how the whole game looks and sounds while it's current.
  * Eras are ordered in UIJPEraSubsystem's config; the subsystem says which one is current, and
@@ -235,6 +257,10 @@ public:
 	/** Targets popping up mid-court (the Arcade twist). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Twist")
 	FIJPBonusTargets BonusTargets;
+
+	/** Bullet time on near-goals (the Matrix twist). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Twist")
+	FIJPBulletTime BulletTime;
 
 	/** Light trails behind every ball (the Grid twist). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Twist")

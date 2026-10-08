@@ -8,6 +8,7 @@
 #include "Presentation/IJPScreenShakeComponent.h"
 #include "Gameplay/IJPDriftingBlockComponent.h"
 #include "Gameplay/IJPLightTrailComponent.h"
+#include "Gameplay/IJPBulletTimeComponent.h"
 #include "Abilities/IJPAbility_Split.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Audio/IJPToneSet.h"
@@ -103,6 +104,7 @@ AIJPArena::AIJPArena()
 	ScreenShake = CreateDefaultSubobject<UIJPScreenShakeComponent>(TEXT("ScreenShake"));
 	DriftingBlocks = CreateDefaultSubobject<UIJPDriftingBlockComponent>(TEXT("DriftingBlocks"));
 	LightTrails = CreateDefaultSubobject<UIJPLightTrailComponent>(TEXT("LightTrails"));
+	BulletTime = CreateDefaultSubobject<UIJPBulletTimeComponent>(TEXT("BulletTime"));
 	LeftHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("LeftHealthBar"));
 	LeftHealthBar->SetupAttachment(Root);
 	RightHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("RightHealthBar"));
@@ -500,8 +502,14 @@ void AIJPArena::HandleEraChanged(const UIJPEra* NewEra)
 	BonusTargets->Clear();
 	DriftingBlocks->Reset();
 	LightTrails->Reset();
+	BulletTime->Reset();
 	ApplyPalette(NewEra ? NewEra->Palette : FIJPPalette());
 	ApplyBloom(NewEra);
+}
+
+float AIJPArena::GetBallTimeFactor() const
+{
+	return BallSpeedScale * BulletTime->GetBallTimeFactor();
 }
 
 void AIJPArena::ApplyBloom(const UIJPEra* Era)
@@ -648,6 +656,7 @@ void AIJPArena::ClearWinner()
 	BonusTargets->Clear(); // a new match starts with a clear court, at normal speed
 	DriftingBlocks->Reset();
 	LightTrails->Reset();
+	BulletTime->Reset();
 	BallSpeedScale = 1.f;
 	for (const EIJPSide Side : { EIJPSide::Left, EIJPSide::Right })
 	{

@@ -15,6 +15,7 @@
 #include "Gameplay/IJPBonusTargetComponent.h"
 #include "Gameplay/IJPDriftingBlockComponent.h"
 #include "Gameplay/IJPLightTrailComponent.h"
+#include "Gameplay/IJPBulletTimeComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPMatchRules.h"
@@ -184,6 +185,40 @@ bool FIJPLightTrailsTest::RunTest(const FString& Parameters)
 	UIJPEraSubsystem::Get(Arena)->SetEra(NewObject<UIJPEra>(GetTransientPackage()));
 	UTEST_EQUAL("Gone with the era", Trails->GetNumPieces(), 0);
 	UTEST_EQUAL_TOLERANCE("No glow", Arena->GetCamera()->PostProcessSettings.BloomIntensity, 0.f, 0.001f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPBulletTimeTest, "IJPong.Era.BulletTimeSlowsANearGoalOnce", IJPBonusTargetTests::Flags)
+bool FIJPBulletTimeTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPArena* Arena = Test.GetArena();
+	AIJPBall* Ball = Arena->GetBall();
+	AIJPPaddle* Left = Arena->GetPaddle(EIJPSide::Left);
+	const auto HoldUp = [Left] { Left->AddMoveInput(1.f); };
+	UIJPBulletTimeComponent* Bullet = Arena->GetBulletTime();
+	UIJPEra* Era = NewObject<UIJPEra>(GetTransientPackage());
+	Era->BulletTime.bEnabled = true;
+	Era->BulletTime.TimeScale = 0.25f;
+	Era->BulletTime.Duration = 0.5f;
+	UIJPEraSubsystem::Get(Arena)->SetEra(Era);
+	Test.RunFor(1.1f, HoldUp);
+
+	// The paddle's up at the top; a ball straight at the middle of its goal.
+	Ball->Serve(EIJPSide::Left, 0.f);
+	UTEST_TRUE("Bullet time", IJPBonusTargetTests::RunUntil(Test, 2.f, [Bullet] { return Bullet->IsActive(); }));
+	UTEST_EQUAL_TOLERANCE("Balls at a quarter speed", Arena->GetBallTimeFactor(), 0.25f, 0.001f);
+	const double X0 = Ball->GetPlanePosition().X;
+	Test.RunFor(0.2f, HoldUp);
+	const double Moved = FMath::Abs(Ball->GetPlanePosition().X - X0);
+	UTEST_TRUE("Crawling", Moved < Ball->GetPlaneVelocity().Size() * 0.2 * 0.4);
+
+	// Once per approach: it ends and doesn't come back for the same ball.
+	bool bAgain = false;
+	Test.RunFor(0.4f, HoldUp);
+	UTEST_FALSE("Over", Bullet->IsActive());
+	Test.RunFor(0.5f, [&] { HoldUp(); bAgain |= Bullet->IsActive(); });
+	UTEST_FALSE("Not twice", bAgain);
 	return true;
 }
 
