@@ -12,6 +12,7 @@ class UIJPAIProfile;
 class UIJPBackdrop;
 class UIJPConversation;
 class UIJPPaddleClass;
+class UTexture2D;
 
 /** A moment in play a rival can react to. */
 UENUM(BlueprintType)
@@ -80,6 +81,10 @@ struct FIJPBossPhase
 	/** Break the paddle into two halves with this gap (0 = no change). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss", meta = (ClampMin = "0"))
 	float SplitGap = 0.f;
+
+	/** In sprite eras, its paddle looks like this from now on (e.g. cracked; empty = no change). Cap as BossSpriteCap. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss")
+	TObjectPtr<UTexture2D> Sprite;
 };
 
 /**
@@ -160,6 +165,21 @@ public:
 	/** Stages it goes through as its health falls, in order (see UIJPBossComponent). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Boss")
 	TArray<FIJPBossPhase> Phases;
+
+	/** In sprite eras, its own paddle in place of its class's (empty = the class's). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Boss")
+	TObjectPtr<UTexture2D> BossSprite;
+
+	/** The 9-slice end caps of BossSprite and the phases' sprites, as a fraction of the texture's height. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Boss", meta = (ClampMin = "0", ClampMax = "0.5"))
+	float BossSpriteCap = 0.1f;
+
+	/** In sprite eras, each half once a phase splits it: drawn as the upper half, broken end down (empty = plain halves). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Boss")
+	TObjectPtr<UTexture2D> BossHalfSprite;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Boss", meta = (ClampMin = "0", ClampMax = "0.5"))
+	float BossHalfSpriteCap = 0.25f;
 
 	bool IsBoss() const { return BossLength > 1.f || !Phases.IsEmpty(); }
 

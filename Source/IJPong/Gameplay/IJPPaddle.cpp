@@ -62,6 +62,14 @@ AIJPPaddle::AIJPPaddle()
 	SpriteQuad->SetRelativeRotation(IJP::SpriteQuadRotation);
 	IJP::ConfigureAsVisualOnly(SpriteQuad);
 
+	SpriteQuadBottom = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SpriteQuadBottom"));
+	SpriteQuadBottom->SetupAttachment(Collision);
+	SpriteQuadBottom->SetStaticMesh(PlaneMesh.Object);
+	SpriteQuadBottom->CastShadow = false;
+	SpriteQuadBottom->SetVisibility(false);
+	SpriteQuadBottom->SetRelativeRotation(IJP::SpriteQuadRotation);
+	IJP::ConfigureAsVisualOnly(SpriteQuadBottom);
+
 	AimLine = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AimLine"));
 	AimLine->SetupAttachment(Collision);
 	AimLine->SetStaticMesh(CubeMesh.Object);
@@ -211,9 +219,12 @@ void AIJPPaddle::UpdateStunLook()
 		Visual->SetMaterial(0, StunMaterial);
 		VisualBottom->SetMaterial(0, StunMaterial);
 	}
-	if (SpriteMaterial)
+	for (UMaterialInstanceDynamic* Sprite : { SpriteMaterial.Get(), SpriteMaterialBottom.Get() })
 	{
-		SpriteMaterial->SetVectorParameterValue(ColorParam, Dim);
+		if (Sprite)
+		{
+			Sprite->SetVectorParameterValue(ColorParam, Dim);
+		}
 	}
 }
 
@@ -304,8 +315,9 @@ void AIJPPaddle::Flicker()
 	FlickerBlinker.Start(this, GetProfile()->FlickerTime, 1, false, [this](bool bShow)
 	{
 		Visual->SetVisibility(bShow && !bUsingSprite);
-		VisualBottom->SetVisibility(bShow && SplitGap > 0.f);
+		VisualBottom->SetVisibility(bShow && SplitGap > 0.f && !bUsingSprite);
 		SpriteQuad->SetVisibility(bShow && bUsingSprite);
+		SpriteQuadBottom->SetVisibility(bShow && bUsingSprite && SplitGap > 0.f);
 	});
 }
 
@@ -319,46 +331,78 @@ bool AIJPPaddle::IsSpriteShown() const
 	return bUsingSprite;
 }
 
+void AIJPPaddle::SetSpriteOverride(UTexture2D* Sprite, float Cap, UTexture2D* HalfSprite, float HalfCap)
+{
+	SpriteOverride = Sprite;
+	SpriteOverrideCap = Cap;
+	HalfSpriteOverride = HalfSprite;
+	HalfSpriteOverrideCap = HalfCap;
+	if (Arena.IsValid())
+	{
+		RefreshSprite();
+	}
+}
+
 void AIJPPaddle::RefreshSprite()
 {
 	const AIJPArena* ArenaPtr = Arena.Get();
-	UTexture2D* Sprite = PaddleClass ? PaddleClass->Sprite.Get() : nullptr;
-	const bool bSprite = ArenaPtr && ArenaPtr->ShowsSprites() && Sprite && SplitGap <= 0.f;
+	const bool bSplit = SplitGap > 0.f;
+	// Whole: the override or the class's. Split: only a half sprite will do, else plain halves.
+	UTexture2D* Sprite = bSplit ? HalfSpriteOverride.Get() : SpriteOverride ? SpriteOverride.Get() : PaddleClass ? PaddleClass->Sprite.Get() : nullptr;
+	const float Cap = bSplit ? HalfSpriteOverrideCap : SpriteOverride ? SpriteOverrideCap : PaddleClass ? PaddleClass->SpriteCap : 0.f;
+	const bool bSprite = ArenaPtr && ArenaPtr->ShowsSprites() && Sprite;
 	if (bSprite && !SpriteMaterial)
 	{
 		if (UMaterialInterface* Base = ArenaPtr->GetSpriteMaterial())
 		{
 			SpriteMaterial = UMaterialInstanceDynamic::Create(Base, this);
 			SpriteQuad->SetMaterial(0, SpriteMaterial);
+			SpriteMaterialBottom = UMaterialInstanceDynamic::Create(Base, this);
+			SpriteQuadBottom->SetMaterial(0, SpriteMaterialBottom);
 		}
 	}
 	bUsingSprite = bSprite && SpriteMaterial;
+	ShownSprite = bUsingSprite ? Sprite : nullptr;
 	if (!bUsingSprite)
 	{
 		SpriteQuad->SetVisibility(false);
+		SpriteQuadBottom->SetVisibility(false);
 		Visual->SetVisibility(true);
+		VisualBottom->SetVisibility(bSplit);
 		return;
 	}
 
-	// Stretch the sprite's middle to the paddle's length, keeping its end caps (the texture's own
+	// Stretch the sprite's middle to the length drawn, keeping its end caps (the texture's own
 	// proportions give its natural length at this width).
 	static const FName SpriteParam(TEXT("Sprite"));
 	static const FName ColorParam(TEXT("Color"));
 	static const FName StretchParam(TEXT("Stretch"));
 	static const FName CapParam(TEXT("Cap"));
 	const FVector2D Size = GetSize();
+	const float Length = bSplit ? FMath::Max((Size.Y - SplitGap) * 0.5f, 1.f) : Size.Y;
 	const float NaturalLength = Size.X * Sprite->GetSizeY() / FMath::Max(Sprite->GetSizeX(), 1);
-	SpriteMaterial->SetTextureParameterValue(SpriteParam, Sprite);
-	SpriteMaterial->SetVectorParameterValue(ColorParam, ArenaPtr->GetPalette().Get(Side == EIJPSide::Left ? EIJPPaletteRole::LeftPaddle : EIJPPaletteRole::RightPaddle));
-	SpriteMaterial->SetScalarParameterValue(StretchParam, Size.Y / FMath::Max(NaturalLength, 1.f));
-	SpriteMaterial->SetScalarParameterValue(CapParam, PaddleClass->SpriteCap);
+	const FLinearColor Colour = ArenaPtr->GetPalette().Get(Side == EIJPSide::Left ? EIJPPaletteRole::LeftPaddle : EIJPPaletteRole::RightPaddle);
 	const float PlaneSize = 100.f; // /Engine/BasicShapes/Plane is 100 units square.
-	SpriteQuad->SetRelativeLocation(FVector(0.f, VisualDepth * 0.5f + 1.f, 0.f));
 	// The art is drawn for the left paddle; the right one mirrors it so both face the court.
 	const float Facing = Side == EIJPSide::Right ? -1.f : 1.f;
-	SpriteQuad->SetRelativeScale3D(FVector(Facing * Size.X / PlaneSize, Size.Y / PlaneSize, 1.f));
+	const float Depth = VisualDepth * 0.5f + 1.f;
+	const float Offset = GetSplitHalfOffset();
+	for (const bool bTop : { true, false })
+	{
+		UMaterialInstanceDynamic* Material = bTop ? SpriteMaterial.Get() : SpriteMaterialBottom.Get();
+		UStaticMeshComponent* Quad = bTop ? SpriteQuad.Get() : SpriteQuadBottom.Get();
+		Material->SetTextureParameterValue(SpriteParam, Sprite);
+		Material->SetVectorParameterValue(ColorParam, Colour);
+		Material->SetScalarParameterValue(StretchParam, Length / FMath::Max(NaturalLength, 1.f));
+		Material->SetScalarParameterValue(CapParam, Cap);
+		// The lower half is the upper one turned over, so both broken ends face the gap.
+		Quad->SetRelativeLocation(FVector(0.f, Depth, bTop ? Offset : -Offset));
+		Quad->SetRelativeScale3D(FVector(Facing * Size.X / PlaneSize, (bTop ? 1.f : -1.f) * Length / PlaneSize, 1.f));
+	}
 	SpriteQuad->SetVisibility(true);
+	SpriteQuadBottom->SetVisibility(bSplit);
 	Visual->SetVisibility(false);
+	VisualBottom->SetVisibility(false);
 }
 
 void AIJPPaddle::SetAimDirection(const FVector2D& Direction)

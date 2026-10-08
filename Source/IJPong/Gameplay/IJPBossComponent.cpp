@@ -52,8 +52,10 @@ void UIJPBossComponent::Restart()
 	if (!IsBossFight())
 	{
 		Paddle->SetRunScales(1.f, 1.f);
+		Paddle->SetSpriteOverride(nullptr, 0.f, nullptr, 0.f);
 		return;
 	}
+	Paddle->SetSpriteOverride(Rival->BossSprite, Rival->BossSpriteCap, Rival->BossHalfSprite, Rival->BossHalfSpriteCap);
 
 	// Its own skill (or its class's) and spell again, and full size.
 	UIJPAbilityComponent* Abilities = Paddle->GetAbilities();
@@ -111,6 +113,10 @@ void UIJPBossComponent::EnterPhase(int32 Index)
 	{
 		Abilities->Equip(EIJPAbilitySlot::Spell, Phase.Spell);
 		Abilities->AddCharge(1000); // ready at once: the new form shows itself
+	}
+	if (Phase.Sprite)
+	{
+		Paddle->SetSpriteOverride(Phase.Sprite, Rival->BossSpriteCap, Rival->BossHalfSprite, Rival->BossHalfSpriteCap);
 	}
 	if (Phase.SplitGap > 0.f)
 	{

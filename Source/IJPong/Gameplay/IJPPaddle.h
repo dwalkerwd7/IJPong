@@ -16,6 +16,7 @@ class UMaterialInstanceDynamic;
 class UIJPPaddleClass;
 class UIJPPaddleProfile;
 class UStaticMeshComponent;
+class UTexture2D;
 
 /**
  * A paddle locked to one lane of an arena. It moves only along plane Y, clamped between the walls.
@@ -53,6 +54,16 @@ public:
 
 	/** Show the class's sprite (or the plain rectangle) for the current era, size and colour. */
 	void RefreshSprite();
+
+	/**
+	 * Draw Sprite instead of the class's (null = the class's again), and HalfSprite on each half while
+	 * split (drawn as the top half, broken end down; the bottom half is mirrored; null = plain halves).
+	 * Caps are the 9-slice end fractions, as UIJPPaddleClass::SpriteCap. For bosses.
+	 */
+	void SetSpriteOverride(UTexture2D* Sprite, float Cap, UTexture2D* HalfSprite, float HalfCap);
+
+	/** The texture drawn now (the top half's while split), or null when it's a plain rectangle. */
+	const UTexture2D* GetShownSprite() const { return bUsingSprite ? ShownSprite.Get() : nullptr; }
 
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	bool IsSpriteShown() const;
@@ -247,6 +258,25 @@ protected:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> SpriteMaterial;
+
+	/** The lower half's sprite while split. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Paddle|Components")
+	TObjectPtr<UStaticMeshComponent> SpriteQuadBottom;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> SpriteMaterialBottom;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTexture2D> SpriteOverride;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTexture2D> HalfSpriteOverride;
+
+	UPROPERTY(Transient)
+	TObjectPtr<const UTexture2D> ShownSprite;
+
+	float SpriteOverrideCap = 0.1f;
+	float HalfSpriteOverrideCap = 0.1f;
 
 	/** Drawn with the sprite rather than the box (kept apart from visibility, which flickers). */
 	bool bUsingSprite = false;

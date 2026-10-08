@@ -8,7 +8,10 @@
 #include "Abilities/IJPAbilityComponent.h"
 #include "Core/IJPTestGameMode.h"
 #include "Core/IJPTypes.h"
+#include "Engine/Texture2D.h"
 #include "Engine/World.h"
+#include "Era/IJPEra.h"
+#include "Era/IJPEraSubsystem.h"
 #include "GameFramework/Controller.h"
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPBall.h"
@@ -149,6 +152,51 @@ bool FIJPBrickfallTest::RunTest(const FString& Parameters)
 		Highest = FMath::Max(Highest, Strike->GetTargetY());
 	}
 	UTEST_EQUAL_TOLERANCE("Spread along the lane", Highest - Lowest, 280.f, 0.5f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPBossSpritesTest, "IJPong.Boss.SpritesCrackThenBreakInTwo", IJPBossTests::Flags)
+bool FIJPBossSpritesTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = Cast<AIJPTestGameMode>(Test.GetWorld()->GetAuthGameMode());
+	AIJPArena* Arena = Mode->GetArena();
+	UIJPMatchComponent* Match = Mode->GetMatch();
+	AIJPPaddle* BossPaddle = Arena->GetPaddle(EIJPSide::Right);
+	UIJPEra* Era = NewObject<UIJPEra>(GetTransientPackage());
+	Era->bShowSprites = true;
+	UIJPEraSubsystem::Get(Arena)->SetEra(Era);
+
+	UTexture2D* Whole = UTexture2D::CreateTransient(8, 64);
+	UTexture2D* Cracked = UTexture2D::CreateTransient(8, 64);
+	UTexture2D* Half = UTexture2D::CreateTransient(8, 32);
+	UIJPRival* Boss = NewObject<UIJPRival>(GetTransientPackage());
+	Boss->BossLength = 3.f;
+	Boss->BossSprite = Whole;
+	Boss->BossHalfSprite = Half;
+	FIJPBossPhase& Second = Boss->Phases.AddDefaulted_GetRef();
+	Second.AtHealth = 0.66f;
+	Second.Pause = 0.f;
+	Second.Sprite = Cracked;
+	FIJPBossPhase& Third = Boss->Phases.AddDefaulted_GetRef();
+	Third.AtHealth = 0.33f;
+	Third.Pause = 0.f;
+	Third.SplitGap = 40.f;
+	Mode->SetRival(Boss);
+	Mode->RestartMatch();
+
+	UTEST_TRUE("Its own paddle", BossPaddle->GetShownSprite() == Whole);
+	Match->ApplyDamage(EIJPSide::Right, 2.f);
+	UTEST_TRUE("Cracked in phase two", BossPaddle->GetShownSprite() == Cracked);
+	Match->ApplyDamage(EIJPSide::Right, 2.f);
+	UTEST_TRUE("Two halves in phase three", BossPaddle->GetShownSprite() == Half);
+	UTEST_TRUE("Drawn as sprites, not boxes", BossPaddle->IsSpriteShown());
+
+	// A new match: whole again, and an ordinary rival gets its class's look back.
+	Mode->RestartMatch();
+	UTEST_TRUE("Whole again", BossPaddle->GetShownSprite() == Whole);
+	Mode->SetRival(nullptr);
+	UTEST_FALSE("No boss art on an ordinary paddle", BossPaddle->GetShownSprite() == Whole);
 	return true;
 }
 
