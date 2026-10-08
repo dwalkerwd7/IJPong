@@ -4,6 +4,7 @@
 #include "Gameplay/IJPHealthBarComponent.h"
 #include "Narrative/IJPPortraitComponent.h"
 #include "Presentation/IJPBackdropComponent.h"
+#include "Gameplay/IJPBonusTargetComponent.h"
 #include "Abilities/IJPAbility_Split.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Audio/IJPToneSet.h"
@@ -95,6 +96,7 @@ AIJPArena::AIJPArena()
 	RightScore = CreateDefaultSubobject<UIJPSevenSegmentComponent>(TEXT("RightScore"));
 	RightScore->SetupAttachment(Root);
 
+	BonusTargets = CreateDefaultSubobject<UIJPBonusTargetComponent>(TEXT("BonusTargets"));
 	LeftHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("LeftHealthBar"));
 	LeftHealthBar->SetupAttachment(Root);
 	RightHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("RightHealthBar"));
@@ -487,6 +489,7 @@ void AIJPArena::SetHealthDisplay(EIJPSide Side, float Health, float MaxHealth, b
 
 void AIJPArena::HandleEraChanged(const UIJPEra* NewEra)
 {
+	BonusTargets->Clear();
 	ApplyPalette(NewEra ? NewEra->Palette : FIJPPalette());
 }
 
@@ -611,6 +614,7 @@ void AIJPArena::FlashScore(EIJPSide Side)
 
 void AIJPArena::ShowWinner(EIJPSide Winner)
 {
+	BonusTargets->Clear();
 	const EIJPSide Loser = IJP::Opposite(Winner);
 	if (ShowsHealthBar(Winner))
 	{
@@ -624,6 +628,7 @@ void AIJPArena::ShowWinner(EIJPSide Winner)
 
 void AIJPArena::ClearWinner()
 {
+	BonusTargets->Clear(); // a new match starts with a clear court
 	for (const EIJPSide Side : { EIJPSide::Left, EIJPSide::Right })
 	{
 		GetHealthBar(Side)->StopFlash();

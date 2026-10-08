@@ -143,6 +143,10 @@ private:
 	UFUNCTION()
 	void HandleRunMatchEnded(EIJPSide Winner);
 
+	/** A bonus target broke: coins if the player's return broke it. */
+	UFUNCTION()
+	void HandleBonusTarget(EIJPSide Side, int32 Coins);
+
 	/** The player used their item: it's gone from the run too. */
 	UFUNCTION()
 	void HandlePlayerAbility(EIJPAbilitySlot Slot, const UIJPAbility* Ability);

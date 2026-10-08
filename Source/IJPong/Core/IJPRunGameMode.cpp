@@ -8,6 +8,7 @@
 #include "Era/IJPEraSubsystem.h"
 #include "Era/IJPEra.h"
 #include "Gameplay/IJPArena.h"
+#include "Gameplay/IJPBonusTargetComponent.h"
 #include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPPaddleClass.h"
@@ -111,6 +112,7 @@ void AIJPRunGameMode::OnArenaReady()
 	MapView->Init(ArenaPtr);
 
 	GetMatch()->OnHealthChanged.AddDynamic(this, &AIJPRunGameMode::HandleHealthChanged);
+	ArenaPtr->GetBonusTargets()->OnTargetHit.AddDynamic(this, &AIJPRunGameMode::HandleBonusTarget);
 	GetMatch()->OnMatchEnded.AddDynamic(this, &AIJPRunGameMode::HandleRunMatchEnded);
 	if (AIJPPaddle* Player = ArenaPtr->GetPaddle(PlayerSide))
 	{
@@ -406,6 +408,15 @@ void AIJPRunGameMode::HandleHealthChanged(EIJPSide Side, float Health, float Dam
 	if (Run->GetState() == EIJPRunState::Lost)
 	{
 		EndRun();
+	}
+}
+
+void AIJPRunGameMode::HandleBonusTarget(EIJPSide Side, int32 Coins)
+{
+	// Only the player's breaks pay; a rival's just clears the target.
+	if (Phase == EIJPRunPhase::Playing && Side == PlayerSide)
+	{
+		UIJPRunSubsystem::Get(this)->AddCoins(Coins);
 	}
 }
 

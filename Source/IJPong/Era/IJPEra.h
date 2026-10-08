@@ -108,6 +108,36 @@ struct FIJPPalette
 	}
 };
 
+/** The Arcade era's twist: targets that pop up mid-court. A ball breaks one and bounces off; if you returned it last, you get coins. */
+USTRUCT(BlueprintType)
+struct FIJPBonusTargets
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bonus Targets")
+	bool bEnabled = false;
+
+	/** Seconds between new targets while a ball is in play. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bonus Targets", meta = (ClampMin = "0.1", Units = "s"))
+	float SpawnInterval = 6.f;
+
+	/** Most on the court at once. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bonus Targets", meta = (ClampMin = "1"))
+	int32 MaxTargets = 2;
+
+	/** A target's side length, in arena units. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bonus Targets", meta = (ClampMin = "4"))
+	float Size = 20.f;
+
+	/** How far out from the net they can appear, as a fraction of the half-court. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bonus Targets", meta = (ClampMin = "0", ClampMax = "1"))
+	float CourtFraction = 0.5f;
+
+	/** Run coins for breaking one with a ball you returned. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bonus Targets", meta = (ClampMin = "0"))
+	int32 Coins = 5;
+};
+
 /**
  * One era of the game's history: how the whole game looks and sounds while it's current.
  * Eras are ordered in UIJPEraSubsystem's config; the subsystem says which one is current, and
@@ -151,6 +181,10 @@ public:
 	/** Health as bars instead of seven-segment numbers (eras with sprites only; unset = keep the numbers). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Look", meta = (EditCondition = "bShowSprites"))
 	FIJPHealthBarStyle HealthBar;
+
+	/** Targets popping up mid-court (the Arcade twist). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Twist")
+	FIJPBonusTargets BonusTargets;
 
 	/** Shown when a run climbs into this era (e.g. "1978 - ARCADE"). Empty = DisplayName. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Run")

@@ -126,6 +126,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ball")
 	bool IsHeld() const { return HeldBy.IsValid(); }
 
+	/** The side whose paddle last returned this ball; false if none has since its serve or launch. */
+	bool GetLastReturner(EIJPSide& OutSide) const { OutSide = LastReturner; return bReturned; }
+
 	/** Drawn with its type's sprite (eras with sprites) rather than the plain square. */
 	UFUNCTION(BlueprintPure, Category = "Ball")
 	bool IsSpriteShown() const;
@@ -285,6 +288,8 @@ private:
 	float CurveBend = 0.f;
 	/** Seconds of turning left before the bend flips (a hook); < 0 = never. */
 	float CurveFlipLeft = -1.f;
+	EIJPSide LastReturner = EIJPSide::Left;
+	bool bReturned = false;
 	bool bCurveWaitsForNet = false;
 	int32 RallyHits = 0;
 	bool bPiercing = false;

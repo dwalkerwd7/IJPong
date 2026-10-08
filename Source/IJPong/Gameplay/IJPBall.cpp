@@ -8,6 +8,7 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "Gameplay/IJPArena.h"
+#include "Gameplay/IJPBonusTarget.h"
 #include "Gameplay/IJPBallType.h"
 #include "Gameplay/IJPGoalComponent.h"
 #include "Gameplay/IJPPaddle.h"
@@ -158,6 +159,7 @@ void AIJPBall::Serve(EIJPSide Toward, float AngleDeg)
 	Velocity = FVector2D(IJP::SideSign(Toward) * FMath::Cos(AngleRad), FMath::Sin(AngleRad)) * Speed;
 	Accumulator = 0.f;
 	RallyHits = 0;
+	bReturned = false;
 	bPiercing = false;
 	Heat = ArrivalHeat = 0.f;
 	bGhosted = bHasSplit = false;
@@ -266,6 +268,7 @@ void AIJPBall::Launch(const FVector2D& InPosition, const FVector2D& InVelocity)
 	FreezeLeft = 0.f;
 	Accumulator = 0.f;
 	RallyHits = 0;
+	bReturned = false;
 	bPiercing = false;
 	Heat = ArrivalHeat = 0.f;
 	bGhosted = bHasSplit = false;
@@ -297,6 +300,7 @@ void AIJPBall::ResetBall()
 	CurveTimeLeft = 0.f;
 	Accumulator = 0.f;
 	RallyHits = 0;
+	bReturned = false;
 	Heat = ArrivalHeat = 0.f;
 	bGhosted = bHasSplit = false;
 	HeldBy.Reset();
@@ -457,6 +461,12 @@ void AIJPBall::HandleHit(const FHitResult& Hit)
 		}
 	}
 
+	// A bonus target breaks, and the ball bounces off it like a wall.
+	if (AIJPBonusTarget* Target = Cast<AIJPBonusTarget>(Hit.GetActor()))
+	{
+		Target->Break(this);
+	}
+
 	if (AIJPPaddle* Paddle = Cast<AIJPPaddle>(Hit.GetActor()))
 	{
 		if (TryPaddleBounce(Paddle, Normal))
@@ -502,6 +512,8 @@ bool AIJPBall::TryPaddleBounce(AIJPPaddle* Paddle, const FVector2D& Normal)
 	AngleLimitDeg = FMath::Min(MaxBounceAngleDeg + Paddle->GetReturnAngleBonus(), 85.f);
 	Velocity = FIJPPongMath::ComputePaddleBounce(Offset, Speed, AngleLimitDeg, -GoalDir);
 	++RallyHits;
+	LastReturner = Paddle->GetSide();
+	bReturned = true;
 	OnPaddleHit.Broadcast(this, Paddle);
 	return true;
 }

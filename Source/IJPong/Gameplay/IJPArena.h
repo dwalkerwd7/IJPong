@@ -26,6 +26,7 @@ class UIJPChargePipsComponent;
 class UIJPHealthBarComponent;
 class UIJPPortraitComponent;
 class UIJPBackdropComponent;
+class UIJPBonusTargetComponent;
 class UIJPBackdrop;
 struct FIJPPortraits;
 class AIJPSpellStrike;
@@ -119,6 +120,9 @@ public:
 	void SetBackdrop(const UIJPBackdrop* Backdrop);
 
 	UIJPBackdropComponent* GetBackdrop() const { return Backdrop; }
+
+	/** Bonus targets mid-court (the era's twist). */
+	UIJPBonusTargetComponent* GetBonusTargets() const { return BonusTargets; }
 
 	/** Whose faces Side's portrait shows (unset = no portrait). */
 	void SetPortraits(EIJPSide Side, const FIJPPortraits& Portraits);
@@ -388,6 +392,9 @@ protected:
 	/** Scenery behind everything (eras with sprites). */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<UIJPBackdropComponent> Backdrop;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<UIJPBonusTargetComponent> BonusTargets;
 
 	/** Each side's character portrait (only rivals have faces so far). */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
