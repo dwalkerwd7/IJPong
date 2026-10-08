@@ -33,7 +33,7 @@ void UIJPComboComponent::HandleReturn(AIJPBall* Ball, AIJPPaddle* Paddle)
 {
 	AIJPArena* Arena = GetArena();
 	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
-	if (!Arena || !Ball || !Paddle || !Era || !Era->Combo.bEnabled)
+	if (!Arena || !Ball || !Paddle || !Era || !Arena->IsTwistOn(EIJPTwist::Combo))
 	{
 		return;
 	}

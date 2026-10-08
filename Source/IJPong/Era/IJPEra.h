@@ -108,6 +108,44 @@ struct FIJPPalette
 	}
 };
 
+/** The eras' signature twists, for mixing them (Overdrive). */
+UENUM(BlueprintType)
+enum class EIJPTwist : uint8
+{
+	BonusTargets,
+	DriftingBlocks,
+	LightTrails,
+	BulletTime,
+	CourtShift,
+	Combo,
+	Count UMETA(Hidden)
+};
+
+/** The Overdrive era's twist: everything at once, at top speed. Each match turns on a few earlier twists at random. */
+USTRUCT(BlueprintType)
+struct FIJPOverdrive
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Overdrive")
+	bool bEnabled = false;
+
+	/** How many twists each match mixes in (their settings are this era's own twist settings). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Overdrive", meta = (ClampMin = "0", ClampMax = "6"))
+	int32 MinTwists = 2;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Overdrive", meta = (ClampMin = "0", ClampMax = "6"))
+	int32 MaxTwists = 3;
+
+	/** Every ball this many times faster. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Overdrive", meta = (ClampMin = "0.1"))
+	float BallSpeedScale = 1.2f;
+
+	/** The screen shakes this long on every goal. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Overdrive", meta = (ClampMin = "0", Units = "s"))
+	float GoalShake = 0.35f;
+};
+
 /** The Arcade era's twist: targets that pop up mid-court. A ball breaks one and bounces off; if you returned it last, you get coins. */
 USTRUCT(BlueprintType)
 struct FIJPBonusTargets
@@ -301,6 +339,25 @@ public:
 	/** Targets popping up mid-court (the Arcade twist). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Twist")
 	FIJPBonusTargets BonusTargets;
+
+	/** Everything at once (the Overdrive twist): a random mix of the twists below each match. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Twist")
+	FIJPOverdrive Overdrive;
+
+	/** On in this era by its own settings (Overdrive's mix comes on top, see AIJPArena::IsTwistOn). */
+	bool HasTwist(EIJPTwist Twist) const
+	{
+		switch (Twist)
+		{
+		case EIJPTwist::BonusTargets:   return BonusTargets.bEnabled;
+		case EIJPTwist::DriftingBlocks: return DriftingBlocks.bEnabled;
+		case EIJPTwist::LightTrails:    return LightTrails.bEnabled;
+		case EIJPTwist::BulletTime:     return BulletTime.bEnabled;
+		case EIJPTwist::CourtShift:     return CourtShift.bEnabled;
+		case EIJPTwist::Combo:          return Combo.bEnabled;
+		default:                        return false;
+		}
+	}
 
 	/** Matches open fighting-game style: "YOU VS <RIVAL>", the rival's pre-match lines, then "ROUND 1", "FIGHT!". */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Look")

@@ -22,7 +22,7 @@ void UIJPBulletTimeComponent::TickComponent(float DeltaTime, ELevelTick TickType
 	TimeLeft = FMath::Max(TimeLeft - DeltaTime, 0.f);
 	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
 	AIJPArena* Arena = GetArena();
-	if (!Era || !Era->BulletTime.bEnabled || !Arena)
+	if (!Era || !Arena || !Arena->IsTwistOn(EIJPTwist::BulletTime))
 	{
 		TimeLeft = 0.f;
 		return;

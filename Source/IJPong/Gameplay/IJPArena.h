@@ -151,6 +151,15 @@ public:
 	void SetBallSpeedScale(float Scale) { BallSpeedScale = FMath::Max(Scale, 0.f); }
 	float GetBallSpeedScale() const { return BallSpeedScale; }
 
+	/** Twist on now: the era has it, or this match's Overdrive mix picked it. */
+	bool IsTwistOn(EIJPTwist Twist) const;
+
+	/** The twists this match's Overdrive mix picked (empty outside Overdrive). */
+	const TArray<EIJPTwist>& GetTwistMix() const { return TwistMix; }
+
+	/** Pick a fresh mix (Overdrive): done at each match's start. */
+	void RollTwistMix();
+
 	/** What the balls' clock runs at now: the speed scale, slowed by any bullet time. */
 	float GetBallTimeFactor() const;
 
@@ -470,6 +479,8 @@ protected:
 	void ApplyBloom(const UIJPEra* Era);
 
 	float BallSpeedScale = 1.f;
+
+	TArray<EIJPTwist> TwistMix;
 
 	/** Each side's character portrait (only rivals have faces so far). */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")

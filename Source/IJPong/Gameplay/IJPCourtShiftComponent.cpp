@@ -28,8 +28,7 @@ void UIJPCourtShiftComponent::TickComponent(float DeltaTime, ELevelTick TickType
 	{
 		return;
 	}
-	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
-	if ((!Era || !Era->CourtShift.bEnabled) && !Arena->GetCourtScale().Equals(FVector2D(1.f, 1.f)))
+	if (!Arena->IsTwistOn(EIJPTwist::CourtShift) && !Arena->GetCourtScale().Equals(FVector2D(1.f, 1.f)))
 	{
 		Reset();
 		return;
@@ -67,7 +66,7 @@ void UIJPCourtShiftComponent::HandleGoal(AIJPBall* Ball, EIJPSide DefendingSide)
 	// Only between points: once the last ball is out, before the next serve.
 	const AIJPArena* Arena = GetArena();
 	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
-	if (!Arena || !Era || !Era->CourtShift.bEnabled || Arena->GetNumBallsInPlay() > 0)
+	if (!Arena || !Era || !Arena->IsTwistOn(EIJPTwist::CourtShift) || Arena->GetNumBallsInPlay() > 0)
 	{
 		return;
 	}

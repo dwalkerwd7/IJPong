@@ -27,7 +27,7 @@ void UIJPBonusTargetComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 
 	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
 	const AIJPArena* Arena = GetArena();
-	if (!Era || !Era->BonusTargets.bEnabled || !Arena || Arena->GetNumBallsInPlay() == 0)
+	if (!Era || !Arena || !Arena->IsTwistOn(EIJPTwist::BonusTargets) || Arena->GetNumBallsInPlay() == 0)
 	{
 		return;
 	}

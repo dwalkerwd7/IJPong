@@ -531,6 +531,7 @@ void AIJPArena::SetHealthDisplay(EIJPSide Side, float Health, float MaxHealth, b
 
 void AIJPArena::HandleEraChanged(const UIJPEra* NewEra)
 {
+	RollTwistMix();
 	BonusTargets->Clear();
 	DriftingBlocks->Reset();
 	LightTrails->Reset();
@@ -543,7 +544,36 @@ void AIJPArena::HandleEraChanged(const UIJPEra* NewEra)
 
 float AIJPArena::GetBallTimeFactor() const
 {
-	return BallSpeedScale * BulletTime->GetBallTimeFactor();
+	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
+	const float Overdrive = Era && Era->Overdrive.bEnabled ? Era->Overdrive.BallSpeedScale : 1.f;
+	return BallSpeedScale * Overdrive * BulletTime->GetBallTimeFactor();
+}
+
+bool AIJPArena::IsTwistOn(EIJPTwist Twist) const
+{
+	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
+	return Era && (Era->HasTwist(Twist) || (Era->Overdrive.bEnabled && TwistMix.Contains(Twist)));
+}
+
+void AIJPArena::RollTwistMix()
+{
+	TwistMix.Reset();
+	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
+	if (!Era || !Era->Overdrive.bEnabled)
+	{
+		return;
+	}
+	TArray<EIJPTwist> All;
+	for (int32 i = 0; i < static_cast<int32>(EIJPTwist::Count); ++i)
+	{
+		All.Add(static_cast<EIJPTwist>(i));
+	}
+	const int32 Count = FMath::RandRange(FMath::Min(Era->Overdrive.MinTwists, Era->Overdrive.MaxTwists), Era->Overdrive.MaxTwists);
+	for (int32 i = 0; i < Count && !All.IsEmpty(); ++i)
+	{
+		TwistMix.Add(All[FMath::RandHelper(All.Num())]);
+		All.Remove(TwistMix.Last());
+	}
 }
 
 void AIJPArena::ApplyBloom(const UIJPEra* Era)
@@ -580,6 +610,10 @@ void AIJPArena::HandleBallGoal(AIJPBall* ScoringBall, EIJPSide DefendingSide)
 {
 	Tones->PlayTone(GetToneSet().Goal);
 	CRT->Pulse();
+	if (const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this); Era && Era->Overdrive.bEnabled)
+	{
+		ScreenShake->Shake(Era->Overdrive.GoalShake);
+	}
 
 	// Bomb: the paddle it got past is stunned.
 	const float Stun = ScoringBall ? ScoringBall->GetType().StunOnGoal : 0.f;
@@ -687,6 +721,7 @@ void AIJPArena::ShowWinner(EIJPSide Winner)
 
 void AIJPArena::ClearWinner()
 {
+	RollTwistMix(); // Overdrive: a new mix each match
 	BonusTargets->Clear(); // a new match starts with a clear court, at normal speed
 	DriftingBlocks->Reset();
 	LightTrails->Reset();

@@ -31,7 +31,7 @@ void UIJPLightTrailComponent::TickComponent(float DeltaTime, ELevelTick TickType
 
 	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
 	const AIJPArena* Arena = GetArena();
-	if (!Era || !Era->LightTrails.bEnabled || !Arena)
+	if (!Era || !Arena || !Arena->IsTwistOn(EIJPTwist::LightTrails))
 	{
 		if (GetNumPieces() > 0 || !Anchors.IsEmpty())
 		{

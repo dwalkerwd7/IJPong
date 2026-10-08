@@ -19,7 +19,7 @@ void UIJPDriftingBlockComponent::TickComponent(float DeltaTime, ELevelTick TickT
 
 	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
 	const AIJPArena* Arena = GetArena();
-	if (!Era || !Era->DriftingBlocks.bEnabled || !Arena)
+	if (!Era || !Arena || !Arena->IsTwistOn(EIJPTwist::DriftingBlocks))
 	{
 		if (!Blocks.IsEmpty())
 		{

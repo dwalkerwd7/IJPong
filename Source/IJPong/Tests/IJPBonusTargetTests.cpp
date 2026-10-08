@@ -333,6 +333,46 @@ bool FIJPVersusIntroTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPOverdriveTest, "IJPong.Era.OverdriveMixesTwistsEachMatchAtSpeed", IJPBonusTargetTests::Flags)
+bool FIJPOverdriveTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = Cast<AIJPTestGameMode>(Test.GetWorld()->GetAuthGameMode());
+	AIJPArena* Arena = Test.GetArena();
+	UIJPEra* Era = NewObject<UIJPEra>(GetTransientPackage());
+	Era->Overdrive.bEnabled = true;
+	Era->Overdrive.MinTwists = 2;
+	Era->Overdrive.MaxTwists = 2;
+	Era->Overdrive.BallSpeedScale = 1.25f;
+	UIJPEraSubsystem::Get(Arena)->SetEra(Era);
+
+	Mode->RestartMatch();
+	UTEST_EQUAL("Two twists this match", Arena->GetTwistMix().Num(), 2);
+	int32 On = 0;
+	for (int32 i = 0; i < static_cast<int32>(EIJPTwist::Count); ++i)
+	{
+		On += Arena->IsTwistOn(static_cast<EIJPTwist>(i)) ? 1 : 0;
+	}
+	UTEST_EQUAL("Exactly those on", On, 2);
+	UTEST_EQUAL_TOLERANCE("Faster balls", Arena->GetBallTimeFactor(), 1.25f, 0.001f);
+
+	// A mixed-in twist actually runs: with drifting blocks forced in, they appear.
+	bool bMixedBlocks = false;
+	for (int32 Tries = 0; Tries < 30 && !bMixedBlocks; ++Tries)
+	{
+		Mode->RestartMatch();
+		bMixedBlocks = Arena->IsTwistOn(EIJPTwist::DriftingBlocks);
+	}
+	UTEST_TRUE("Blocks came up in some mix", bMixedBlocks);
+	Test.Step();
+	UTEST_TRUE("And they're on the court", Arena->GetDriftingBlocks()->GetNumBlocks() > 0);
+
+	UIJPEraSubsystem::Get(Arena)->SetEra(NewObject<UIJPEra>(GetTransientPackage()));
+	UTEST_EQUAL("No mix outside Overdrive", Arena->GetTwistMix().Num(), 0);
+	UTEST_EQUAL_TOLERANCE("Normal speed", Arena->GetBallTimeFactor(), 1.f, 0.001f);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPBonusTargetCoinsTest, "IJPong.Run.BreakingABonusTargetPaysCoinsAndBounces", IJPBonusTargetTests::Flags)
 bool FIJPBonusTargetCoinsTest::RunTest(const FString& Parameters)
 {
