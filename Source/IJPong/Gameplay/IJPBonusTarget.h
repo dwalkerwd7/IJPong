@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Era/IJPEra.h"
 #include "IJPBonusTarget.generated.h"
 
 class AIJPArena;
@@ -13,7 +14,8 @@ class UStaticMeshComponent;
 
 /**
  * A bonus target mid-court (UIJPBonusTargetComponent places them). It blocks the ball like a wall;
- * the ball that hits it breaks it (Break) and bounces off.
+ * the ball that hits it breaks it (Break) and bounces off. As a bumper (InitBumper, a boss's
+ * pinball skill) it doesn't break: it kicks the ball off faster, until its owner takes it away.
  */
 UCLASS()
 class IJPONG_API AIJPBonusTarget : public AActor
@@ -26,8 +28,13 @@ public:
 	/** Place it at plane position Centre, Size across. Call right after spawning. */
 	void Init(AIJPArena* InArena, const FVector2D& Centre, float Size);
 
-	/** Hit by Ball: it's gone, and the arena's targets hear about it. */
+	/** A bumper instead: unbreakable, kicks the ball Boost times faster, in the Colour role's colour. */
+	void InitBumper(AIJPArena* InArena, const FVector2D& Centre, float Size, float Boost, EIJPPaletteRole Colour);
+
+	/** Hit by Ball: a target is gone (and the arena's targets hear about it); a bumper kicks it. */
 	void Break(AIJPBall* Ball);
+
+	bool IsBumper() const { return bBumper; }
 
 	FVector2D GetPlanePosition() const { return PlanePosition; }
 
@@ -41,4 +48,6 @@ private:
 	TWeakObjectPtr<AIJPArena> Arena;
 	FVector2D PlanePosition = FVector2D::ZeroVector;
 	bool bBroken = false;
+	bool bBumper = false;
+	float BumperBoost = 1.f;
 };

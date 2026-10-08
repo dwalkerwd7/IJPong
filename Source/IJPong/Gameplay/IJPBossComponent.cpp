@@ -10,6 +10,7 @@
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPPaddleClass.h"
 #include "Gameplay/IJPRival.h"
+#include "Presentation/IJPScreenShakeComponent.h"
 
 void UIJPBossComponent::Bind(AIJPArena* InArena, UIJPMatchComponent* InMatch)
 {
@@ -49,6 +50,10 @@ void UIJPBossComponent::Restart()
 		return;
 	}
 	Paddle->SetSplitGap(0.f);
+	if (Arena.IsValid())
+	{
+		Arena->SetBallSpeedScale(1.f);
+	}
 	if (!IsBossFight())
 	{
 		Paddle->SetRunScales(1.f, 1.f);
@@ -113,6 +118,21 @@ void UIJPBossComponent::EnterPhase(int32 Index)
 	{
 		Abilities->Equip(EIJPAbilitySlot::Spell, Phase.Spell);
 		Abilities->AddCharge(1000); // ready at once: the new form shows itself
+	}
+	if (Phase.LaunchBalls > 0 && Match.IsValid())
+	{
+		for (int32 i = 0; i < Phase.LaunchBalls; ++i)
+		{
+			Match->LaunchExtraBall(nullptr);
+		}
+	}
+	if (Phase.BallSpeedScale > 0.f && Arena.IsValid())
+	{
+		Arena->SetBallSpeedScale(Phase.BallSpeedScale);
+	}
+	if (Phase.ScreenShake > 0.f && Arena.IsValid())
+	{
+		Arena->GetScreenShake()->Shake(Phase.ScreenShake);
 	}
 	if (Phase.Sprite)
 	{

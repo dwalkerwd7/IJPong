@@ -4,7 +4,10 @@
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
+#include "Audio/IJPToneSet.h"
+#include "Audio/IJPToneSynthComponent.h"
 #include "Gameplay/IJPArena.h"
+#include "Gameplay/IJPBall.h"
 #include "Gameplay/IJPBonusTargetComponent.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -40,8 +43,29 @@ void AIJPBonusTarget::Init(AIJPArena* InArena, const FVector2D& Centre, float Si
 	Visual->SetMaterial(0, InArena->GetPaletteMaterial(EIJPPaletteRole::Score));
 }
 
+void AIJPBonusTarget::InitBumper(AIJPArena* InArena, const FVector2D& Centre, float Size, float Boost, EIJPPaletteRole Colour)
+{
+	Init(InArena, Centre, Size);
+	bBumper = true;
+	BumperBoost = Boost;
+	Visual->SetMaterial(0, InArena->GetPaletteMaterial(Colour));
+}
+
 void AIJPBonusTarget::Break(AIJPBall* Ball)
 {
+	if (bBumper)
+	{
+		// Pinball: the ball bounces off (the ball does that) with a kick.
+		if (Ball)
+		{
+			Ball->Boost(BumperBoost);
+		}
+		if (AIJPArena* ArenaPtr = Arena.Get())
+		{
+			ArenaPtr->GetTones()->PlayTone(ArenaPtr->GetToneSet().Pop);
+		}
+		return;
+	}
 	if (bBroken)
 	{
 		return;

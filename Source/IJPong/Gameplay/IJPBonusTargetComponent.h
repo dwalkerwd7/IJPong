@@ -42,13 +42,17 @@ public:
 	/** Called by a target as a ball breaks it. */
 	void HandleTargetBroken(AIJPBonusTarget* Target, AIJPBall* Ball);
 
+	/**
+	 * A random spot mid-court for something Size across, within CourtFraction of the half-court from
+	 * the net, clear of the balls and the targets (and of Avoid). False if none was found.
+	 */
+	bool PickSpot(float Size, float CourtFraction, FVector2D& OutCentre, const TArray<FVector2D>& Avoid = {}) const;
+
 	UPROPERTY(BlueprintAssignable, Category = "Bonus Targets")
 	FIJPBonusTargetHitSignature OnTargetHit;
 
 private:
 	AIJPArena* GetArena() const;
-	/** A random spot for a new target, clear of the balls, or false if none was found. */
-	bool PickSpot(FVector2D& OutCentre) const;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<AIJPBonusTarget>> Targets;

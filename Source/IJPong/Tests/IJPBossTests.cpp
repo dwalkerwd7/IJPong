@@ -4,6 +4,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "Abilities/IJPAbility_Bumpers.h"
 #include "Abilities/IJPAbility_Spell.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Core/IJPTestGameMode.h"
@@ -20,6 +21,7 @@
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPRival.h"
 #include "Narrative/IJPConversation.h"
+#include "Presentation/IJPScreenShakeComponent.h"
 #include "Narrative/IJPSpeechBubbleComponent.h"
 #include "Tests/IJPTestWorld.h"
 
@@ -152,6 +154,52 @@ bool FIJPBrickfallTest::RunTest(const FString& Parameters)
 		Highest = FMath::Max(Highest, Strike->GetTargetY());
 	}
 	UTEST_EQUAL_TOLERANCE("Spread along the lane", Highest - Lowest, 280.f, 0.5f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPTiltBossTest, "IJPong.Boss.TiltBumpersMultiBallThenTilt", IJPBossTests::Flags)
+bool FIJPTiltBossTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = Cast<AIJPTestGameMode>(Test.GetWorld()->GetAuthGameMode());
+	AIJPArena* Arena = Mode->GetArena();
+	UIJPMatchComponent* Match = Mode->GetMatch();
+	AIJPPaddle* BossPaddle = Arena->GetPaddle(EIJPSide::Right);
+
+	UIJPRival* Tilt = NewObject<UIJPRival>(GetTransientPackage());
+	Tilt->BossLength = 2.f;
+	Tilt->RivalSkill = NewObject<UIJPAbility_Bumpers>(GetTransientPackage());
+	FIJPBossPhase& Multi = Tilt->Phases.AddDefaulted_GetRef();
+	Multi.AtHealth = 0.66f;
+	Multi.Pause = 0.f;
+	Multi.LaunchBalls = 2;
+	FIJPBossPhase& TiltPhase = Tilt->Phases.AddDefaulted_GetRef();
+	TiltPhase.AtHealth = 0.33f;
+	TiltPhase.Pause = 0.f;
+	TiltPhase.BallSpeedScale = 1.5f;
+	TiltPhase.ScreenShake = 1.f;
+	Mode->SetRival(Tilt);
+	Mode->RestartMatch();
+
+	// Its skill: bumpers as soon as a ball is in play.
+	Test.RunFor(1.2f);
+	const UIJPAbility_Bumpers* Bumpers = Cast<UIJPAbility_Bumpers>(BossPaddle->GetAbilities()->GetAbility(EIJPAbilitySlot::ClassSkill));
+	UTEST_NOT_NULL("Tilt's skill", Bumpers);
+	UTEST_TRUE("Bumpers down", Bumpers->GetNumBumpers() > 0);
+
+	// Phase two: multi-ball.
+	const int32 BallsBefore = Arena->GetNumBallsInPlay();
+	Match->ApplyDamage(EIJPSide::Right, 2.f);
+	UTEST_EQUAL("Two more balls", Arena->GetNumBallsInPlay(), BallsBefore + 2);
+
+	// Phase three: TILT.
+	Match->ApplyDamage(EIJPSide::Right, 2.f);
+	UTEST_EQUAL_TOLERANCE("Everything faster", Arena->GetBallSpeedScale(), 1.5f, 0.001f);
+	Test.Step();
+	UTEST_TRUE("The screen shakes", Arena->GetScreenShake()->IsShaking());
+
+	Mode->RestartMatch();
+	UTEST_EQUAL_TOLERANCE("A new match, normal speed", Arena->GetBallSpeedScale(), 1.f, 0.001f);
 	return true;
 }
 

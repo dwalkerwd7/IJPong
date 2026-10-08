@@ -11,6 +11,7 @@
 #include "Era/IJPEraSubsystem.h"
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPBall.h"
+#include "Gameplay/IJPBonusTarget.h"
 #include "Gameplay/IJPBonusTargetComponent.h"
 #include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPMatchRules.h"
@@ -50,6 +51,31 @@ bool FIJPBonusTargetSpawnTest::RunTest(const FString& Parameters)
 
 	UIJPEraSubsystem::Get(Arena)->SetEra(NewObject<UIJPEra>(GetTransientPackage()));
 	UTEST_EQUAL("Gone with the era", Targets->GetNumTargets(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPBumperTest, "IJPong.Boss.BumpersKickTheBallAndStay", IJPBonusTargetTests::Flags)
+bool FIJPBumperTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPArena* Arena = Test.GetArena();
+	AIJPBall* Ball = Arena->GetBall();
+	Test.RunFor(1.1f);
+
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	AIJPBonusTarget* Bumper = Test.GetWorld()->SpawnActor<AIJPBonusTarget>(AIJPBonusTarget::StaticClass(), Arena->GetActorTransform(), Params);
+	Bumper->InitBumper(Arena, FVector2D(100.f, 0.f), 24.f, 1.5f, EIJPPaletteRole::RightPaddle);
+	Ball->Launch(FVector2D(0.f, 0.f), FVector2D(300.f, 0.f));
+	bool bBounced = false;
+	for (int32 i = 0; i < 60 && !bBounced; ++i)
+	{
+		Test.Step();
+		bBounced = Ball->GetPlaneVelocity().X < 0.f;
+	}
+	UTEST_TRUE("Bounced off", bBounced);
+	UTEST_TRUE("Kicked", Ball->GetPlaneVelocity().Size() > 400.f);
+	UTEST_TRUE("Still there", IsValid(Bumper) && !Bumper->IsHidden());
 	return true;
 }
 

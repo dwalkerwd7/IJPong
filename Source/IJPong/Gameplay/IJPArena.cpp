@@ -5,6 +5,7 @@
 #include "Narrative/IJPPortraitComponent.h"
 #include "Presentation/IJPBackdropComponent.h"
 #include "Gameplay/IJPBonusTargetComponent.h"
+#include "Presentation/IJPScreenShakeComponent.h"
 #include "Abilities/IJPAbility_Split.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Audio/IJPToneSet.h"
@@ -97,6 +98,7 @@ AIJPArena::AIJPArena()
 	RightScore->SetupAttachment(Root);
 
 	BonusTargets = CreateDefaultSubobject<UIJPBonusTargetComponent>(TEXT("BonusTargets"));
+	ScreenShake = CreateDefaultSubobject<UIJPScreenShakeComponent>(TEXT("ScreenShake"));
 	LeftHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("LeftHealthBar"));
 	LeftHealthBar->SetupAttachment(Root);
 	RightHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("RightHealthBar"));
@@ -126,6 +128,7 @@ AIJPArena::AIJPArena()
 	Camera->SetupAttachment(Root);
 	Camera->SetRelativeLocationAndRotation(FVector(0.f, 1000.f, 0.f), FRotator(0.f, -90.f, 0.f));
 	Camera->ProjectionMode = ECameraProjectionMode::Orthographic;
+	ScreenShake->SetTarget(Camera);
 	Camera->bConstrainAspectRatio = true;
 
 	// Flat, crisp output: fixed exposure and no lens effects, so white stays white.
@@ -628,7 +631,8 @@ void AIJPArena::ShowWinner(EIJPSide Winner)
 
 void AIJPArena::ClearWinner()
 {
-	BonusTargets->Clear(); // a new match starts with a clear court
+	BonusTargets->Clear(); // a new match starts with a clear court, at normal speed
+	BallSpeedScale = 1.f;
 	for (const EIJPSide Side : { EIJPSide::Left, EIJPSide::Right })
 	{
 		GetHealthBar(Side)->StopFlash();

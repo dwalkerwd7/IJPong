@@ -39,7 +39,7 @@ void UIJPBonusTargetComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	}
 	SpawnCountdown = Settings.SpawnInterval;
 	FVector2D Spot;
-	if (Targets.Num() < Settings.MaxTargets && PickSpot(Spot))
+	if (Targets.Num() < Settings.MaxTargets && PickSpot(Settings.Size, Settings.CourtFraction, Spot))
 	{
 		SpawnTargetAt(Spot);
 	}
@@ -102,29 +102,31 @@ AIJPArena* UIJPBonusTargetComponent::GetArena() const
 	return Cast<AIJPArena>(GetOwner());
 }
 
-bool UIJPBonusTargetComponent::PickSpot(FVector2D& OutCentre) const
+bool UIJPBonusTargetComponent::PickSpot(float Size, float CourtFraction, FVector2D& OutCentre, const TArray<FVector2D>& Avoid) const
 {
 	const AIJPArena* Arena = GetArena();
-	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
-	if (!Arena || !Era)
+	if (!Arena)
 	{
 		return false;
 	}
-	const FIJPBonusTargets& Settings = Era->BonusTargets;
 	const FVector2D Half = Arena->GetHalfExtents();
-	const float MaxX = FMath::Max(Half.X * Settings.CourtFraction - Settings.Size, 0.f);
-	const float MaxY = FMath::Max(Half.Y - Settings.Size * 2.f, 0.f);
+	const float MaxX = FMath::Max(Half.X * CourtFraction - Size, 0.f);
+	const float MaxY = FMath::Max(Half.Y - Size * 2.f, 0.f);
 	for (int32 Try = 0; Try < 8; ++Try)
 	{
 		const FVector2D Spot(FMath::FRandRange(-MaxX, MaxX), FMath::FRandRange(-MaxY, MaxY));
 		bool bClear = true;
 		for (const AIJPBall* Ball : Arena->GetBalls())
 		{
-			bClear &= !Ball->IsInPlay() || FVector2D::Distance(Ball->GetPlanePosition(), Spot) > TargetBallClearance + Settings.Size;
+			bClear &= !Ball->IsInPlay() || FVector2D::Distance(Ball->GetPlanePosition(), Spot) > TargetBallClearance + Size;
 		}
 		for (const AIJPBonusTarget* Other : Targets)
 		{
-			bClear &= !Other || FVector2D::Distance(Other->GetPlanePosition(), Spot) > Settings.Size * 2.f;
+			bClear &= !Other || FVector2D::Distance(Other->GetPlanePosition(), Spot) > Size * 2.f;
+		}
+		for (const FVector2D& Other : Avoid)
+		{
+			bClear &= FVector2D::Distance(Other, Spot) > Size * 2.f;
 		}
 		if (bClear)
 		{

@@ -338,7 +338,7 @@ void AIJPBall::Tick(float DeltaSeconds)
 		FreezeLeft -= DeltaSeconds;
 		return;
 	}
-	DeltaSeconds *= TimeScale;
+	DeltaSeconds *= TimeScale * (Arena.IsValid() ? Arena->GetBallSpeedScale() : 1.f);
 
 	// Fixed substeps: same result at any frame rate. The cap stops a long hitch from simulating a burst of steps.
 	const float Step = 1.f / SimRate;

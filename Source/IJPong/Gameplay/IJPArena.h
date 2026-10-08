@@ -27,6 +27,7 @@ class UIJPHealthBarComponent;
 class UIJPPortraitComponent;
 class UIJPBackdropComponent;
 class UIJPBonusTargetComponent;
+class UIJPScreenShakeComponent;
 class UIJPBackdrop;
 struct FIJPPortraits;
 class AIJPSpellStrike;
@@ -123,6 +124,13 @@ public:
 
 	/** Bonus targets mid-court (the era's twist). */
 	UIJPBonusTargetComponent* GetBonusTargets() const { return BonusTargets; }
+
+	/** Shakes the arena's camera (a boss's TILT). */
+	UIJPScreenShakeComponent* GetScreenShake() const { return ScreenShake; }
+
+	/** Every ball moves this many times faster, until the next match (a boss's TILT). 1 = normal. */
+	void SetBallSpeedScale(float Scale) { BallSpeedScale = FMath::Max(Scale, 0.f); }
+	float GetBallSpeedScale() const { return BallSpeedScale; }
 
 	/** Whose faces Side's portrait shows (unset = no portrait). */
 	void SetPortraits(EIJPSide Side, const FIJPPortraits& Portraits);
@@ -395,6 +403,11 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<UIJPBonusTargetComponent> BonusTargets;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<UIJPScreenShakeComponent> ScreenShake;
+
+	float BallSpeedScale = 1.f;
 
 	/** Each side's character portrait (only rivals have faces so far). */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")

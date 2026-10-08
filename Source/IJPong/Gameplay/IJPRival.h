@@ -82,6 +82,18 @@ struct FIJPBossPhase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss", meta = (ClampMin = "0"))
 	float SplitGap = 0.f;
 
+	/** Extra balls launched into play as it changes (multi-ball). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss", meta = (ClampMin = "0", ClampMax = "6"))
+	int32 LaunchBalls = 0;
+
+	/** Every ball moves this many times faster for the rest of the match (a TILT). 0 = no change. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss", meta = (ClampMin = "0"))
+	float BallSpeedScale = 0.f;
+
+	/** The screen shakes for this long as it changes. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss", meta = (ClampMin = "0", Units = "s"))
+	float ScreenShake = 0.f;
+
 	/** In sprite eras, its paddle looks like this from now on (e.g. cracked; empty = no change). Cap as BossSpriteCap. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss")
 	TObjectPtr<UTexture2D> Sprite;
