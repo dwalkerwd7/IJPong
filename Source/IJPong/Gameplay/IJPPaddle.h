@@ -130,6 +130,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	float GetSplitGap() const { return SplitGap; }
 
+	/** Move to another lane (the court reshaping), staying inside the walls. */
+	void SetLaneX(float InLaneX);
+
 	/** How far each half's centre sits from the paddle's centre while split (0 when whole). */
 	float GetSplitHalfOffset() const;
 

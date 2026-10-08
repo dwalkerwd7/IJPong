@@ -78,6 +78,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Arena")
 	FVector2D GetHalfExtents() const { return HalfExtents; }
 
+	/**
+	 * Resize the court to Scale of its full size (each axis), keeping the screen framed on the full
+	 * court: walls, goals, barriers, net, scores and the paddles' lanes follow. For the HD twist.
+	 */
+	void SetCourtScale(const FVector2D& Scale);
+	FVector2D GetCourtScale() const { return CourtScale; }
+
+	/** The court's size at scale 1. */
+	FVector2D GetFullHalfExtents() const { return FullHalfExtents; }
+
 	UFUNCTION(BlueprintCallable, Category = "Arena")
 	void SetScore(EIJPSide Side, int32 Score);
 
@@ -143,6 +153,9 @@ public:
 
 	/** What the balls' clock runs at now: the speed scale, slowed by any bullet time. */
 	float GetBallTimeFactor() const;
+
+	/** The court reshaping between points (the era's twist). */
+	class UIJPCourtShiftComponent* GetCourtShift() const { return CourtShift; }
 
 	/** Bullet time on near-goals (the era's twist). */
 	UIJPBulletTimeComponent* GetBulletTime() const { return BulletTime; }
@@ -430,6 +443,16 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<UIJPBulletTimeComponent> BulletTime;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<class UIJPCourtShiftComponent> CourtShift;
+
+	/** Walls, barriers, goals, net and scores for the current HalfExtents. */
+	void LayoutCourt();
+
+	/** HalfExtents as set in the editor; the court scales from it. */
+	FVector2D FullHalfExtents = FVector2D::ZeroVector;
+	FVector2D CourtScale = FVector2D(1.f, 1.f);
 
 	/** The era's bloom on the camera. */
 	void ApplyBloom(const UIJPEra* Era);

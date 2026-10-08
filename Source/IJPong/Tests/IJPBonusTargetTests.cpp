@@ -16,6 +16,8 @@
 #include "Gameplay/IJPDriftingBlockComponent.h"
 #include "Gameplay/IJPLightTrailComponent.h"
 #include "Gameplay/IJPBulletTimeComponent.h"
+#include "Gameplay/IJPCourtShiftComponent.h"
+#include "Core/IJPTestGameMode.h"
 #include "Camera/CameraComponent.h"
 #include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPMatchRules.h"
@@ -219,6 +221,47 @@ bool FIJPBulletTimeTest::RunTest(const FString& Parameters)
 	UTEST_FALSE("Over", Bullet->IsActive());
 	Test.RunFor(0.5f, [&] { HoldUp(); bAgain |= Bullet->IsActive(); });
 	UTEST_FALSE("Not twice", bAgain);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPCourtShiftTest, "IJPong.Era.CourtReshapesBetweenPoints", IJPBonusTargetTests::Flags)
+bool FIJPCourtShiftTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = Cast<AIJPTestGameMode>(Test.GetWorld()->GetAuthGameMode());
+	AIJPArena* Arena = Test.GetArena();
+	AIJPBall* Ball = Arena->GetBall();
+	AIJPPaddle* Left = Arena->GetPaddle(EIJPSide::Left);
+	const auto HoldUp = [Left] { Left->AddMoveInput(1.f); };
+	UIJPCourtShiftComponent* Shift = Arena->GetCourtShift();
+	const FVector2D Full = Arena->GetFullHalfExtents();
+	UIJPEra* Era = NewObject<UIJPEra>(GetTransientPackage());
+	Era->CourtShift.bEnabled = true;
+	Era->CourtShift.MinScale = FVector2D(0.7f, 0.7f);
+	Era->CourtShift.MaxScale = FVector2D(0.8f, 0.8f);
+	Era->CourtShift.ShiftTime = 0.4f;
+	UIJPEraSubsystem::Get(Arena)->SetEra(Era);
+	Test.RunFor(1.1f, HoldUp);
+
+	// A goal: the court reshapes before the next serve.
+	Ball->Serve(EIJPSide::Left, 0.f);
+	UTEST_TRUE("Goal", IJPBonusTargetTests::RunUntil(Test, 3.f, [Ball] { return !Ball->IsInPlay(); }));
+	UTEST_TRUE("Reshaping", Shift->IsShifting());
+	Test.RunFor(0.45f);
+	const FVector2D Half = Arena->GetHalfExtents();
+	UTEST_TRUE("Smaller, within the limits", Half.X >= Full.X * 0.69f && Half.X <= Full.X * 0.81f && Half.Y >= Full.Y * 0.69f && Half.Y <= Full.Y * 0.81f);
+	UTEST_EQUAL_TOLERANCE("Paddles in the new lanes", static_cast<float>(Left->GetPlanePosition().X), Arena->GetLaneX(EIJPSide::Left), 0.01f);
+	UTEST_TRUE("Inside the new walls", FMath::Abs(Left->GetPlanePosition().Y) + Left->GetSize().Y * 0.5f <= Half.Y + 0.01f);
+
+	// The walls moved too: a ball bounces off the new top.
+	Ball->Launch(FVector2D(0.f, 0.f), FVector2D(0.f, 300.f));
+	double Highest = 0.0;
+	Test.RunFor(1.5f, [&] { Highest = FMath::Max(Highest, Ball->GetPlanePosition().Y); });
+	UTEST_TRUE("Bounced off the new top wall", Highest <= Half.Y && Highest > Half.Y - 20.f);
+
+	// A new match starts at full size.
+	Mode->RestartMatch();
+	UTEST_TRUE("Full size again", Arena->GetHalfExtents().Equals(Full, 0.01));
 	return true;
 }
 

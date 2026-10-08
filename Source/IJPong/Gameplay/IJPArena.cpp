@@ -9,6 +9,7 @@
 #include "Gameplay/IJPDriftingBlockComponent.h"
 #include "Gameplay/IJPLightTrailComponent.h"
 #include "Gameplay/IJPBulletTimeComponent.h"
+#include "Gameplay/IJPCourtShiftComponent.h"
 #include "Abilities/IJPAbility_Split.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Audio/IJPToneSet.h"
@@ -105,6 +106,7 @@ AIJPArena::AIJPArena()
 	DriftingBlocks = CreateDefaultSubobject<UIJPDriftingBlockComponent>(TEXT("DriftingBlocks"));
 	LightTrails = CreateDefaultSubobject<UIJPLightTrailComponent>(TEXT("LightTrails"));
 	BulletTime = CreateDefaultSubobject<UIJPBulletTimeComponent>(TEXT("BulletTime"));
+	CourtShift = CreateDefaultSubobject<UIJPCourtShiftComponent>(TEXT("CourtShift"));
 	LeftHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("LeftHealthBar"));
 	LeftHealthBar->SetupAttachment(Root);
 	RightHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("RightHealthBar"));
@@ -159,6 +161,48 @@ void AIJPArena::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
+	FullHalfExtents = HalfExtents;
+	CourtScale = FVector2D(1.f, 1.f);
+	LayoutCourt();
+
+	// The base material in the editor; BeginPlay swaps in the palette's instances.
+	UMaterialInterface* BaseMaterial = PongMaterial.LoadSynchronous();
+	for (UPrimitiveComponent* Piece : TArray<UPrimitiveComponent*>{ Background, WallVisuals, NetVisuals, LeftScore, RightScore, LeftBarrierVisual, RightBarrierVisual })
+	{
+		Piece->SetMaterial(0, BaseMaterial);
+	}
+
+	// Frame the playfield plus walls and margin; width follows from the screen's aspect ratio.
+	const float ScreenHeight = 2.f * (HalfExtents.Y + WallThickness + ScreenMargin);
+	Camera->AspectRatio = ScreenAspectRatio;
+	Camera->OrthoWidth = ScreenHeight * ScreenAspectRatio;
+
+	// Background: a thin slab just behind every piece, filling exactly what the camera frames.
+	const float CubeSize = 100.f; // /Engine/BasicShapes/Cube is 100 units, centred.
+	Background->SetRelativeLocation(FVector(0.f, -VisualDepth, 0.f));
+	Background->SetRelativeScale3D(FVector(Camera->OrthoWidth / CubeSize, 1.f / CubeSize, ScreenHeight / CubeSize));
+}
+
+void AIJPArena::SetCourtScale(const FVector2D& Scale)
+{
+	if (FullHalfExtents.IsZero())
+	{
+		FullHalfExtents = HalfExtents;
+	}
+	CourtScale = Scale;
+	HalfExtents = FullHalfExtents * Scale;
+	LayoutCourt();
+	for (const EIJPSide Side : { EIJPSide::Left, EIJPSide::Right })
+	{
+		if (AIJPPaddle* Paddle = GetPaddle(Side))
+		{
+			Paddle->SetLaneX(GetLaneX(Side));
+		}
+	}
+}
+
+void AIJPArena::LayoutCourt()
+{
 	const float HalfBlockerDepth = BlockerDepth * 0.5f;
 	const float WallCentreY = HalfExtents.Y + WallThickness * 0.5f;
 	const float OuterHalfY = HalfExtents.Y + WallThickness;
@@ -192,13 +236,6 @@ void AIJPArena::OnConstruction(const FTransform& Transform)
 	RightGoal->SetRelativeLocation(FVector(GoalCentreX, 0.f, 0.f));
 	RightGoal->SetBoxExtent(GoalExtent);
 
-	// The base material in the editor; BeginPlay swaps in the palette's instances.
-	UMaterialInterface* BaseMaterial = PongMaterial.LoadSynchronous();
-	for (UPrimitiveComponent* Piece : TArray<UPrimitiveComponent*>{ Background, WallVisuals, NetVisuals, LeftScore, RightScore, LeftBarrierVisual, RightBarrierVisual })
-	{
-		Piece->SetMaterial(0, BaseMaterial);
-	}
-
 	WallVisuals->ClearInstances();
 	if (bShowWalls)
 	{
@@ -220,16 +257,6 @@ void AIJPArena::OnConstruction(const FTransform& Transform)
 	}
 
 	LayoutHealth();
-
-	// Frame the playfield plus walls and margin; width follows from the screen's aspect ratio.
-	const float ScreenHeight = 2.f * (OuterHalfY + ScreenMargin);
-	Camera->AspectRatio = ScreenAspectRatio;
-	Camera->OrthoWidth = ScreenHeight * ScreenAspectRatio;
-
-	// Background: a thin slab just behind every piece, filling exactly what the camera frames.
-	const float CubeSize = 100.f; // /Engine/BasicShapes/Cube is 100 units, centred.
-	Background->SetRelativeLocation(FVector(0.f, -VisualDepth, 0.f));
-	Background->SetRelativeScale3D(FVector(Camera->OrthoWidth / CubeSize, 1.f / CubeSize, ScreenHeight / CubeSize));
 }
 
 void AIJPArena::BeginPlay()
@@ -503,6 +530,7 @@ void AIJPArena::HandleEraChanged(const UIJPEra* NewEra)
 	DriftingBlocks->Reset();
 	LightTrails->Reset();
 	BulletTime->Reset();
+	CourtShift->Reset();
 	ApplyPalette(NewEra ? NewEra->Palette : FIJPPalette());
 	ApplyBloom(NewEra);
 }
@@ -657,6 +685,7 @@ void AIJPArena::ClearWinner()
 	DriftingBlocks->Reset();
 	LightTrails->Reset();
 	BulletTime->Reset();
+	CourtShift->Reset();
 	BallSpeedScale = 1.f;
 	for (const EIJPSide Side : { EIJPSide::Left, EIJPSide::Right })
 	{

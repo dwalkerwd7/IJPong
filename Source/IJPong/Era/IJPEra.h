@@ -210,6 +210,28 @@ struct FIJPBulletTime
 	float Lead = 0.2f;
 };
 
+/** The HD era's twist: between points the court changes size, smoothly, within limits. */
+USTRUCT(BlueprintType)
+struct FIJPCourtShift
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Court Shift")
+	bool bEnabled = false;
+
+	/** Smallest court, as a fraction of the full size (width, height). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Court Shift")
+	FVector2D MinScale = FVector2D(0.75f, 0.7f);
+
+	/** Largest court (1 = full size, the screen's frame). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Court Shift")
+	FVector2D MaxScale = FVector2D(1.f, 1.f);
+
+	/** How long the reshape takes. Keep it under the serve delay, so the court has settled before play. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Court Shift", meta = (ClampMin = "0", Units = "s"))
+	float ShiftTime = 0.6f;
+};
+
 /**
  * One era of the game's history: how the whole game looks and sounds while it's current.
  * Eras are ordered in UIJPEraSubsystem's config; the subsystem says which one is current, and
@@ -257,6 +279,10 @@ public:
 	/** Targets popping up mid-court (the Arcade twist). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Twist")
 	FIJPBonusTargets BonusTargets;
+
+	/** The court reshaping between points (the HD twist). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Twist")
+	FIJPCourtShift CourtShift;
 
 	/** Bullet time on near-goals (the Matrix twist). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Twist")

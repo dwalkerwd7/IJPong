@@ -247,6 +247,16 @@ void AIJPPaddle::SetLengthScale(float Scale)
 	}
 }
 
+void AIJPPaddle::SetLaneX(float InLaneX)
+{
+	LaneX = InLaneX;
+	if (Arena.IsValid())
+	{
+		ClampToWalls();
+		UpdateTransform();
+	}
+}
+
 bool AIJPPaddle::ClampToWalls()
 {
 	const float MaxY = FMath::Max(0.f, Arena->GetHalfExtents().Y - GetSize().Y * 0.5f);
