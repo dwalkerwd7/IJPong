@@ -65,6 +65,68 @@ bool FIJPDashTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPDashTreeTest, "IJPong.Tree.StrikerUpgradesReachDoubleDashSlipstreamStrike", IJPClassSkillTests::Flags)
+bool FIJPDashTreeTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPArena* Arena = Test.GetArena();
+	AIJPPaddle* Left = Arena->GetPaddle(EIJPSide::Left);
+	UIJPAbilityComponent* Abilities = Left->GetAbilities();
+	UIJPAbility_Dash* Dash = NewObject<UIJPAbility_Dash>(GetTransientPackage());
+	Dash->Distance = 100.f;
+	Dash->Duration = 0.1f;
+	Abilities->Equip(EIJPAbilitySlot::ClassSkill, Dash);
+	Abilities->GetAbility(EIJPAbilitySlot::ClassSkill)->SetUpgrades({ { FName(TEXT("Distance")), 0.5f }, { FName(TEXT("ExtraDashes")), 1.f }, { FName(TEXT("Slipstream")), 1.f }, { FName(TEXT("DashStrike")), 1.f } });
+	const float BaseSpeed = Left->GetMaxSpeed();
+	Test.RunFor(1.1f);
+
+	// Reach: half as far again. Slipstream: faster for a while after.
+	Test.RunFor(0.1f, [Left] { Left->AddMoveInput(-1.f); });
+	Test.RunFor(0.3f);
+	const double StartY = Left->GetPlanePosition().Y;
+	UTEST_TRUE("Dashes", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
+	Test.RunFor(0.12f);
+	UTEST_TRUE("Further", StartY - Left->GetPlanePosition().Y >= 145.0);
+	UTEST_TRUE("Slipstream", Left->GetMaxSpeed() > BaseSpeed * 1.25f);
+
+	// Double Dash: the first was free, the second starts the cooldown.
+	UTEST_TRUE("Still ready", Abilities->IsReady(EIJPAbilitySlot::ClassSkill));
+	UTEST_TRUE("Second dash", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
+	UTEST_FALSE("Now cooling down", Abilities->IsReady(EIJPAbilitySlot::ClassSkill));
+	Test.RunFor(1.1f);
+	UTEST_EQUAL_TOLERANCE("Slipstream wears off", Left->GetMaxSpeed(), BaseSpeed, 0.01f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPDashStrikeTest, "IJPong.Tree.DashStrikeSmashesAReturnRightAfterADash", IJPClassSkillTests::Flags)
+bool FIJPDashStrikeTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPArena* Arena = Test.GetArena();
+	AIJPBall* Ball = Arena->GetBall();
+	AIJPPaddle* Left = Arena->GetPaddle(EIJPSide::Left);
+	UIJPAbilityComponent* Abilities = Left->GetAbilities();
+	UIJPAbility_Dash* Dash = NewObject<UIJPAbility_Dash>(GetTransientPackage());
+	Dash->Distance = 1.f; // barely moves: the ball still meets it
+	Abilities->Equip(EIJPAbilitySlot::ClassSkill, Dash);
+	Abilities->GetAbility(EIJPAbilitySlot::ClassSkill)->SetUpgrades({ { FName(TEXT("DashStrike")), 1.f } });
+	Test.RunFor(1.1f);
+
+	// A ball a moment away from the paddle: dash, and the return is smashed.
+	const FVector2D Face = Left->GetPlanePosition() + FVector2D(Left->GetSize().X * 0.5f, 0.f);
+	Ball->Launch(Face + FVector2D(60.f, 0.f), FVector2D(-400.f, 0.f));
+	Abilities->TryActivate(EIJPAbilitySlot::ClassSkill);
+	UTEST_TRUE("Returned", IJPClassSkillTests::RunUntil(Test, 1.f, [Ball] { return Ball->GetRallyHits() >= 1; }));
+	UTEST_TRUE("Smashed", Ball->IsBoosted());
+
+	// Later, a plain return.
+	Test.RunFor(1.f);
+	Ball->Launch(Face + FVector2D(60.f, 0.f), FVector2D(-400.f, 0.f));
+	UTEST_TRUE("Returned again", IJPClassSkillTests::RunUntil(Test, 1.f, [Ball] { return Ball->GetRallyHits() >= 1; }));
+	UTEST_FALSE("Not smashed without a dash", Ball->IsBoosted());
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPBarrierTest, "IJPong.Ability.BarrierBlocksTheGoalForItsDuration", IJPClassSkillTests::Flags)
 bool FIJPBarrierTest::RunTest(const FString& Parameters)
 {

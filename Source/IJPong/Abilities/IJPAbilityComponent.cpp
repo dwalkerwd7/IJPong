@@ -83,7 +83,7 @@ bool UIJPAbilityComponent::TryActivate(EIJPAbilitySlot Slot)
 	// The cooldown runs from the button, wind-up included.
 	const int32 Index = static_cast<int32>(Slot);
 	UIJPAbility* Ability = Abilities[Index];
-	Cooldowns[Index] = Ability->Cooldown * CooldownScales[Index];
+	Cooldowns[Index] = Ability->StartsCooldown() ? Ability->Cooldown * CooldownScales[Index] : 0.f;
 	if (Ability->Telegraph > 0.f)
 	{
 		WindUps[Index] = Ability->Telegraph;

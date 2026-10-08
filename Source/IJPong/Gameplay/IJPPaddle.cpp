@@ -258,7 +258,7 @@ bool AIJPPaddle::ClampToWalls()
 
 float AIJPPaddle::GetMaxSpeed() const
 {
-	return GetProfile()->MaxSpeed * RunSpeedScale * SpeedScale;
+	return GetProfile()->MaxSpeed * RunSpeedScale * SpeedScale * (SpeedBoostLeft > 0.f ? SpeedBoost : 1.f);
 }
 
 void AIJPPaddle::SetRunScales(float Length, float Speed)
@@ -502,6 +502,7 @@ void AIJPPaddle::Tick(float DeltaSeconds)
 		LastMoveSign = FMath::Sign(Input);
 	}
 
+	SpeedBoostLeft = FMath::Max(SpeedBoostLeft - DeltaSeconds, 0.f);
 	const float MaxSpeed = GetMaxSpeed();
 	if (DashTimeLeft > 0.f)
 	{

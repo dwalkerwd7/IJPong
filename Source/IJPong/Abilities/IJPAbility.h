@@ -73,6 +73,9 @@ public:
 
 	virtual void Activate() PURE_VIRTUAL(UIJPAbility::Activate, );
 
+	/** Asked on each press: false = this press is free and the cooldown doesn't start (e.g. a second dash). */
+	virtual bool StartsCooldown() { return true; }
+
 	/** Still doing something: armed, or a timed effect running. */
 	virtual bool IsActive() const { return false; }
 

@@ -171,6 +171,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	float GetSpeedScale() const { return SpeedScale; }
 
+	/** Top speed times Scale for Seconds, on top of everything else (the player's own boosts, e.g. Slipstream). */
+	UFUNCTION(BlueprintCallable, Category = "Paddle")
+	void BoostSpeed(float Scale, float Seconds) { SpeedBoost = FMath::Max(Scale, 0.f); SpeedBoostLeft = FMath::Max(Seconds, 0.f); }
+
 	/** Degrees added to how steeply this paddle can return the ball (e.g. from a skill tree). */
 	UFUNCTION(BlueprintCallable, Category = "Paddle")
 	void SetReturnAngleBonus(float Degrees) { ReturnAngleBonus = Degrees; }
@@ -313,6 +317,8 @@ private:
 	float RunLengthScale = 1.f;
 	float RunSpeedScale = 1.f;
 	float SpeedScale = 1.f;
+	float SpeedBoost = 1.f;
+	float SpeedBoostLeft = 0.f;
 	float ReturnAngleBonus = 0.f;
 	float AimAngle = 0.f;
 	/** +1 or -1: the way the paddle was last steered. */
