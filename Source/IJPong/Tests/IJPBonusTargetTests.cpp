@@ -14,6 +14,8 @@
 #include "Gameplay/IJPBonusTarget.h"
 #include "Gameplay/IJPBonusTargetComponent.h"
 #include "Gameplay/IJPDriftingBlockComponent.h"
+#include "Gameplay/IJPLightTrailComponent.h"
+#include "Camera/CameraComponent.h"
 #include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPMatchRules.h"
 #include "Gameplay/IJPPaddle.h"
@@ -24,6 +26,16 @@
 namespace IJPBonusTargetTests
 {
 	constexpr EAutomationTestFlags Flags = EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter;
+
+	bool RunUntil(FIJPTestWorld& Test, float MaxSeconds, TFunctionRef<bool()> Condition)
+	{
+		const int32 Steps = FMath::CeilToInt(MaxSeconds / FIJPTestWorld::FixedStep);
+		for (int32 i = 0; i < Steps && !Condition(); ++i)
+		{
+			Test.Step();
+		}
+		return Condition();
+	}
 
 	UIJPEra* MakeEra(float Interval)
 	{
@@ -123,6 +135,55 @@ bool FIJPDriftingBlocksTest::RunTest(const FString& Parameters)
 
 	UIJPEraSubsystem::Get(Arena)->SetEra(NewObject<UIJPEra>(GetTransientPackage()));
 	UTEST_EQUAL("Gone with the era", Drift->GetNumBlocks(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPLightTrailsTest, "IJPong.Era.LightTrailsBlockCrossingBallsButNotAlongThem", IJPBonusTargetTests::Flags)
+bool FIJPLightTrailsTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPArena* Arena = Test.GetArena();
+	AIJPBall* Ball = Arena->GetBall();
+	UIJPLightTrailComponent* Trails = Arena->GetLightTrails();
+	Test.RunFor(1.1f);
+
+	UIJPEra* Era = NewObject<UIJPEra>(GetTransientPackage());
+	Era->LightTrails.bEnabled = true;
+	Era->BloomIntensity = 2.f;
+	UIJPEraSubsystem::Get(Arena)->SetEra(Era);
+	UTEST_EQUAL_TOLERANCE("The camera glows", Arena->GetCamera()->PostProcessSettings.BloomIntensity, 2.f, 0.001f);
+
+	// A ball going up lays a vertical trail.
+	Ball->Launch(FVector2D(60.f, -200.f), FVector2D(0.f, 400.f));
+	Test.RunFor(0.5f);
+	UTEST_TRUE("A trail", Trails->GetNumPieces() > 3);
+	UTEST_TRUE("Solid behind the ball", Trails->GetNumSolidPieces() > 0);
+
+	// Another ball crossing it bounces back.
+	AIJPBall* Crosser = Arena->AddBall(nullptr);
+	Crosser->Launch(FVector2D(-40.f, -100.f), FVector2D(400.f, 0.f));
+	bool bBounced = false;
+	for (int32 i = 0; i < 40 && !bBounced; ++i)
+	{
+		Test.Step();
+		bBounced = Crosser->GetPlaneVelocity().X < 0.f;
+	}
+	UTEST_TRUE("Bounced off the trail", bBounced);
+	UTEST_TRUE("Before passing it", Crosser->GetPlanePosition().X < 60.f);
+	Crosser->ResetBall();
+
+	// A flat return heads back along its own wake without bouncing off it.
+	Test.RunFor(1.2f); // the old trail fades
+	AIJPPaddle* Left = Arena->GetPaddle(EIJPSide::Left);
+	Ball->Launch(FVector2D(0.f, Left->GetPlanePosition().Y), FVector2D(-400.f, 0.f));
+	UTEST_TRUE("Returned", IJPBonusTargetTests::RunUntil(Test, 2.f, [Ball] { return Ball->GetRallyHits() >= 1; }));
+	Test.RunFor(0.5f);
+	UTEST_TRUE("Still heading out along the wake", Ball->GetPlaneVelocity().X > 0.f && Ball->GetPlanePosition().X > Left->GetPlanePosition().X + 120.f);
+	UTEST_EQUAL("Returned once, not ping-ponged", Ball->GetRallyHits(), 1);
+
+	UIJPEraSubsystem::Get(Arena)->SetEra(NewObject<UIJPEra>(GetTransientPackage()));
+	UTEST_EQUAL("Gone with the era", Trails->GetNumPieces(), 0);
+	UTEST_EQUAL_TOLERANCE("No glow", Arena->GetCamera()->PostProcessSettings.BloomIntensity, 0.f, 0.001f);
 	return true;
 }
 

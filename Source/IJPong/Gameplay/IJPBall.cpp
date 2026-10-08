@@ -9,6 +9,7 @@
 #include "Engine/World.h"
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPBonusTarget.h"
+#include "Gameplay/IJPLightTrailComponent.h"
 #include "Gameplay/IJPBallType.h"
 #include "Gameplay/IJPGoalComponent.h"
 #include "Gameplay/IJPPaddle.h"
@@ -424,6 +425,8 @@ bool AIJPBall::Sweep(const FVector2D& From, const FVector2D& To, FHitResult& Out
 		Params.AddIgnoredComponent(ArenaPtr->GetBarrier(EIJPSide::Left));
 		Params.AddIgnoredComponent(ArenaPtr->GetBarrier(EIJPSide::Right));
 	}
+	// A ball sliding along a light trail doesn't hit it; only crossing one does.
+	ArenaPtr->GetLightTrails()->AddParallelPieces(To - From, Params);
 
 	// The box is aligned with the arena, so ball faces meet wall and paddle faces flat.
 	return GetWorld()->SweepSingleByChannel(OutHit, ArenaPtr->PlaneToWorld(From), ArenaPtr->PlaneToWorld(To),

@@ -7,6 +7,7 @@
 #include "Gameplay/IJPBonusTargetComponent.h"
 #include "Presentation/IJPScreenShakeComponent.h"
 #include "Gameplay/IJPDriftingBlockComponent.h"
+#include "Gameplay/IJPLightTrailComponent.h"
 #include "Abilities/IJPAbility_Split.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Audio/IJPToneSet.h"
@@ -101,6 +102,7 @@ AIJPArena::AIJPArena()
 	BonusTargets = CreateDefaultSubobject<UIJPBonusTargetComponent>(TEXT("BonusTargets"));
 	ScreenShake = CreateDefaultSubobject<UIJPScreenShakeComponent>(TEXT("ScreenShake"));
 	DriftingBlocks = CreateDefaultSubobject<UIJPDriftingBlockComponent>(TEXT("DriftingBlocks"));
+	LightTrails = CreateDefaultSubobject<UIJPLightTrailComponent>(TEXT("LightTrails"));
 	LeftHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("LeftHealthBar"));
 	LeftHealthBar->SetupAttachment(Root);
 	RightHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("RightHealthBar"));
@@ -236,6 +238,7 @@ void AIJPArena::BeginPlay()
 	CreatePaletteMaterials();
 	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
 	ApplyPalette(Era ? Era->Palette : FIJPPalette());
+	ApplyBloom(Era);
 	if (UIJPEraSubsystem* Eras = UIJPEraSubsystem::Get(this))
 	{
 		Eras->OnEraChanged.AddDynamic(this, &AIJPArena::HandleEraChanged);
@@ -496,7 +499,15 @@ void AIJPArena::HandleEraChanged(const UIJPEra* NewEra)
 {
 	BonusTargets->Clear();
 	DriftingBlocks->Reset();
+	LightTrails->Reset();
 	ApplyPalette(NewEra ? NewEra->Palette : FIJPPalette());
+	ApplyBloom(NewEra);
+}
+
+void AIJPArena::ApplyBloom(const UIJPEra* Era)
+{
+	// Off in the CRT eras (flat, crisp output); the neon eras glow.
+	Camera->PostProcessSettings.BloomIntensity = Era ? Era->BloomIntensity : 0.f;
 }
 
 void AIJPArena::HandleBallPaddleHit(AIJPBall* HitBall, AIJPPaddle* Paddle)
@@ -636,6 +647,7 @@ void AIJPArena::ClearWinner()
 {
 	BonusTargets->Clear(); // a new match starts with a clear court, at normal speed
 	DriftingBlocks->Reset();
+	LightTrails->Reset();
 	BallSpeedScale = 1.f;
 	for (const EIJPSide Side : { EIJPSide::Left, EIJPSide::Right })
 	{

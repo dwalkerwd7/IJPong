@@ -162,6 +162,32 @@ struct FIJPDriftingBlocks
 	float CourtFraction = 0.4f;
 };
 
+/** The Grid era's twist: every ball leaves a light trail that any ball bounces off, fading after a moment. */
+USTRUCT(BlueprintType)
+struct FIJPLightTrails
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Light Trails")
+	bool bEnabled = false;
+
+	/** How long a piece of trail lasts. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Light Trails", meta = (ClampMin = "0.05", Units = "s"))
+	float Lifetime = 1.f;
+
+	/** A piece only turns solid this long after it's laid, so a ball never hits the trail it's laying. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Light Trails", meta = (ClampMin = "0", Units = "s"))
+	float SolidDelay = 0.15f;
+
+	/** The trail's thickness, in arena units. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Light Trails", meta = (ClampMin = "1"))
+	float Thickness = 4.f;
+
+	/** A new piece every this many units travelled. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Light Trails", meta = (ClampMin = "4"))
+	float PieceLength = 24.f;
+};
+
 /**
  * One era of the game's history: how the whole game looks and sounds while it's current.
  * Eras are ordered in UIJPEraSubsystem's config; the subsystem says which one is current, and
@@ -209,6 +235,14 @@ public:
 	/** Targets popping up mid-court (the Arcade twist). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Twist")
 	FIJPBonusTargets BonusTargets;
+
+	/** Light trails behind every ball (the Grid twist). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Twist")
+	FIJPLightTrails LightTrails;
+
+	/** Bloom on the arena camera, so bright colours glow (eras past the CRT). 0 = none. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Look", meta = (ClampMin = "0"))
+	float BloomIntensity = 0.f;
 
 	/** Blocks drifting through mid-court (the 16-bit twist). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Twist")

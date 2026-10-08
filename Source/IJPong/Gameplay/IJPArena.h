@@ -29,6 +29,7 @@ class UIJPBackdropComponent;
 class UIJPBonusTargetComponent;
 class UIJPScreenShakeComponent;
 class UIJPDriftingBlockComponent;
+class UIJPLightTrailComponent;
 class UIJPBackdrop;
 struct FIJPPortraits;
 class AIJPSpellStrike;
@@ -125,6 +126,9 @@ public:
 
 	/** Bonus targets mid-court (the era's twist). */
 	UIJPBonusTargetComponent* GetBonusTargets() const { return BonusTargets; }
+
+	/** Light trails behind the balls (the era's twist). */
+	UIJPLightTrailComponent* GetLightTrails() const { return LightTrails; }
 
 	/** Blocks drifting through mid-court (the era's twist). */
 	UIJPDriftingBlockComponent* GetDriftingBlocks() const { return DriftingBlocks; }
@@ -413,6 +417,12 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<UIJPDriftingBlockComponent> DriftingBlocks;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<UIJPLightTrailComponent> LightTrails;
+
+	/** The era's bloom on the camera. */
+	void ApplyBloom(const UIJPEra* Era);
 
 	float BallSpeedScale = 1.f;
 
