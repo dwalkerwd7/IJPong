@@ -1,6 +1,7 @@
 // It's Just Pong
 
 #include "Core/IJPRunGameMode.h"
+#include "Core/IJPRunPlayerController.h"
 #include "Abilities/IJPAbility.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Engine/World.h"
@@ -21,6 +22,81 @@
 #include "Run/IJPRunMapView.h"
 #include "Run/IJPRunSubsystem.h"
 #include "TimerManager.h"
+
+AIJPRunGameMode::AIJPRunGameMode()
+{
+	PlayerControllerClass = AIJPRunPlayerController::StaticClass();
+}
+
+void AIJPRunGameMode::CheatEndMatch(bool bWin)
+{
+	if (Phase != EIJPRunPhase::Playing)
+	{
+		return;
+	}
+	const EIJPSide Loser = bWin ? IJP::Opposite(PlayerSide) : PlayerSide;
+	UE_LOG(LogIJPong, Warning, TEXT("Cheat: %s the match."), bWin ? TEXT("win") : TEXT("lose"));
+	GetMatch()->ApplyDamage(Loser, GetMatch()->GetHealth(Loser));
+}
+
+void AIJPRunGameMode::CheatHeal()
+{
+	UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
+	if (!Run || Run->GetState() != EIJPRunState::Running)
+	{
+		return;
+	}
+	UE_LOG(LogIJPong, Warning, TEXT("Cheat: full health."));
+	Run->RestoreHealth(Run->GetMaxHealth());
+	if (Phase == EIJPRunPhase::Playing)
+	{
+		GetMatch()->SetHealth(PlayerSide, Run->GetHealth(), Run->GetMaxHealth());
+	}
+	RefreshScreen();
+}
+
+void AIJPRunGameMode::CheatCoins(int32 Amount)
+{
+	if (UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this))
+	{
+		UE_LOG(LogIJPong, Warning, TEXT("Cheat: %+d coins."), Amount);
+		Run->AddCoins(Amount);
+		RefreshScreen();
+	}
+}
+
+void AIJPRunGameMode::CheatMeta(int32 SkillPoints, int32 BossTokens)
+{
+	if (UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(this))
+	{
+		UE_LOG(LogIJPong, Warning, TEXT("Cheat: +%d skill points, +%d boss tokens."), SkillPoints, BossTokens);
+		Meta->AddCurrency(SkillPoints, BossTokens);
+		RefreshScreen();
+	}
+}
+
+void AIJPRunGameMode::CheatUnlockNextEra()
+{
+	if (UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(this))
+	{
+		Meta->UnlockErasUpTo(Meta->GetErasUnlocked() + 1);
+		UE_LOG(LogIJPong, Warning, TEXT("Cheat: %d eras unlocked (the next run climbs into the newest)."), Meta->GetErasUnlocked());
+		RefreshScreen();
+	}
+}
+
+void AIJPRunGameMode::RefreshScreen()
+{
+	switch (Phase)
+	{
+	case EIJPRunPhase::Map:      ShowMap(); break;
+	case EIJPRunPhase::Reward:   ShowRewards(); break;
+	case EIJPRunPhase::Shop:     ShowShop(MapView->GetSelectedCard()); break;
+	case EIJPRunPhase::Event:    ShowEvent(); break;
+	case EIJPRunPhase::Tree:     MapView->ShowTree(GetPlayerTree(), false); break;
+	default: break; // the arena, results and end screens show the run's numbers as they change, or not at all
+	}
+}
 
 void AIJPRunGameMode::OnArenaReady()
 {

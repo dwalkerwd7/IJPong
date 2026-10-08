@@ -50,6 +50,20 @@ class IJPONG_API AIJPRunGameMode : public AIJPGameModeBase
 	GENERATED_BODY()
 
 public:
+	AIJPRunGameMode();
+
+	// --- Debug cheats (keys in AIJPRunPlayerController; never bound in shipping builds) ---
+
+	/** End the match being played now: the player wins (the rival's health to 0) or loses (theirs to 0). */
+	void CheatEndMatch(bool bWin);
+	/** The run's health to full (and the player's in a match being played). */
+	void CheatHeal();
+	void CheatCoins(int32 Amount);
+	/** Meta currencies, kept between runs. */
+	void CheatMeta(int32 SkillPoints, int32 BossTokens);
+	/** One more era unlocked: the next run climbs into it. */
+	void CheatUnlockNextEra();
+
 	/**
 	 * Throw away any run and start a fresh one on the map.
 	 * @param Act             Null = FirstAct from config.
@@ -102,6 +116,8 @@ private:
 	/** The shop's shelf as cards (with prices) plus LEAVE; SelectedCard keeps the pick after a purchase. */
 	void ShowShop(int32 SelectedCard = 0);
 	void ShowEvent();
+	/** Redraw whatever screen is up (after a cheat changed what it shows). */
+	void RefreshScreen();
 	/** A screen of cards to pick from (map, rewards, shop, event, tree): the arrows step the pick. */
 	bool IsPickingPhase() const
 	{

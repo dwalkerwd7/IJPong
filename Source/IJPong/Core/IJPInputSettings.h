@@ -98,4 +98,26 @@ public:
 
 	UPROPERTY(Config, EditAnywhere, Category = "Debug")
 	TSoftObjectPtr<UInputAction> DebugCycleRivalAction;
+
+	/** Only added in the run game mode, and never in shipping builds. */
+	UPROPERTY(Config, EditAnywhere, Category = "Cheats")
+	TSoftObjectPtr<UInputMappingContext> CheatMappingContext;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Cheats")
+	TSoftObjectPtr<UInputAction> CheatWinAction;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Cheats")
+	TSoftObjectPtr<UInputAction> CheatLoseAction;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Cheats")
+	TSoftObjectPtr<UInputAction> CheatHealAction;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Cheats")
+	TSoftObjectPtr<UInputAction> CheatCoinsAction;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Cheats")
+	TSoftObjectPtr<UInputAction> CheatMetaAction;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Cheats")
+	TSoftObjectPtr<UInputAction> CheatUnlockEraAction;
 };
