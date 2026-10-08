@@ -245,6 +245,61 @@ bool FIJPCurveTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPCurveTreeTest, "IJPong.Tree.CurverUpgradesRateHookDoubleCurve", IJPClassSkillTests::Flags)
+bool FIJPCurveTreeTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPArena* Arena = Test.GetArena();
+	AIJPBall* Ball = Arena->GetBall();
+	AIJPPaddle* Left = Arena->GetPaddle(EIJPSide::Left);
+	UIJPAbilityComponent* Abilities = Left->GetAbilities();
+	Abilities->Equip(EIJPAbilitySlot::ClassSkill, NewObject<UIJPAbility_Curve>(GetTransientPackage()));
+	Abilities->GetAbility(EIJPAbilitySlot::ClassSkill)->SetUpgrades({ { FName(TEXT("Rate")), 0.5f }, { FName(TEXT("Hook")), 1.f }, { FName(TEXT("ExtraCurves")), 1.f } });
+	Test.RunFor(1.1f);
+
+	// Standing still: a flat return bends up, then hooks back down halfway through.
+	UTEST_TRUE("Arms", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
+	Ball->Serve(EIJPSide::Left, 0.f);
+	UTEST_TRUE("Returned", IJPClassSkillTests::RunUntil(Test, 2.f, [Ball] { return Ball->GetRallyHits() >= 1; }));
+	UTEST_EQUAL_TOLERANCE("Turns faster", Ball->GetCurveRate(), 105.f, 0.01f);
+	Test.RunFor(0.4f);
+	const double Rising = Ball->GetPlaneVelocity().Y;
+	UTEST_TRUE("Bent up first", Rising > 0.0);
+	Test.RunFor(0.5f);
+	UTEST_TRUE("Then hooked back", Ball->GetPlaneVelocity().Y < Rising * 0.5);
+
+	// Double Curve: still armed for a second return.
+	UTEST_TRUE("Still armed", Abilities->GetAbility(EIJPAbilitySlot::ClassSkill)->IsArmed());
+	const FVector2D Face = Left->GetPlanePosition() + FVector2D(Left->GetSize().X * 0.5f, 0.f);
+	Ball->Launch(Face + FVector2D(60.f, 0.f), FVector2D(-400.f, 0.f));
+	UTEST_TRUE("Returned again", IJPClassSkillTests::RunUntil(Test, 1.f, [Ball] { return Ball->GetRallyHits() >= 1; }));
+	UTEST_TRUE("Curving again", Ball->IsCurving());
+	UTEST_FALSE("Spent", Abilities->GetAbility(EIJPAbilitySlot::ClassSkill)->IsArmed());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPLateBreakTest, "IJPong.Tree.LateBreakCurvesOnlyPastTheNet", IJPClassSkillTests::Flags)
+bool FIJPLateBreakTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPArena* Arena = Test.GetArena();
+	AIJPBall* Ball = Arena->GetBall();
+	AIJPPaddle* Left = Arena->GetPaddle(EIJPSide::Left);
+	UIJPAbilityComponent* Abilities = Left->GetAbilities();
+	Abilities->Equip(EIJPAbilitySlot::ClassSkill, NewObject<UIJPAbility_Curve>(GetTransientPackage()));
+	Abilities->GetAbility(EIJPAbilitySlot::ClassSkill)->SetUpgrades({ { FName(TEXT("LateBreak")), 1.f } });
+	Test.RunFor(1.1f);
+
+	UTEST_TRUE("Arms", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
+	Ball->Serve(EIJPSide::Left, 0.f);
+	UTEST_TRUE("Returned", IJPClassSkillTests::RunUntil(Test, 2.f, [Ball] { return Ball->GetRallyHits() >= 1; }));
+	UTEST_TRUE("Waiting", Ball->IsCurveWaiting());
+	UTEST_TRUE("Straight on its own side", IJPClassSkillTests::RunUntil(Test, 2.f, [Ball] { return Ball->GetPlanePosition().X > 0.f; }) && IJPClassSkillTests::SlopeDeg(Ball) < 2.0);
+	Test.RunFor(0.4f);
+	UTEST_TRUE("Breaks past the net", IJPClassSkillTests::SlopeDeg(Ball) > 15.0);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPSplitTest, "IJPong.Ability.SplitFansTheReturnIntoTwoBalls", IJPClassSkillTests::Flags)
 bool FIJPSplitTest::RunTest(const FString& Parameters)
 {

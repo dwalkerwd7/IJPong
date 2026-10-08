@@ -75,9 +75,14 @@ public:
 	 * Bend the ball's path for Duration seconds, turning DegreesPerSecond toward BendUp (+1 up the
 	 * screen, -1 down). A wall bounce mirrors the bend with the rest of the motion; the next paddle
 	 * hit, a goal or a reset ends it. For abilities like Curve shot.
+	 * FlipAfter >= 0: the bend turns the other way once, that long in (a hook).
+	 * bAfterNet: the bend waits until the ball crosses the net (a late break); Duration counts from there.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Ball")
-	void Curve(float DegreesPerSecond, float Duration, float BendUp);
+	void Curve(float DegreesPerSecond, float Duration, float BendUp, float FlipAfter = -1.f, bool bAfterNet = false);
+
+	/** A late-breaking curve still waiting to cross the net. */
+	bool IsCurveWaiting() const { return IsCurving() && bCurveWaitsForNet; }
 
 	UFUNCTION(BlueprintPure, Category = "Ball")
 	bool IsCurving() const { return CurveTimeLeft > 0.f; }
@@ -278,6 +283,9 @@ private:
 	float CurveTimeLeft = 0.f;
 	/** +1 bends up the screen, -1 down. */
 	float CurveBend = 0.f;
+	/** Seconds of turning left before the bend flips (a hook); < 0 = never. */
+	float CurveFlipLeft = -1.f;
+	bool bCurveWaitsForNet = false;
 	int32 RallyHits = 0;
 	bool bPiercing = false;
 	bool bGhosted = false;

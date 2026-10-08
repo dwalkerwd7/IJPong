@@ -183,13 +183,15 @@ void AIJPBall::Boost(float Multiplier)
 	Velocity = Velocity.GetSafeNormal() * Speed;
 }
 
-void AIJPBall::Curve(float DegreesPerSecond, float Duration, float BendUp)
+void AIJPBall::Curve(float DegreesPerSecond, float Duration, float BendUp, float FlipAfter, bool bAfterNet)
 {
 	if (bInPlay)
 	{
 		CurveRate = DegreesPerSecond;
 		CurveTimeLeft = Duration;
 		CurveBend = BendUp >= 0.f ? 1.f : -1.f;
+		CurveFlipLeft = FlipAfter;
+		bCurveWaitsForNet = bAfterNet;
 	}
 }
 
@@ -359,8 +361,21 @@ void AIJPBall::Tick(float DeltaSeconds)
 
 void AIJPBall::Substep(float StepSeconds)
 {
-	if (CurveTimeLeft > 0.f)
+	// A late break holds off until the ball is past the net, going away from where it was hit.
+	if (bCurveWaitsForNet && CurveTimeLeft > 0.f && Position.X * FMath::Sign(Velocity.X) > 0.f)
 	{
+		bCurveWaitsForNet = false;
+	}
+	if (CurveTimeLeft > 0.f && !bCurveWaitsForNet)
+	{
+		if (CurveFlipLeft >= 0.f)
+		{
+			CurveFlipLeft -= StepSeconds;
+			if (CurveFlipLeft < 0.f)
+			{
+				CurveBend = -CurveBend; // the hook
+			}
+		}
 		// Turn toward the bend. Rotating counter-clockwise lifts a ball moving right and drops one
 		// moving left, so the sign depends on which way it's going.
 		const float Turn = FMath::DegreesToRadians(CurveRate * StepSeconds) * CurveBend * FMath::Sign(Velocity.X);

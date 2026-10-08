@@ -4,6 +4,21 @@
 #include "Gameplay/IJPBall.h"
 #include "Gameplay/IJPPaddle.h"
 
+namespace
+{
+	const FName RateUpgrade(TEXT("Rate"));
+	const FName DurationUpgrade(TEXT("Duration"));
+	const FName HookUpgrade(TEXT("Hook"));
+	const FName ExtraCurvesUpgrade(TEXT("ExtraCurves"));
+	const FName LateBreakUpgrade(TEXT("LateBreak"));
+}
+
+void UIJPAbility_Curve::Activate()
+{
+	bArmed = true;
+	CurvesLeft = 1 + FMath::Max(FMath::RoundToInt(GetUpgrade(ExtraCurvesUpgrade)), 0);
+}
+
 void UIJPAbility_Curve::OnBallHit(AIJPBall& Ball)
 {
 	const AIJPPaddle* Paddle = GetPaddle();
@@ -11,11 +26,14 @@ void UIJPAbility_Curve::OnBallHit(AIJPBall& Ball)
 	{
 		return;
 	}
-	bArmed = false;
-	CurveReturn(Ball, *Paddle, DegreesPerSecond, Duration);
+	bArmed = --CurvesLeft > 0;
+
+	const float Time = Duration + GetUpgrade(DurationUpgrade);
+	CurveReturn(Ball, *Paddle, DegreesPerSecond * (1.f + GetUpgrade(RateUpgrade)), Time,
+		GetUpgrade(HookUpgrade) > 0.f ? Time * 0.5f : -1.f, GetUpgrade(LateBreakUpgrade) > 0.f);
 }
 
-void UIJPAbility_Curve::CurveReturn(AIJPBall& Ball, const AIJPPaddle& Paddle, float DegreesPerSecond, float Duration)
+void UIJPAbility_Curve::CurveReturn(AIJPBall& Ball, const AIJPPaddle& Paddle, float DegreesPerSecond, float Duration, float FlipAfter, bool bAfterNet)
 {
 	// Bend the way the paddle was moving, like spin. Standing still, bend against the ball's own
 	// slope (or upward for a flat shot), so it still visibly curves.
@@ -23,5 +41,5 @@ void UIJPAbility_Curve::CurveReturn(AIJPBall& Ball, const AIJPPaddle& Paddle, fl
 	const float BallSlope = Ball.GetPlaneVelocity().Y;
 	const float BendUp = FMath::Abs(PaddleVelocity) > 1.f ? FMath::Sign(PaddleVelocity)
 		: FMath::Abs(BallSlope) > 1.f ? -FMath::Sign(BallSlope) : 1.f;
-	Ball.Curve(DegreesPerSecond, Duration, BendUp);
+	Ball.Curve(DegreesPerSecond, Duration, BendUp, FlipAfter, bAfterNet);
 }
