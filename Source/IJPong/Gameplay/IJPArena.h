@@ -154,6 +154,9 @@ public:
 	/** What the balls' clock runs at now: the speed scale, slowed by any bullet time. */
 	float GetBallTimeFactor() const;
 
+	/** Combo meters and super shots (the era's twist). */
+	class UIJPComboComponent* GetCombo() const { return Combo; }
+
 	/** The court reshaping between points (the era's twist). */
 	class UIJPCourtShiftComponent* GetCourtShift() const { return CourtShift; }
 
@@ -446,6 +449,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<class UIJPCourtShiftComponent> CourtShift;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<class UIJPComboComponent> Combo;
 
 	/** Walls, barriers, goals, net and scores for the current HalfExtents. */
 	void LayoutCourt();

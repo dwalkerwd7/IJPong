@@ -456,7 +456,7 @@ bool AIJPPaddle::IsArmedCueShown() const
 
 void AIJPPaddle::UpdateArmedCue(float DeltaSeconds)
 {
-	const bool bArmed = Abilities->ShouldShowCue();
+	const bool bArmed = Abilities->ShouldShowCue() || bExtraArmedCue;
 	if (bArmed != ArmedHalo->IsVisible())
 	{
 		ArmedHalo->SetVisibility(bArmed);

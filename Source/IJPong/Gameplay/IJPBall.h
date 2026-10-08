@@ -126,6 +126,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ball")
 	bool IsHeld() const { return HeldBy.IsValid(); }
 
+	/** A goal by this ball deals this many times its damage (a super shot); back to 1 at its next return or serve. */
+	void SetDamageScale(float Scale) { DamageScale = FMath::Max(Scale, 0.f); }
+	float GetDamageScale() const { return DamageScale; }
+
 	/** The side whose paddle last returned this ball; false if none has since its serve or launch. */
 	bool GetLastReturner(EIJPSide& OutSide) const { OutSide = LastReturner; return bReturned; }
 
@@ -289,6 +293,7 @@ private:
 	/** Seconds of turning left before the bend flips (a hook); < 0 = never. */
 	float CurveFlipLeft = -1.f;
 	EIJPSide LastReturner = EIJPSide::Left;
+	float DamageScale = 1.f;
 	bool bReturned = false;
 	bool bCurveWaitsForNet = false;
 	int32 RallyHits = 0;

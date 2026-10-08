@@ -10,6 +10,7 @@
 #include "Gameplay/IJPLightTrailComponent.h"
 #include "Gameplay/IJPBulletTimeComponent.h"
 #include "Gameplay/IJPCourtShiftComponent.h"
+#include "Gameplay/IJPComboComponent.h"
 #include "Abilities/IJPAbility_Split.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Audio/IJPToneSet.h"
@@ -107,6 +108,7 @@ AIJPArena::AIJPArena()
 	LightTrails = CreateDefaultSubobject<UIJPLightTrailComponent>(TEXT("LightTrails"));
 	BulletTime = CreateDefaultSubobject<UIJPBulletTimeComponent>(TEXT("BulletTime"));
 	CourtShift = CreateDefaultSubobject<UIJPCourtShiftComponent>(TEXT("CourtShift"));
+	Combo = CreateDefaultSubobject<UIJPComboComponent>(TEXT("Combo"));
 	LeftHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("LeftHealthBar"));
 	LeftHealthBar->SetupAttachment(Root);
 	RightHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("RightHealthBar"));
@@ -531,6 +533,7 @@ void AIJPArena::HandleEraChanged(const UIJPEra* NewEra)
 	LightTrails->Reset();
 	BulletTime->Reset();
 	CourtShift->Reset();
+	Combo->Reset();
 	ApplyPalette(NewEra ? NewEra->Palette : FIJPPalette());
 	ApplyBloom(NewEra);
 }
@@ -686,6 +689,7 @@ void AIJPArena::ClearWinner()
 	LightTrails->Reset();
 	BulletTime->Reset();
 	CourtShift->Reset();
+	Combo->Reset();
 	BallSpeedScale = 1.f;
 	for (const EIJPSide Side : { EIJPSide::Left, EIJPSide::Right })
 	{

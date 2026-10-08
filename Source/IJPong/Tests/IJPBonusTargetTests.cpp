@@ -17,6 +17,8 @@
 #include "Gameplay/IJPLightTrailComponent.h"
 #include "Gameplay/IJPBulletTimeComponent.h"
 #include "Gameplay/IJPCourtShiftComponent.h"
+#include "Gameplay/IJPComboComponent.h"
+#include "GameFramework/Controller.h"
 #include "Core/IJPTestGameMode.h"
 #include "Camera/CameraComponent.h"
 #include "Gameplay/IJPMatchComponent.h"
@@ -30,11 +32,12 @@ namespace IJPBonusTargetTests
 {
 	constexpr EAutomationTestFlags Flags = EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter;
 
-	bool RunUntil(FIJPTestWorld& Test, float MaxSeconds, TFunctionRef<bool()> Condition)
+	bool RunUntil(FIJPTestWorld& Test, float MaxSeconds, TFunctionRef<bool()> Condition, TFunctionRef<void()> BeforeEachStep = [] {})
 	{
 		const int32 Steps = FMath::CeilToInt(MaxSeconds / FIJPTestWorld::FixedStep);
 		for (int32 i = 0; i < Steps && !Condition(); ++i)
 		{
+			BeforeEachStep();
 			Test.Step();
 		}
 		return Condition();
@@ -262,6 +265,48 @@ bool FIJPCourtShiftTest::RunTest(const FString& Parameters)
 	// A new match starts at full size.
 	Mode->RestartMatch();
 	UTEST_TRUE("Full size again", Arena->GetHalfExtents().Equals(Full, 0.01));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPComboTest, "IJPong.Era.ComboFillsThenASuperShotHitsHarder", IJPBonusTargetTests::Flags)
+bool FIJPComboTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = Cast<AIJPTestGameMode>(Test.GetWorld()->GetAuthGameMode());
+	AIJPArena* Arena = Test.GetArena();
+	AIJPBall* Ball = Arena->GetBall();
+	AIJPPaddle* Left = Arena->GetPaddle(EIJPSide::Left);
+	AIJPPaddle* Right = Arena->GetPaddle(EIJPSide::Right);
+	Right->GetController()->UnPossess();
+	UIJPComboComponent* Combo = Arena->GetCombo();
+	UIJPEra* Era = NewObject<UIJPEra>(GetTransientPackage());
+	Era->Combo.bEnabled = true;
+	Era->Combo.ReturnsToFill = 2;
+	Era->Combo.SuperBoost = 2.f;
+	Era->Combo.SuperDamage = 2.f;
+	UIJPEraSubsystem::Get(Arena)->SetEra(Era);
+	Test.RunFor(1.1f);
+
+	// Two returns fill the left meter.
+	const FVector2D Face = Left->GetPlanePosition() + FVector2D(Left->GetSize().X * 0.5f, 0.f);
+	for (int32 i = 0; i < 2; ++i)
+	{
+		Ball->Launch(Face + FVector2D(60.f, 0.f), FVector2D(-400.f, 0.f));
+		UTEST_TRUE("Returned", IJPBonusTargetTests::RunUntil(Test, 1.f, [Ball] { return Ball->GetRallyHits() >= 1; }));
+	}
+	UTEST_TRUE("Super ready", Combo->IsSuperReady(EIJPSide::Left));
+	Test.Step();
+	UTEST_TRUE("The paddle shows it", Left->IsArmedCueShown());
+
+	// The super: fast, and a goal hits twice as hard.
+	const float Before = Mode->GetMatch()->GetHealth(EIJPSide::Right);
+	Ball->Launch(Face + FVector2D(60.f, 0.f), FVector2D(-400.f, 0.f));
+	UTEST_TRUE("Super return", IJPBonusTargetTests::RunUntil(Test, 1.f, [Ball] { return Ball->GetRallyHits() >= 1; }));
+	UTEST_TRUE("Boosted", Ball->IsBoosted());
+	UTEST_EQUAL_TOLERANCE("Double damage on it", Ball->GetDamageScale(), 2.f, 0.001f);
+	UTEST_FALSE("Spent", Combo->IsSuperReady(EIJPSide::Left));
+	UTEST_TRUE("Scores", IJPBonusTargetTests::RunUntil(Test, 2.f, [Ball] { return !Ball->IsInPlay(); }, [Right] { Right->AddMoveInput(1.f); }));
+	UTEST_EQUAL_TOLERANCE("Twice the damage", Mode->GetMatch()->GetHealth(EIJPSide::Right), Before - 2.f, 0.001f);
 	return true;
 }
 

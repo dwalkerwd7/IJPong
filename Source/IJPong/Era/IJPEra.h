@@ -232,6 +232,28 @@ struct FIJPCourtShift
 	float ShiftTime = 0.6f;
 };
 
+/** The Fighting game era's twist: consecutive returns fill a combo meter; full, the next return is a super shot. */
+USTRUCT(BlueprintType)
+struct FIJPCombo
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combo")
+	bool bEnabled = false;
+
+	/** Returns in a row (without a goal) that fill a side's meter. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combo", meta = (ClampMin = "1"))
+	int32 ReturnsToFill = 6;
+
+	/** The super shot leaves this many times faster... */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combo", meta = (ClampMin = "1"))
+	float SuperBoost = 2.f;
+
+	/** ...and deals this many times the damage if it scores. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combo", meta = (ClampMin = "1"))
+	float SuperDamage = 2.f;
+};
+
 /**
  * One era of the game's history: how the whole game looks and sounds while it's current.
  * Eras are ordered in UIJPEraSubsystem's config; the subsystem says which one is current, and
@@ -279,6 +301,10 @@ public:
 	/** Targets popping up mid-court (the Arcade twist). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Twist")
 	FIJPBonusTargets BonusTargets;
+
+	/** Combo meters and super shots (the Fighting game twist). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Twist")
+	FIJPCombo Combo;
 
 	/** The court reshaping between points (the HD twist). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Twist")

@@ -161,6 +161,7 @@ void AIJPBall::Serve(EIJPSide Toward, float AngleDeg)
 	Accumulator = 0.f;
 	RallyHits = 0;
 	bReturned = false;
+	DamageScale = 1.f;
 	bPiercing = false;
 	Heat = ArrivalHeat = 0.f;
 	bGhosted = bHasSplit = false;
@@ -270,6 +271,7 @@ void AIJPBall::Launch(const FVector2D& InPosition, const FVector2D& InVelocity)
 	Accumulator = 0.f;
 	RallyHits = 0;
 	bReturned = false;
+	DamageScale = 1.f;
 	bPiercing = false;
 	Heat = ArrivalHeat = 0.f;
 	bGhosted = bHasSplit = false;
@@ -302,6 +304,7 @@ void AIJPBall::ResetBall()
 	Accumulator = 0.f;
 	RallyHits = 0;
 	bReturned = false;
+	DamageScale = 1.f;
 	Heat = ArrivalHeat = 0.f;
 	bGhosted = bHasSplit = false;
 	HeldBy.Reset();
@@ -517,6 +520,7 @@ bool AIJPBall::TryPaddleBounce(AIJPPaddle* Paddle, const FVector2D& Normal)
 	++RallyHits;
 	LastReturner = Paddle->GetSide();
 	bReturned = true;
+	DamageScale = 1.f;
 	OnPaddleHit.Broadcast(this, Paddle);
 	return true;
 }

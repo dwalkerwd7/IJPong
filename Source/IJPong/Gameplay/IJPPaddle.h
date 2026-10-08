@@ -79,6 +79,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	bool IsArmedCueShown() const;
 
+	/** Show the armed cue for something besides an ability (a full combo meter). */
+	void SetExtraArmedCue(bool bShow) { bExtraArmedCue = bShow; }
+
 	/** The halo's current brightness, as a fraction of the paddle's colour (0 when hidden). */
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	float GetArmedCueStrength() const { return ArmedCueStrength; }
@@ -338,6 +341,7 @@ private:
 	void UpdateStunLook();
 	float SplitGap = 0.f;
 	float ArmedTime = 0.f;
+	bool bExtraArmedCue = false;
 	float ArmedCueStrength = 0.f;
 
 	UPROPERTY(Transient)

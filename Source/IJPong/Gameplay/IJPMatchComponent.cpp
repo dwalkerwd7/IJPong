@@ -183,7 +183,7 @@ void UIJPMatchComponent::HandleGoal(AIJPBall* ScoringBall, EIJPSide DefendingSid
 	}
 	else
 	{
-		ApplyDamage(DefendingSide, Points * GetRules().GoalDamage);
+		ApplyDamage(DefendingSide, Points * GetRules().GoalDamage * (ScoringBall ? ScoringBall->GetDamageScale() : 1.f));
 		if (!IsPlaying())
 		{
 			return;
