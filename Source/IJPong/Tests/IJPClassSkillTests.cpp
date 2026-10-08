@@ -157,6 +157,72 @@ bool FIJPBarrierTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPBarrierTreeTest, "IJPong.Tree.BulwarkUpgradesLongerReboundMending", IJPClassSkillTests::Flags)
+bool FIJPBarrierTreeTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = Cast<AIJPTestGameMode>(Test.GetWorld()->GetAuthGameMode());
+	AIJPArena* Arena = Mode->GetArena();
+	UIJPMatchComponent* Match = Mode->GetMatch();
+	AIJPBall* Ball = Arena->GetBall();
+	AIJPPaddle* Left = Arena->GetPaddle(EIJPSide::Left);
+	const auto HoldUp = [Left] { Left->AddMoveInput(1.f); };
+	UIJPAbility_Barrier* Barrier = NewObject<UIJPAbility_Barrier>(GetTransientPackage());
+	Barrier->Duration = 2.f;
+	Left->GetAbilities()->Equip(EIJPAbilitySlot::ClassSkill, Barrier);
+	Left->GetAbilities()->GetAbility(EIJPAbilitySlot::ClassSkill)->SetUpgrades({ { FName(TEXT("Duration")), 1.f }, { FName(TEXT("Rebound")), 1.f }, { FName(TEXT("Mending")), 0.25f } });
+	Test.RunFor(1.1f, HoldUp);
+	Match->ApplyDamage(EIJPSide::Left, 1.f);
+	const float HurtHealth = Match->GetHealth(EIJPSide::Left);
+
+	Ball->Serve(EIJPSide::Left, 0.f);
+	UTEST_TRUE("Raises it", Left->GetAbilities()->TryActivate(EIJPAbilitySlot::ClassSkill));
+	UTEST_TRUE("Bounces back off it", IJPClassSkillTests::RunUntil(Test, 1.5f, [Ball] { return Ball->GetPlaneVelocity().X > 0.f; }, HoldUp));
+	UTEST_TRUE("Rebound: boosted", Ball->IsBoosted());
+	UTEST_EQUAL_TOLERANCE("Mending: healed", Match->GetHealth(EIJPSide::Left), HurtHealth + 0.25f, 0.001f);
+
+	Test.RunFor(1.2f, HoldUp); // 2 s base would be over by now; 3 s with the upgrade isn't
+	UTEST_TRUE("Lasts longer", Arena->IsBarrierUp(EIJPSide::Left));
+	Test.RunFor(1.f, HoldUp);
+	UTEST_FALSE("Then down", Arena->IsBarrierUp(EIJPSide::Left));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPLastStandTest, "IJPong.Tree.LastStandSavesOneGoalPerMatch", IJPClassSkillTests::Flags)
+bool FIJPLastStandTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = Cast<AIJPTestGameMode>(Test.GetWorld()->GetAuthGameMode());
+	AIJPArena* Arena = Mode->GetArena();
+	UIJPMatchComponent* Match = Mode->GetMatch();
+	AIJPBall* Ball = Arena->GetBall();
+	AIJPPaddle* Left = Arena->GetPaddle(EIJPSide::Left);
+	const auto HoldUp = [Left] { Left->AddMoveInput(1.f); };
+	Left->GetAbilities()->Equip(EIJPAbilitySlot::ClassSkill, NewObject<UIJPAbility_Barrier>(GetTransientPackage()));
+	Left->GetAbilities()->GetAbility(EIJPAbilitySlot::ClassSkill)->SetUpgrades({ { FName(TEXT("LastStand")), 1.f } });
+	Test.RunFor(1.1f, HoldUp);
+
+	// Paddle out of the way, never pressed: the barrier rises by itself, once.
+	const int32 Before = Match->GetGoals(EIJPSide::Right);
+	Ball->Serve(EIJPSide::Left, 0.f);
+	UTEST_TRUE("Saved", IJPClassSkillTests::RunUntil(Test, 1.5f, [Ball] { return Ball->GetPlaneVelocity().X > 0.f || !Ball->IsInPlay(); }, HoldUp));
+	UTEST_TRUE("Still in play", Ball->IsInPlay());
+	UTEST_EQUAL("No goal", Match->GetGoals(EIJPSide::Right), Before);
+
+	Test.RunFor(1.2f, HoldUp);
+	Ball->Serve(EIJPSide::Left, 0.f);
+	UTEST_TRUE("Not twice in a match", IJPClassSkillTests::RunUntil(Test, 1.5f, [Ball] { return !Ball->IsInPlay(); }, HoldUp));
+	UTEST_EQUAL("A goal this time", Match->GetGoals(EIJPSide::Right), Before + 1);
+
+	// A new match: ready again.
+	Mode->RestartMatch();
+	Test.RunFor(1.1f, HoldUp);
+	Ball->Serve(EIJPSide::Left, 0.f);
+	UTEST_TRUE("Saved again", IJPClassSkillTests::RunUntil(Test, 1.5f, [Ball] { return Ball->GetPlaneVelocity().X > 0.f || !Ball->IsInPlay(); }, HoldUp));
+	UTEST_TRUE("Next match, saved", Ball->IsInPlay());
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPCurveTest, "IJPong.Ability.CurveShotBendsTheReturn", IJPClassSkillTests::Flags)
 bool FIJPCurveTest::RunTest(const FString& Parameters)
 {

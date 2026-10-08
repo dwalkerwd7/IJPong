@@ -18,6 +18,7 @@ void UIJPMatchComponent::StartMatch(AIJPArena* InArena, const UIJPMatchRules* In
 	Arena = InArena;
 	Rules = InRules;
 	bServeHeld = bHoldServe;
+	++MatchNumber;
 
 	if (!GetBall())
 	{

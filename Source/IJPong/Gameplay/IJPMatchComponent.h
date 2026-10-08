@@ -95,6 +95,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Match")
 	EIJPMatchPhase GetPhase() const { return Phase; }
 
+	/** Counts StartMatch calls, so "once per match" effects can tell a new match from the same one. */
+	int32 GetMatchNumber() const { return MatchNumber; }
+
 	UFUNCTION(BlueprintPure, Category = "Match")
 	bool IsOver() const { return Phase == EIJPMatchPhase::MatchOver; }
 
@@ -164,6 +167,7 @@ private:
 	EIJPSide RefillSide = EIJPSide::Left;
 	EIJPSide Winner = EIJPSide::Left;
 	bool bServeHeld = false;
+	int32 MatchNumber = 0;
 	float Health[2] = { 0.f, 0.f };
 	float MaxHealth[2] = { 0.f, 0.f };
 	int32 Goals[2] = { 0, 0 };
