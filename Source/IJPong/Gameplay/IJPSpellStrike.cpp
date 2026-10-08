@@ -8,12 +8,15 @@
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPPaddle.h"
+#include "Engine/Texture2D.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "UObject/ConstructorHelpers.h"
 
 namespace
 {
-	constexpr float StrikeCubeSize = 100.f; // /Engine/BasicShapes/Cube is 100 units, centred.
+	constexpr float StrikeCubeSize = 100.f; // /Engine/BasicShapes/Cube and Plane are 100 units, centred.
 	constexpr float StrikeDepth = 4.f;       // just in front of play
+	constexpr float StrikeSpriteDepth = 5.f; // sprites on top of it
 	constexpr float StrikeLineThickness = 3.f;
 	constexpr float StrikeMarkerWidth = 36.f;
 	constexpr float StrikeShotSize = 14.f;
@@ -42,6 +45,15 @@ AIJPSpellStrike::AIJPSpellStrike()
 	MarkerBottom = MakePiece(TEXT("MarkerBottom"));
 	Shot = MakePiece(TEXT("Shot"));
 	Shot->SetVisibility(false);
+
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> Plane(TEXT("/Engine/BasicShapes/Plane.Plane"));
+	for (TObjectPtr<UStaticMeshComponent>* Quad : { &ShotQuad, &MarkerQuad, &ImpactQuad })
+	{
+		*Quad = MakePiece(Quad == &ShotQuad ? TEXT("ShotQuad") : Quad == &MarkerQuad ? TEXT("MarkerQuad") : TEXT("ImpactQuad"));
+		(*Quad)->SetStaticMesh(Plane.Object);
+		(*Quad)->SetRelativeRotation(IJP::SpriteQuadRotation);
+		(*Quad)->SetVisibility(false);
+	}
 }
 
 void AIJPSpellStrike::Launch(AIJPArena* InArena, EIJPSide InCasterSide, EIJPSide InTargetSide, float InY, const FIJPStrikeSpec& InSpec)
@@ -59,17 +71,34 @@ void AIJPSpellStrike::Launch(AIJPArena* InArena, EIJPSide InCasterSide, EIJPSide
 	StartX = Caster ? Caster->GetPlanePosition().X : 0.f;
 
 	// In the caster's colour.
-	UMaterialInterface* Colour = InArena->GetPaletteMaterial(InCasterSide == EIJPSide::Left ? EIJPPaletteRole::LeftPaddle : EIJPPaletteRole::RightPaddle);
+	const EIJPPaletteRole CasterRole = InCasterSide == EIJPSide::Left ? EIJPPaletteRole::LeftPaddle : EIJPPaletteRole::RightPaddle;
+	UMaterialInterface* Colour = InArena->GetPaletteMaterial(CasterRole);
 	for (UStaticMeshComponent* Piece : { MarkerTop.Get(), MarkerBottom.Get(), Shot.Get() })
 	{
 		Piece->SetMaterial(0, Colour);
 	}
+	const FLinearColor Tint = InArena->GetPalette().Get(CasterRole);
+	bShotSprite = PrepareSprite(ShotQuad, Spec.ShotSprite, Tint);
+	bMarkerSprite = PrepareSprite(MarkerQuad, Spec.MarkerSprite, Tint);
+	bImpactSprite = PrepareSprite(ImpactQuad, Spec.ImpactSprite, Tint);
+
 	Place(MarkerTop, FVector2D(LaneX, TargetY + Spec.HalfHeight), FVector2D(StrikeMarkerWidth, StrikeLineThickness));
 	Place(MarkerBottom, FVector2D(LaneX, TargetY - Spec.HalfHeight), FVector2D(StrikeMarkerWidth, StrikeLineThickness));
+	if (bMarkerSprite)
+	{
+		// Its own size, or fitted to the zone's height at the art's own proportions.
+		const float Height = Spec.MarkerSize.Y > 0.f ? Spec.MarkerSize.Y : Spec.HalfHeight * 2.f;
+		const float Width = Spec.MarkerSize.X > 0.f ? Spec.MarkerSize.X : Height * Spec.MarkerSprite->GetSizeX() / FMath::Max(Spec.MarkerSprite->GetSizeY(), 1);
+		Place(MarkerQuad, FVector2D(LaneX, TargetY), FVector2D(Width, Height));
+	}
+	ShowMarker(true);
 	if (Spec.bTravels)
 	{
-		Place(Shot, FVector2D(StartX, TargetY), FVector2D(StrikeShotSize, StrikeShotSize));
-		Shot->SetVisibility(true);
+		PlaceShot(FVector2D(StartX, TargetY), bShotSprite ? Spec.ShotSize : FVector2D(StrikeShotSize));
+	}
+	else if (Spec.bFalls)
+	{
+		PlaceShot(FVector2D(LaneX, InArena->GetHalfExtents().Y), bShotSprite ? Spec.ShotSize : FVector2D(StrikeShotSize));
 	}
 	InArena->RegisterStrike(this);
 }
@@ -98,12 +127,16 @@ void AIJPSpellStrike::Tick(float DeltaSeconds)
 
 	// The warning blinks faster as it nears.
 	const float BlinkRate = FMath::Lerp(4.f, 16.f, Progress);
-	const bool bMarkerOn = FMath::Frac(Elapsed * BlinkRate) < 0.6f;
-	MarkerTop->SetVisibility(bMarkerOn);
-	MarkerBottom->SetVisibility(bMarkerOn);
+	ShowMarker(FMath::Frac(Elapsed * BlinkRate) < 0.6f);
+	const FVector2D ShotSize = bShotSprite ? Spec.ShotSize : FVector2D(StrikeShotSize);
 	if (Spec.bTravels)
 	{
-		Place(Shot, FVector2D(FMath::Lerp(StartX, LaneX, Progress), TargetY), FVector2D(StrikeShotSize, StrikeShotSize));
+		PlaceShot(FVector2D(FMath::Lerp(StartX, LaneX, Progress), TargetY), ShotSize);
+	}
+	else if (Spec.bFalls)
+	{
+		// Gathering speed like something dropped.
+		PlaceShot(FVector2D(LaneX, FMath::Lerp(Arena->GetHalfExtents().Y, TargetY, Progress * Progress)), ShotSize);
 	}
 
 	if (Progress >= 1.f)
@@ -116,15 +149,25 @@ void AIJPSpellStrike::Land()
 {
 	bLanded = true;
 	Linger = StrikeLingerTime;
-	MarkerTop->SetVisibility(false);
-	MarkerBottom->SetVisibility(false);
+	ShowMarker(false);
 
-	// Lightning: a bolt from the top wall down to the zone, for a moment.
-	if (!Spec.bTravels)
+	if (Spec.bFalls && !Spec.bTravels)
 	{
+		// It has landed: gone, leaving only the impact.
+		Shot->SetVisibility(false);
+		ShotQuad->SetVisibility(false);
+	}
+	else if (!Spec.bTravels)
+	{
+		// Lightning: a bolt from the top wall down to the zone, for a moment.
 		const float Top = Arena->GetHalfExtents().Y;
-		Place(Shot, FVector2D(LaneX, (Top + TargetY) * 0.5f), FVector2D(StrikeBoltWidth, FMath::Max(Top - TargetY, 1.f)));
-		Shot->SetVisibility(true);
+		PlaceShot(FVector2D(LaneX, (Top + TargetY) * 0.5f), FVector2D(bShotSprite ? Spec.ShotSize.X : StrikeBoltWidth, FMath::Max(Top - TargetY, 1.f)));
+	}
+	if (bImpactSprite)
+	{
+		Place(ImpactQuad, FVector2D(LaneX, TargetY), Spec.ImpactSize);
+		ImpactQuad->SetVisibility(true);
+		Linger = FMath::Max(Linger, Spec.ImpactTime);
 	}
 
 	// A hit only if the paddle is still (partly) in the zone.
@@ -144,8 +187,65 @@ void AIJPSpellStrike::Land()
 void AIJPSpellStrike::Place(UStaticMeshComponent* Piece, const FVector2D& Centre, const FVector2D& Size) const
 {
 	// Arena local axes: X = plane X, Z = plane Y, Y = depth toward the camera.
+	if (Piece == ShotQuad || Piece == MarkerQuad || Piece == ImpactQuad)
+	{
+		// A plane turned to face the camera: its own Y runs up the screen.
+		Piece->SetRelativeLocation(FVector(Centre.X, StrikeSpriteDepth, Centre.Y));
+		Piece->SetRelativeScale3D(FVector(Size.X / StrikeCubeSize, Size.Y / StrikeCubeSize, 1.f));
+		return;
+	}
 	Piece->SetRelativeLocation(FVector(Centre.X, StrikeDepth, Centre.Y));
 	Piece->SetRelativeScale3D(FVector(Size.X / StrikeCubeSize, 1.f / StrikeCubeSize, Size.Y / StrikeCubeSize));
+}
+
+void AIJPSpellStrike::PlaceShot(const FVector2D& Centre, const FVector2D& Size)
+{
+	ShotPosition = Centre;
+	UStaticMeshComponent* Piece = bShotSprite ? ShotQuad.Get() : Shot.Get();
+	Place(Piece, Centre, Size);
+	if (bShotSprite)
+	{
+		// Drawn heading right: a shot from the right paddle faces left.
+		const float Facing = Spec.bTravels && LaneX < StartX ? -1.f : 1.f;
+		Piece->SetRelativeScale3D(FVector(Facing * Size.X / StrikeCubeSize, Size.Y / StrikeCubeSize, 1.f));
+	}
+	Piece->SetVisibility(true);
+}
+
+bool AIJPSpellStrike::PrepareSprite(UStaticMeshComponent* Quad, UTexture2D* Sprite, const FLinearColor& Colour)
+{
+	UMaterialInterface* Base = Sprite && Arena->ShowsSprites() ? Arena->GetSpriteMaterial() : nullptr;
+	if (!Base)
+	{
+		return false;
+	}
+	UMaterialInstanceDynamic* Material = UMaterialInstanceDynamic::Create(Base, this);
+	Material->SetTextureParameterValue(TEXT("Sprite"), Sprite);
+	Material->SetVectorParameterValue(TEXT("Color"), Colour);
+	Quad->SetMaterial(0, Material);
+	return true;
+}
+
+void AIJPSpellStrike::ShowMarker(bool bShow)
+{
+	MarkerQuad->SetVisibility(bShow && bMarkerSprite);
+	MarkerTop->SetVisibility(bShow && !bMarkerSprite);
+	MarkerBottom->SetVisibility(bShow && !bMarkerSprite);
+}
+
+bool AIJPSpellStrike::IsShotSpriteShown() const
+{
+	return ShotQuad->IsVisible();
+}
+
+bool AIJPSpellStrike::IsMarkerSpriteShown() const
+{
+	return MarkerQuad->IsVisible();
+}
+
+bool AIJPSpellStrike::IsImpactShown() const
+{
+	return ImpactQuad->IsVisible();
 }
 
 void AIJPSpellStrike::EndPlay(const EEndPlayReason::Type EndPlayReason)

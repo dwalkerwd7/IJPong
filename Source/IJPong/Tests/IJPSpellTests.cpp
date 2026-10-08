@@ -14,7 +14,10 @@
 #include "Run/IJPReward.h"
 #include "Run/IJPRunSubsystem.h"
 #include "Core/IJPTypes.h"
+#include "Engine/Texture2D.h"
 #include "Engine/World.h"
+#include "Era/IJPEra.h"
+#include "Era/IJPEraSubsystem.h"
 #include "GameFramework/Controller.h"
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPBall.h"
@@ -155,6 +158,58 @@ bool FIJPSpellAITest::RunTest(const FString& Parameters)
 		bAtPlayer |= Strike.IsValid() && Strike->GetTargetSide() == EIJPSide::Left;
 	}
 	UTEST_TRUE("At the player", bAtPlayer);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPSpellSpritesTest, "IJPong.Spell.FallingSpriteSpellWithMarkerAndImpact", IJPSpellTests::Flags)
+bool FIJPSpellSpritesTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPArena* Arena = Test.GetArena();
+	Arena->GetPaddle(EIJPSide::Right)->GetController()->UnPossess();
+	UIJPAbilityComponent* Abilities = Arena->GetPaddle(EIJPSide::Left)->GetAbilities();
+
+	// A Brickfall-like spell with all three sprites.
+	UIJPAbility_Spell* Spell = IJPSpellTests::MakeSpell(1, 1.f, 0.5f, false);
+	Spell->Strike.bFalls = true;
+	Spell->Strike.ShotSprite = UTexture2D::CreateTransient(8, 8);
+	Spell->Strike.MarkerSprite = UTexture2D::CreateTransient(8, 16);
+	Spell->Strike.ImpactSprite = UTexture2D::CreateTransient(8, 8);
+	const auto CastSpell = [&]
+	{
+		Abilities->Equip(EIJPAbilitySlot::Spell, Spell);
+		IJPSpellTests::Charge(Arena, Abilities, 1);
+		Abilities->TryActivate(EIJPAbilitySlot::Spell);
+		return Cast<UIJPAbility_Spell>(Abilities->GetAbility(EIJPAbilitySlot::Spell))->GetLastStrike();
+	};
+
+	// No sprites in this era: the plain shapes.
+	const AIJPSpellStrike* Plain = CastSpell();
+	UTEST_NOT_NULL("Cast", Plain);
+	UTEST_FALSE("No shot sprite", Plain->IsShotSpriteShown());
+	UTEST_FALSE("No marker sprite", Plain->IsMarkerSpriteShown());
+	const TWeakObjectPtr<const AIJPSpellStrike> PlainWeak = Plain;
+	Test.RunFor(1.05f);
+	UTEST_TRUE("Landed plainly, no impact sprite", PlainWeak.IsValid() && PlainWeak->HasLanded() && !PlainWeak->IsImpactShown());
+	Test.RunFor(0.5f);
+
+	UIJPEra* Era = NewObject<UIJPEra>(GetTransientPackage());
+	Era->bShowSprites = true;
+	UIJPEraSubsystem::Get(Arena)->SetEra(Era);
+	const AIJPSpellStrike* Brick = CastSpell();
+	UTEST_NOT_NULL("Cast in a sprite era", Brick);
+	UTEST_TRUE("Marker sprite", Brick->IsMarkerSpriteShown());
+	UTEST_TRUE("Shot sprite", Brick->IsShotSpriteShown());
+	const float Top = Arena->GetHalfExtents().Y;
+	UTEST_EQUAL_TOLERANCE("Starts at the top wall", static_cast<float>(Brick->GetShotPosition().Y), Top, 0.01f);
+
+	Test.RunFor(0.5f);
+	const double MidY = Brick->GetShotPosition().Y;
+	UTEST_TRUE("Falling toward the zone", MidY < Top && MidY > Brick->GetTargetY());
+	Test.RunFor(0.55f);
+	UTEST_TRUE("Landed", Brick->HasLanded());
+	UTEST_FALSE("The brick is gone", Brick->IsShotSpriteShown());
+	UTEST_TRUE("Dust where it landed", Brick->IsImpactShown());
 	return true;
 }
 
