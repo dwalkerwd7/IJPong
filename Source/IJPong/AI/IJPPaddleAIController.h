@@ -14,7 +14,8 @@ class UIJPAIProfile;
  * Plays a paddle. It also uses the paddle's abilities when they say it's their moment (WantsAIUse). Every ReactionTime it picks the ball that will reach its paddle first, predicts
  * where that ball will meet its paddle face, then steers there through AddMoveInput, exactly like a
  * player would. Imperfection comes from the
- * profile: a speed-scaled misjudgement and an aim offset, both rolled once per incoming shot.
+ * profile: a speed-scaled misjudgement and an aim offset, both rolled once per incoming shot, plus
+ * a fresh guess at every look that's wide while the ball is far and narrows as it comes in.
  * An AAIController so behaviour trees can be layered on later (e.g. deciding when to use abilities);
  * this positioning logic would then become the tree's "defend" behaviour.
  */

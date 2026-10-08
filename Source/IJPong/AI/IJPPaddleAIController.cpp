@@ -172,9 +172,14 @@ void AIJPPaddleAIController::Decide(const AIJPPaddle& Paddle, const AIJPBall* In
 	float InterceptY = 0.f;
 	if (FIJPPongMath::PredictInterceptY(Ball.GetPlanePosition(), BallVelocity, FaceX, -BallLimitY, BallLimitY, InterceptY))
 	{
+		// Each look is a new guess, as far off as the ball is from the face (a whole court away = the
+		// full GuessSpread), so the paddle homes in over the approach instead of gliding to one spot.
+		const float Remaining = FMath::Clamp((FaceX - Ball.GetPlanePosition().X) * GoalDir / (2.f * HalfExtents.X), 0.f, 1.f);
+		const float Guess = Random.FRandRange(-1.f, 1.f) * P.GuessSpread.At(Skill) * Remaining;
+
 		// Aim > 0 puts the paddle below the ball, so the ball meets its upper half and goes back upward.
 		const float PaddleLimitY = HalfExtents.Y - PaddleHalfHeight;
-		TargetY = FMath::Clamp(InterceptY + ShotError - ShotAim * Reach, -PaddleLimitY, PaddleLimitY);
+		TargetY = FMath::Clamp(InterceptY + ShotError + Guess - ShotAim * Reach, -PaddleLimitY, PaddleLimitY);
 	}
 	// Otherwise the ball is already past the face: keep the last target.
 }

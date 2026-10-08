@@ -33,6 +33,7 @@ namespace IJPAITests
 		UIJPAIProfile* Profile = NewObject<UIJPAIProfile>();
 		Profile->ErrorSpread = { 0.f, 0.f };
 		Profile->AimSpread = { 0.f, 0.f };
+		Profile->GuessSpread = { 0.f, 0.f };
 		return Profile;
 	}
 
@@ -114,6 +115,54 @@ bool FIJPAIDriftTest::RunTest(const FString& Parameters)
 	UTEST_TRUE("Moved back toward centre", FMath::Abs(Paddle->GetPlanePosition().Y) < FMath::Abs(HitY) - 20.f);
 	UTEST_TRUE("Drifts at idle speed, not full speed", FastestDrift <= Profile->IdleSpeedScale.At(AI->GetSkill()) * Paddle->GetMaxSpeed() + 1.f);
 	UTEST_EQUAL_TOLERANCE("Heading for the centre", AI->GetTargetY(), 0.f, KINDA_SMALL_NUMBER);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPAIHomesInTest, "IJPong.AI.GuessesWideThenHomesIn", IJPAITests::Flags)
+bool FIJPAIHomesInTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test(IJPAITests::ArenaTransform);
+	AIJPArena* Arena = Test.GetArena();
+	AIJPBall* Ball = Arena->GetBall();
+	AIJPPaddle* Paddle = Arena->GetPaddle(EIJPSide::Right);
+	AIJPPaddleAIController* AI = IJPAITests::GetAI(Arena, EIJPSide::Right);
+	UTEST_NOT_NULL("AI", AI);
+	UIJPAIProfile* Profile = IJPAITests::MakePerfectProfile();
+	constexpr float Spread = 300.f;
+	Profile->GuessSpread = { Spread, Spread };
+	AI->SetProfile(Profile);
+	AI->SetRandomSeed(5);
+	Test.RunFor(1.1f); // past the game mode's own serve
+
+	// Straight across from the far wall: the true arrival is the centre line.
+	const float CourtWidth = 2.f * Arena->GetHalfExtents().X;
+	const float FaceX = Paddle->GetPlanePosition().X - Paddle->GetSize().X * 0.5f;
+	const AIJPPaddle* Far = Arena->GetPaddle(EIJPSide::Left);
+	Ball->Launch(FVector2D(Far->GetPlanePosition().X + Far->GetSize().X + 20.f, 0.f), FVector2D(300.f, 0.f));
+
+	TSet<int32> FarGuesses;
+	float WidestFar = 0.f;
+	float WidestNear = 0.f;
+	const bool bReturned = IJPAITests::RunUntil(Test, 6.f, [&]
+	{
+		const float Left = (FaceX - Ball->GetPlanePosition().X) / CourtWidth;
+		if (Left > 0.5f)
+		{
+			FarGuesses.Add(FMath::RoundToInt(AI->GetTargetY()));
+			WidestFar = FMath::Max(WidestFar, FMath::Abs(AI->GetTargetY()));
+		}
+		else if (Left < 0.1f && Ball->GetPlaneVelocity().X > 0.f)
+		{
+			WidestNear = FMath::Max(WidestNear, FMath::Abs(AI->GetTargetY()));
+		}
+		return Ball->GetPlaneVelocity().X < 0.f;
+	});
+
+	AddInfo(FString::Printf(TEXT("%d guesses while far, widest %.0f; widest near the paddle %.0f"), FarGuesses.Num(), WidestFar, WidestNear));
+	UTEST_TRUE("Several different guesses while the ball is far", FarGuesses.Num() >= 3);
+	UTEST_TRUE("Far guesses are rough", WidestFar > 0.1f * Spread);
+	UTEST_TRUE("Close in, the read is tight", WidestNear < 0.25f * Spread);
+	UTEST_TRUE("Returned it", bReturned && Ball->IsInPlay());
 	return true;
 }
 

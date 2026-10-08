@@ -45,6 +45,14 @@ public:
 	FIJPSkillRange ErrorSpread = { 110.f, 10.f };
 
 	/**
+	 * How far off its read of the ball can be, on top of ErrorSpread, while the ball is still a whole
+	 * court away. Re-rolled at every look and shrinking to nothing as the ball reaches the paddle, so
+	 * it rushes to a rough spot and corrects as the shot comes in, like a person would.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Skill")
+	FIJPSkillRange GuessSpread = { 200.f, 60.f };
+
+	/**
 	 * How far off-centre it tries to hit, as a fraction of the paddle's reach (1 = its edge).
 	 * Off-centre hits send the ball back at an angle, so stronger players aim more. Rolled once per incoming shot.
 	 */
