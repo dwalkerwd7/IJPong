@@ -18,6 +18,7 @@
 #include "Gameplay/IJPBulletTimeComponent.h"
 #include "Gameplay/IJPCourtShiftComponent.h"
 #include "Gameplay/IJPComboComponent.h"
+#include "Presentation/IJPFightIntroComponent.h"
 #include "GameFramework/Controller.h"
 #include "Core/IJPTestGameMode.h"
 #include "Camera/CameraComponent.h"
@@ -307,6 +308,28 @@ bool FIJPComboTest::RunTest(const FString& Parameters)
 	UTEST_FALSE("Spent", Combo->IsSuperReady(EIJPSide::Left));
 	UTEST_TRUE("Scores", IJPBonusTargetTests::RunUntil(Test, 2.f, [Ball] { return !Ball->IsInPlay(); }, [Right] { Right->AddMoveInput(1.f); }));
 	UTEST_EQUAL_TOLERANCE("Twice the damage", Mode->GetMatch()->GetHealth(EIJPSide::Right), Before - 2.f, 0.001f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPVersusIntroTest, "IJPong.Era.VersusIntroThenRoundOneFightThenServe", IJPBonusTargetTests::Flags)
+bool FIJPVersusIntroTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = Cast<AIJPTestGameMode>(Test.GetWorld()->GetAuthGameMode());
+	AIJPArena* Arena = Test.GetArena();
+	UIJPFightIntroComponent* Intro = Arena->GetFightIntro();
+	UIJPEra* Era = NewObject<UIJPEra>(GetTransientPackage());
+	Era->bVersusIntro = true;
+	UIJPEraSubsystem::Get(Arena)->SetEra(Era);
+
+	Mode->RestartMatch();
+	UTEST_EQUAL("The versus card", Intro->GetShownCard(), FString(TEXT("YOU|VS|CPU")));
+	UTEST_TRUE("The serve waits", Mode->GetMatch()->IsServeHeld());
+	bool bSawFight = false;
+	const bool bServed = IJPBonusTargetTests::RunUntil(Test, 6.f, [Arena] { return Arena->GetBall()->IsInPlay(); }, [&] { bSawFight |= Intro->GetShownCard() == TEXT("|FIGHT!|"); });
+	UTEST_TRUE("ROUND 1... FIGHT!", bSawFight);
+	UTEST_TRUE("Then the serve", bServed);
+	UTEST_FALSE("Cards gone", Intro->IsPlaying());
 	return true;
 }
 

@@ -302,6 +302,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Twist")
 	FIJPBonusTargets BonusTargets;
 
+	/** Matches open fighting-game style: "YOU VS <RIVAL>", the rival's pre-match lines, then "ROUND 1", "FIGHT!". */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Look")
+	bool bVersusIntro = false;
+
 	/** Combo meters and super shots (the Fighting game twist). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Twist")
 	FIJPCombo Combo;

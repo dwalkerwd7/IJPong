@@ -11,6 +11,7 @@
 #include "Gameplay/IJPBulletTimeComponent.h"
 #include "Gameplay/IJPCourtShiftComponent.h"
 #include "Gameplay/IJPComboComponent.h"
+#include "Presentation/IJPFightIntroComponent.h"
 #include "Abilities/IJPAbility_Split.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Audio/IJPToneSet.h"
@@ -109,6 +110,8 @@ AIJPArena::AIJPArena()
 	BulletTime = CreateDefaultSubobject<UIJPBulletTimeComponent>(TEXT("BulletTime"));
 	CourtShift = CreateDefaultSubobject<UIJPCourtShiftComponent>(TEXT("CourtShift"));
 	Combo = CreateDefaultSubobject<UIJPComboComponent>(TEXT("Combo"));
+	FightIntro = CreateDefaultSubobject<UIJPFightIntroComponent>(TEXT("FightIntro"));
+	FightIntro->SetupAttachment(Root);
 	LeftHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("LeftHealthBar"));
 	LeftHealthBar->SetupAttachment(Root);
 	RightHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("RightHealthBar"));

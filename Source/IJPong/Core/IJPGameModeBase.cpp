@@ -18,6 +18,7 @@
 #include "Narrative/IJPConversation.h"
 #include "Narrative/IJPSpeechBubbleComponent.h"
 #include "Narrative/IJPConversationPlayer.h"
+#include "Presentation/IJPFightIntroComponent.h"
 
 AIJPGameModeBase::AIJPGameModeBase()
 {
@@ -100,8 +101,12 @@ void AIJPGameModeBase::SetOpponentSkill(float Skill)
 void AIJPGameModeBase::BeginMatch(const UIJPMatchRules* Rules)
 {
 	Conversations->Stop();
+	Arena->GetFightIntro()->Stop();
+	IntroStage = EIntroStage::None;
 	const UIJPConversation* PreMatch = Rival ? UIJPConversation::PickRandom(Rival->PreMatch) : nullptr;
-	Match->StartMatch(Arena, Rules, PreMatch != nullptr);
+	const UIJPEra* IntroEra = UIJPEraSubsystem::GetCurrentEra(this);
+	const bool bVersus = IntroEra && IntroEra->bVersusIntro;
+	Match->StartMatch(Arena, Rules, PreMatch != nullptr || bVersus);
 	Boss->Restart(); // a fresh fight: back to its first form
 
 	// The scenery: the rival's own (a boss's arena), else one of the era's at random.
@@ -112,11 +117,39 @@ void AIJPGameModeBase::BeginMatch(const UIJPMatchRules* Rules)
 		Scenery = Era && !Era->Backdrops.IsEmpty() ? Era->Backdrops[FMath::RandHelper(Era->Backdrops.Num())].Get() : nullptr;
 	}
 	Arena->SetBackdrop(Scenery);
-	if (PreMatch)
+	if (bVersus)
+	{
+		// YOU VS <RIVAL>, then its lines (if any), then ROUND 1, FIGHT!, then the serve.
+		IntroStage = EIntroStage::Versus;
+		const FString RivalName = Rival && !Rival->DisplayName.IsEmpty() ? Rival->DisplayName.ToString().ToUpper() : FString(TEXT("CPU"));
+		Arena->GetFightIntro()->Play({ { TEXT("YOU"), TEXT("VS"), RivalName, 1.6f } }, [this, PreMatch]
+		{
+			if (PreMatch)
+			{
+				IntroStage = EIntroStage::Conversation;
+				PlayConversation(PreMatch);
+			}
+			else
+			{
+				PlayFightCards();
+			}
+		});
+	}
+	else if (PreMatch)
 	{
 		// HandleConversationFinished releases the serve.
 		PlayConversation(PreMatch);
 	}
+}
+
+void AIJPGameModeBase::PlayFightCards()
+{
+	IntroStage = EIntroStage::Fight;
+	Arena->GetFightIntro()->Play({ { FString(), TEXT("ROUND 1"), FString(), 0.9f }, { FString(), TEXT("FIGHT!"), FString(), 0.6f } }, [this]
+	{
+		IntroStage = EIntroStage::None;
+		Match->ReleaseServe();
+	});
 }
 
 void AIJPGameModeBase::PlayConversation(const UIJPConversation* Conversation)
@@ -135,7 +168,15 @@ void AIJPGameModeBase::HandleMatchEnded(EIJPSide Winner)
 
 void AIJPGameModeBase::HandleConversationFinished(const UIJPConversation* Conversation)
 {
-	Match->ReleaseServe();
+	if (IntroStage == EIntroStage::Conversation)
+	{
+		PlayFightCards(); // the versus intro goes on
+		return;
+	}
+	if (IntroStage == EIntroStage::None)
+	{
+		Match->ReleaseServe();
+	}
 }
 
 void AIJPGameModeBase::SetRival(const UIJPRival* InRival)

@@ -132,6 +132,11 @@ private:
 	UFUNCTION()
 	void HandleConversationFinished(const UIJPConversation* Conversation);
 
+	/** The versus intro (eras with bVersusIntro): the card, then the pre-match lines, then ROUND 1 / FIGHT!. */
+	enum class EIntroStage : uint8 { None, Versus, Conversation, Fight };
+	EIntroStage IntroStage = EIntroStage::None;
+	void PlayFightCards();
+
 	/** The AI profile for Side's AI: the rival's on the opponent's side, else the configured one. */
 	const UIJPAIProfile* GetAIProfileFor(EIJPSide Side) const;
 

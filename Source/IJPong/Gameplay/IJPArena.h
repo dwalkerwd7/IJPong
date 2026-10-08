@@ -154,6 +154,9 @@ public:
 	/** What the balls' clock runs at now: the speed scale, slowed by any bullet time. */
 	float GetBallTimeFactor() const;
 
+	/** Big text cards before a match (the versus intro). */
+	class UIJPFightIntroComponent* GetFightIntro() const { return FightIntro; }
+
 	/** Combo meters and super shots (the era's twist). */
 	class UIJPComboComponent* GetCombo() const { return Combo; }
 
@@ -452,6 +455,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<class UIJPComboComponent> Combo;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<class UIJPFightIntroComponent> FightIntro;
 
 	/** Walls, barriers, goals, net and scores for the current HalfExtents. */
 	void LayoutCourt();
