@@ -80,8 +80,14 @@ public:
 		FString Text;
 	};
 
-	/** Show a row of cards to pick from instead of the map, under Heading. Refresh() goes back to the map. */
-	void ShowCards(const FString& Heading, const TArray<FCard>& Cards, int32 InSelectedCard = 0);
+	/**
+	 * Show a row of cards to pick from instead of the map, under Heading. Body (an event's text) types
+	 * out between the heading and the cards. Refresh() goes back to the map.
+	 */
+	void ShowCards(const FString& Heading, const TArray<FCard>& Cards, int32 InSelectedCard = 0, const FString& Body = FString());
+
+	/** The body typed so far. */
+	FString GetBodyShown() const { return Body.Left(BodyLetters); }
 
 	UFUNCTION(BlueprintPure, Category = "Map")
 	bool IsShowingCards() const { return bShowingCards; }
@@ -344,6 +350,15 @@ private:
 
 	float EraChangeTime = 0.f;
 	float EraChangeLeft = 0.f;
+
+	/** An event's text over the cards, typed out a letter at a time. */
+	UPROPERTY(Transient)
+	TObjectPtr<UTextRenderComponent> BodyText;
+
+	FString Body;
+	int32 BodyLetters = 0;
+	float BodyTime = 0.f;
+	void TickBody(float DeltaSeconds);
 
 	int32 NumCards = 0;
 	int32 SelectedCard = 0;

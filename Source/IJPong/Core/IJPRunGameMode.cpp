@@ -16,6 +16,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Narrative/IJPConversationPlayer.h"
 #include "Run/IJPActConfig.h"
+#include "Run/IJPEvent.h"
 #include "Run/IJPReward.h"
 #include "Run/IJPRunMapView.h"
 #include "Run/IJPRunSubsystem.h"
@@ -132,7 +133,7 @@ TArray<FIJPRunStage> AIJPRunGameMode::BuildClimb(int32& OutUnlocksErasTo) const
 
 bool AIJPRunGameMode::HandleUIStep(int32 Direction)
 {
-	if (Phase != EIJPRunPhase::Map && Phase != EIJPRunPhase::Reward && Phase != EIJPRunPhase::Shop && Phase != EIJPRunPhase::Tree)
+	if (!IsPickingPhase())
 	{
 		return false;
 	}
@@ -142,7 +143,7 @@ bool AIJPRunGameMode::HandleUIStep(int32 Direction)
 
 bool AIJPRunGameMode::HandleUIStepVertical(int32 Direction)
 {
-	if (Phase != EIJPRunPhase::Map && Phase != EIJPRunPhase::Reward && Phase != EIJPRunPhase::Shop && Phase != EIJPRunPhase::Tree)
+	if (!IsPickingPhase())
 	{
 		return false;
 	}
@@ -185,6 +186,18 @@ bool AIJPRunGameMode::HandleUIConfirm()
 		ShowMap();
 		return true;
 	}
+	case EIJPRunPhase::Event:
+		// The options, left to right; one that can't be afforded does nothing.
+		if (UIJPRunSubsystem::Get(this)->ChooseEventOption(MapView->GetSelectedCard()))
+		{
+			Phase = EIJPRunPhase::EventResult;
+			ShowEventResult();
+		}
+		return true;
+	case EIJPRunPhase::EventResult:
+		Phase = EIJPRunPhase::Map;
+		ShowMap();
+		return true;
 	case EIJPRunPhase::EraChange:
 		// Skippable once seen.
 		if (const UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(this); Meta && PendingEra && Meta->HasSeenEraCard(PendingEra->GetName()))
@@ -247,6 +260,12 @@ void AIJPRunGameMode::EnterSelectedNode()
 	{
 		Phase = EIJPRunPhase::Shop;
 		ShowShop();
+		return;
+	}
+	if (Run->IsInEvent())
+	{
+		Phase = EIJPRunPhase::Event;
+		ShowEvent();
 		return;
 	}
 	const FIJPEncounter* Encounter = Run->GetAct()->GetEncounter(Type);
@@ -462,6 +481,34 @@ void AIJPRunGameMode::ShowShop(int32 SelectedCard)
 
 	MapView->ShowCards(FString::Printf(TEXT("SHOP    HP %d/%d    COINS %d"), FMath::CeilToInt(Run->GetHealth()), FMath::CeilToInt(Run->GetMaxHealth()), Run->GetCoins()), Cards, SelectedCard);
 	MapView->SetFooter(TEXT("ARROWS  CHOOSE    SPACE  BUY / LEAVE"));
+	SetViewTarget(MapView);
+}
+
+FString AIJPRunGameMode::GetRunStatus() const
+{
+	const UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
+	return FString::Printf(TEXT("HP %d/%d    COINS %d"), FMath::CeilToInt(Run->GetHealth()), FMath::CeilToInt(Run->GetMaxHealth()), Run->GetCoins());
+}
+
+void AIJPRunGameMode::ShowEvent()
+{
+	const UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
+	const UIJPEvent* Event = Run->GetEvent();
+	TArray<AIJPRunMapView::FCard> Cards;
+	for (const FIJPEventOption& Option : Event->Options)
+	{
+		Cards.Add({ Option.Label.ToString().ToUpper(), Option.CardText() + (Option.CanChoose(*Run) ? TEXT("") : TEXT("\n(SHORT)")) });
+	}
+	MapView->ShowCards(FString::Printf(TEXT("%s    %s"), *Event->Title.ToString().ToUpper(), *GetRunStatus()), Cards, 0, Event->Text.ToString());
+	MapView->SetFooter(TEXT("ARROWS  CHOOSE    SPACE  PICK"));
+	SetViewTarget(MapView);
+}
+
+void AIJPRunGameMode::ShowEventResult()
+{
+	const UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
+	MapView->ShowCards(GetRunStatus(), { { TEXT("CONTINUE"), TEXT("BACK TO\nTHE MAP") } }, 0, Run->GetEventResult());
+	MapView->SetFooter(TEXT("SPACE  CONTINUE"));
 	SetViewTarget(MapView);
 }
 

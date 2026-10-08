@@ -157,12 +157,14 @@ FIJPRunMap FIJPRunMap::Generate(const UIJPActConfig& Act, FRandomStream& Random)
 			const float Elite = Row >= Act.EliteFromRow ? Act.EliteWeight : 0.f;
 			const float Rest = bRestAllowed ? Act.RestWeight : 0.f;
 			const float Shop = Act.ShopWeight;
-			const float Total = Match + Elite + Rest + Shop;
+			const float Event = Act.Events.IsEmpty() ? 0.f : Act.EventWeight;
+			const float Total = Match + Elite + Rest + Shop + Event;
 			const float Roll = Random.FRand() * Total;
 			Node.Type = Total <= 0.f || Roll < Match ? EIJPNodeType::Match
 				: Roll < Match + Elite ? EIJPNodeType::Elite
 				: Roll < Match + Elite + Rest ? EIJPNodeType::Rest
-				: EIJPNodeType::Shop;
+				: Roll < Match + Elite + Rest + Shop ? EIJPNodeType::Shop
+				: EIJPNodeType::Event;
 		}
 	}
 

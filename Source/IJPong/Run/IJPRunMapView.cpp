@@ -157,6 +157,8 @@ void AIJPRunMapView::Init(AIJPArena* InArena)
 	InfoText = MakeText(CardTextSize);
 	LoadoutText = MakeText(CardTextSize);
 	LoadoutText->SetVisibility(false);
+	BodyText = MakeText(CardTextSize);
+	BodyText->SetVisibility(false);
 	StartText = MakeText(TextSize);
 	UnlockText = MakeText(TextSize);
 	EraTitleText = MakeText(TextSize * 2.f);
@@ -244,7 +246,7 @@ void AIJPRunMapView::Refresh()
 	PlaceCursor();
 }
 
-void AIJPRunMapView::ShowCards(const FString& Heading, const TArray<FCard>& Cards, int32 InSelectedCard)
+void AIJPRunMapView::ShowCards(const FString& Heading, const TArray<FCard>& Cards, int32 InSelectedCard, const FString& InBody)
 {
 	if (!Arena.IsValid())
 	{
@@ -285,6 +287,42 @@ void AIJPRunMapView::ShowCards(const FString& Heading, const TArray<FCard>& Card
 	Header->SetText(FText::FromString(Heading));
 	ShowLoadout();
 	PlaceCursor();
+
+	// The body types out in the space between the heading and the cards' tops.
+	Body = InBody;
+	BodyLetters = 0;
+	BodyTime = 0.f;
+	if (!Body.IsEmpty())
+	{
+		const float CardsTop = CardCentre(0).Y + Size.Y * 0.5f;
+		BodyText->SetText(FText::GetEmpty());
+		BodyText->SetTextRenderColor(Ink);
+		BodyText->SetRelativeLocation(FVector(0.f, TextDepth, (CardsTop + HalfScreen.Y - 28.f) * 0.5f));
+		BodyText->SetVisibility(true);
+		SetActorTickEnabled(true);
+	}
+}
+
+void AIJPRunMapView::TickBody(float DeltaSeconds)
+{
+	if (BodyLetters >= Body.Len())
+	{
+		return;
+	}
+	// A letter every 0.03 s, with the chat bubbles' blip on every other letter.
+	constexpr float LetterTime = 0.03f;
+	BodyTime += DeltaSeconds;
+	const int32 Letters = FMath::Min(FMath::FloorToInt(BodyTime / LetterTime), Body.Len());
+	if (Letters <= BodyLetters)
+	{
+		return;
+	}
+	BodyLetters = Letters;
+	BodyText->SetText(FText::FromString(GetBodyShown()));
+	if (Arena.IsValid() && FChar::IsAlpha(Body[Letters - 1]) && Letters % 2 == 0)
+	{
+		Arena->GetTones()->PlayTone(Arena->GetToneSet().Talk);
+	}
 }
 
 FString AIJPRunMapView::GetLoadoutLine() const
@@ -510,9 +548,13 @@ void AIJPRunMapView::Tick(float DeltaSeconds)
 		TickRunEnd(DeltaSeconds);
 		return;
 	}
+	TickBody(DeltaSeconds);
 	if (EraChangeLeft <= 0.f)
 	{
-		SetActorTickEnabled(false);
+		if (BodyLetters >= Body.Len())
+		{
+			SetActorTickEnabled(false);
+		}
 		return;
 	}
 	EraChangeLeft = FMath::Max(EraChangeLeft - DeltaSeconds, 0.f);
@@ -630,13 +672,15 @@ void AIJPRunMapView::ClearDrawing()
 		Text->SetVisibility(false);
 	}
 	StopRunEnd();
-	for (UTextRenderComponent* Text : { InfoText.Get(), StartText.Get(), UnlockText.Get(), EraTitleText.Get(), LoadoutText.Get() })
+	for (UTextRenderComponent* Text : { InfoText.Get(), StartText.Get(), UnlockText.Get(), EraTitleText.Get(), LoadoutText.Get(), BodyText.Get() })
 	{
 		if (Text)
 		{
 			Text->SetVisibility(false);
 		}
 	}
+	Body.Reset();
+	BodyLetters = 0;
 }
 
 void AIJPRunMapView::ShowTree(const UIJPSkillTree* Tree, bool bResetPick)

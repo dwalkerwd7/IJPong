@@ -5,6 +5,7 @@
 #include "Engine/World.h"
 #include "Meta/IJPMetaSubsystem.h"
 #include "Run/IJPActConfig.h"
+#include "Run/IJPEvent.h"
 #include "Run/IJPReward.h"
 
 UIJPRunSubsystem* UIJPRunSubsystem::Get(const UObject* WorldContext)
@@ -37,6 +38,9 @@ void UIJPRunSubsystem::StartRun(const TArray<FIJPRunStage>& InStages, int32 Seed
 	Offer.Reset();
 	ShopStock.Reset();
 	bInShop = false;
+	CurrentEvent = nullptr;
+	SeenEvents.Reset();
+	EventResult.Reset();
 	Loadout = FIJPRunLoadout();
 	Visited.Init(false, Map.Nodes.Num());
 	CurrentNode = INDEX_NONE;
@@ -51,7 +55,7 @@ void UIJPRunSubsystem::StartRun(const TArray<FIJPRunStage>& InStages, int32 Seed
 
 TArray<int32> UIJPRunSubsystem::GetReachableNodes() const
 {
-	if (State != EIJPRunState::Running || bInNode || bInShop || HasOffer())
+	if (State != EIJPRunState::Running || bInNode || bInShop || IsInEvent() || HasOffer())
 	{
 		return {};
 	}
@@ -75,6 +79,29 @@ bool UIJPRunSubsystem::EnterNode(int32 Node)
 	{
 		ShopStock = Roll(Act->ShopRewards, Act->ShopChoices);
 		bInShop = true;
+	}
+	else if (Map.Nodes[Node].Type == EIJPNodeType::Event)
+	{
+		// One not met yet this run, while there are any.
+		TArray<const UIJPEvent*> Fresh;
+		TArray<const UIJPEvent*> All;
+		for (const UIJPEvent* Event : Act->Events)
+		{
+			if (Event && !Event->Options.IsEmpty())
+			{
+				All.Add(Event);
+				if (!SeenEvents.Contains(Event))
+				{
+					Fresh.Add(Event);
+				}
+			}
+		}
+		const TArray<const UIJPEvent*>& From = Fresh.IsEmpty() ? All : Fresh;
+		CurrentEvent = From.IsEmpty() ? nullptr : From[Random.RandHelper(From.Num())];
+		if (CurrentEvent)
+		{
+			SeenEvents.Add(CurrentEvent);
+		}
 	}
 	else
 	{
@@ -162,6 +189,33 @@ void UIJPRunSubsystem::LoseHealth(float Amount)
 void UIJPRunSubsystem::RollOffer(const TArray<TObjectPtr<UIJPReward>>& Pool)
 {
 	Offer = Roll(Pool, Act->RewardChoices);
+}
+
+bool UIJPRunSubsystem::ChooseEventOption(int32 Index)
+{
+	if (!CurrentEvent || !CurrentEvent->Options.IsValidIndex(Index) || !CurrentEvent->Options[Index].CanChoose(*this))
+	{
+		return false;
+	}
+	const FIJPEventOption& Option = CurrentEvent->Options[Index];
+	bEventSuccess = Option.Chance >= 1.f || Random.FRand() < Option.Chance;
+	const FIJPEventOutcome& Outcome = bEventSuccess ? Option.Success : Option.Failure;
+	CurrentEvent = nullptr; // before applying, so the map is free again whatever the outcome grants
+	Outcome.Apply(*this);
+
+	const FString Summary = Outcome.Summary();
+	EventResult = Outcome.Text.ToString();
+	if (!Summary.IsEmpty())
+	{
+		EventResult += (EventResult.IsEmpty() ? TEXT("") : TEXT("\n\n")) + Summary;
+	}
+	OnRunChanged.Broadcast();
+	return true;
+}
+
+void UIJPRunSubsystem::AddCoins(int32 Amount)
+{
+	Coins = FMath::Max(Coins + Amount, 0);
 }
 
 bool UIJPRunSubsystem::BuyFromShop(int32 Index)

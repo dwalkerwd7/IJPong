@@ -8,6 +8,7 @@
 #include "IJPActConfig.generated.h"
 
 class UIJPAbility;
+class UIJPEvent;
 class UIJPMatchRules;
 class UIJPReward;
 class UIJPRival;
@@ -75,6 +76,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Map", meta = (ClampMin = "0"))
 	float ShopWeight = 1.f;
 
+	/** Ignored (no Event nodes) while Events is empty. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Map", meta = (ClampMin = "0"))
+	float EventWeight = 0.f;
+
 	/** Elites can't appear above this row (0 = top). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Map", meta = (ClampMin = "1"))
 	int32 EliteFromRow = 2;
@@ -136,11 +141,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Meta", meta = (ClampMin = "0"))
 	int32 BossTokens = 1;
 
+	/** What an Event node can be: one picked at random, not repeating within a run while others are left. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Nodes")
+	TArray<TObjectPtr<UIJPEvent>> Events;
+
 	/** Health restored at a Rest node (never above the run's maximum). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Act|Nodes", meta = (ClampMin = "0"))
 	float RestHeal = 3.f;
 
-	/** The encounter for a fight node type, or null for Rest and Shop (and the unbuilt Event). */
+	/** The encounter for a fight node type, or null for Rest, Shop and Event. */
 	const FIJPEncounter* GetEncounter(EIJPNodeType Type) const
 	{
 		switch (Type)

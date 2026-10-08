@@ -11,6 +11,7 @@ class UIJPAbility;
 class UIJPActConfig;
 class UIJPEra;
 class UIJPBallType;
+class UIJPEvent;
 class UIJPReward;
 
 UENUM(BlueprintType)
@@ -197,6 +198,28 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Run")
 	void LeaveShop();
 
+	// --- Events ---
+
+	/** At an Event node, waiting for an option to be chosen. */
+	UFUNCTION(BlueprintPure, Category = "Run")
+	bool IsInEvent() const { return CurrentEvent != nullptr; }
+
+	const UIJPEvent* GetEvent() const { return CurrentEvent; }
+
+	/**
+	 * Choose the current event's option at Index: rolls its chance and applies the outcome, then the
+	 * map opens again. False (nothing happens) if there's no event or the option can't be chosen now.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Run")
+	bool ChooseEventOption(int32 Index);
+
+	/** The result text and summary of the last option chosen, and whether it went the good way. */
+	const FString& GetEventResult() const { return EventResult; }
+	bool WasEventSuccess() const { return bEventSuccess; }
+
+	/** Gain (or pay, negative) coins; never below 0. */
+	void AddCoins(int32 Amount);
+
 	/** Heal up to the maximum (e.g. an item used mid-fight). */
 	UFUNCTION(BlueprintCallable, Category = "Run")
 	void RestoreHealth(float Amount);
@@ -249,6 +272,16 @@ private:
 	TArray<TObjectPtr<const UIJPReward>> ShopStock;
 
 	bool bInShop = false;
+
+	UPROPERTY(Transient)
+	TObjectPtr<const UIJPEvent> CurrentEvent;
+
+	/** Events met this run, so an act's pool doesn't repeat until it runs out. */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<const UIJPEvent>> SeenEvents;
+
+	FString EventResult;
+	bool bEventSuccess = false;
 
 	UPROPERTY(Transient)
 	FIJPRunLoadout Loadout;

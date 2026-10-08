@@ -25,6 +25,10 @@ enum class EIJPRunPhase : uint8
 	Reward,
 	/** At a Shop node: buying with coins, then LEAVE. */
 	Shop,
+	/** At an Event node: its text, and its options as cards. */
+	Event,
+	/** An event's option played out: what happened, then back to the map. */
+	EventResult,
 	/** Between two acts in different eras: the tube switches off, the title card, then the new era. */
 	EraChange,
 	/** The run is over (won or lost); confirm opens the skill tree (or starts a new run if the class has none). */
@@ -94,6 +98,16 @@ private:
 	void ShowRewards();
 	/** The shop's shelf as cards (with prices) plus LEAVE; SelectedCard keeps the pick after a purchase. */
 	void ShowShop(int32 SelectedCard = 0);
+	void ShowEvent();
+	/** A screen of cards to pick from (map, rewards, shop, event, tree): the arrows step the pick. */
+	bool IsPickingPhase() const
+	{
+		return Phase == EIJPRunPhase::Map || Phase == EIJPRunPhase::Reward || Phase == EIJPRunPhase::Shop
+			|| Phase == EIJPRunPhase::Event || Phase == EIJPRunPhase::EventResult || Phase == EIJPRunPhase::Tree;
+	}
+	void ShowEventResult();
+	/** "HP 7/10    COINS 25", for headings. */
+	FString GetRunStatus() const;
 	const class UIJPSkillTree* GetPlayerTree() const;
 	void FinishNode();
 	void BeginEraChange(const UIJPEra* NewEra);
