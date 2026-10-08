@@ -9,7 +9,7 @@
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPPongMath.h"
 
-namespace
+namespace IJPBarrierUpgrades
 {
 	const FName DurationUpgrade(TEXT("Duration"));
 	const FName LastStandUpgrade(TEXT("LastStand"));
@@ -22,7 +22,7 @@ namespace
 
 void UIJPAbility_Barrier::Activate()
 {
-	Raise(Duration + GetUpgrade(DurationUpgrade));
+	Raise(Duration + GetUpgrade(IJPBarrierUpgrades::DurationUpgrade));
 }
 
 void UIJPAbility_Barrier::TickAbility(float DeltaSeconds)
@@ -38,7 +38,7 @@ void UIJPAbility_Barrier::TickAbility(float DeltaSeconds)
 	}
 
 	// Last Stand: once a match, up by itself when a goal is coming.
-	if (GetUpgrade(LastStandUpgrade) > 0.f && !HasUsedLastStand() && IsGoalComing())
+	if (GetUpgrade(IJPBarrierUpgrades::LastStandUpgrade) > 0.f && !HasUsedLastStand() && IsGoalComing())
 	{
 		LastStandMatch = GetMatchNumber();
 		Raise(LastStandTime);
@@ -69,11 +69,11 @@ void UIJPAbility_Barrier::HandleBarrierHit(EIJPSide Side, AIJPBall* Ball)
 	{
 		return;
 	}
-	if (GetUpgrade(ReboundUpgrade) > 0.f)
+	if (GetUpgrade(IJPBarrierUpgrades::ReboundUpgrade) > 0.f)
 	{
 		Ball->Boost(ReboundBoost);
 	}
-	const float Mending = GetUpgrade(MendingUpgrade);
+	const float Mending = GetUpgrade(IJPBarrierUpgrades::MendingUpgrade);
 	const AIJPGameModeBase* GameMode = Paddle->GetWorld()->GetAuthGameMode<AIJPGameModeBase>();
 	if (UIJPMatchComponent* Match = Mending > 0.f && GameMode ? GameMode->GetMatch() : nullptr)
 	{
@@ -125,7 +125,7 @@ bool UIJPAbility_Barrier::IsGoalComing() const
 		const float TimeToLane = (LaneX - Position.X) / Velocity.X;
 		const float BallLimit = Arena->GetHalfExtents().Y - Ball->GetSize() * 0.5f;
 		float ArriveY = 0.f;
-		if (TimeToLane <= LastStandLead && FIJPPongMath::PredictInterceptY(Position, Velocity, LaneX, -BallLimit, BallLimit, ArriveY))
+		if (TimeToLane <= IJPBarrierUpgrades::LastStandLead && FIJPPongMath::PredictInterceptY(Position, Velocity, LaneX, -BallLimit, BallLimit, ArriveY))
 		{
 			float CentreY = 0.f;
 			float HalfLength = 0.f;

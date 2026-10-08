@@ -5,6 +5,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Abilities/IJPAbility_Barrier.h"
+#include "Abilities/IJPAbility_Catch.h"
 #include "Abilities/IJPAbility_Curve.h"
 #include "Abilities/IJPAbility_Dash.h"
 #include "Abilities/IJPAbility_Split.h"
@@ -14,6 +15,7 @@
 #include "Engine/World.h"
 #include "Gameplay/IJPArena.h"
 #include "Gameplay/IJPBall.h"
+#include "Gameplay/IJPBallType.h"
 #include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPPaddle.h"
 #include "Tests/IJPTestWorld.h"
@@ -328,6 +330,67 @@ bool FIJPSplitTest::RunTest(const FString& Parameters)
 	UTEST_TRUE("Both head away from the paddle", Ball->GetPlaneVelocity().X > 0.f && Twin->GetPlaneVelocity().X > 0.f);
 	UTEST_TRUE("Fanned apart", Ball->GetPlaneVelocity().Y * Twin->GetPlaneVelocity().Y < 0.f);
 	UTEST_EQUAL("Same type", &Twin->GetType(), &Ball->GetType());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPSplitTreeTest, "IJPong.Tree.SplitterUpgradesTripleSmashDecoy", IJPClassSkillTests::Flags)
+bool FIJPSplitTreeTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPArena* Arena = Test.GetArena();
+	AIJPBall* Ball = Arena->GetBall();
+	AIJPPaddle* Left = Arena->GetPaddle(EIJPSide::Left);
+	UIJPAbility_Split* Split = NewObject<UIJPAbility_Split>(GetTransientPackage());
+	UIJPBallType* Decoy = NewObject<UIJPBallType>(GetTransientPackage());
+	Split->DecoyType = Decoy;
+	Left->GetAbilities()->Equip(EIJPAbilitySlot::ClassSkill, Split);
+	Left->GetAbilities()->GetAbility(EIJPAbilitySlot::ClassSkill)->SetUpgrades({ { FName(TEXT("Triple")), 1.f }, { FName(TEXT("Smash")), 1.f }, { FName(TEXT("Decoy")), 1.f } });
+	Test.RunFor(1.1f);
+
+	UTEST_TRUE("Arms", Left->GetAbilities()->TryActivate(EIJPAbilitySlot::ClassSkill));
+	Ball->Serve(EIJPSide::Left, 0.f);
+	UTEST_TRUE("Returned", IJPClassSkillTests::RunUntil(Test, 2.f, [Ball] { return Ball->GetRallyHits() >= 1; }));
+	UTEST_EQUAL("Three balls", Arena->GetNumBallsInPlay(), 3);
+	int32 Boosted = 0;
+	int32 Decoys = 0;
+	for (const AIJPBall* Each : Arena->GetBalls())
+	{
+		Boosted += Each->IsInPlay() && Each->IsBoosted() ? 1 : 0;
+		Decoys += Each->IsInPlay() && &Each->GetType() == Decoy ? 1 : 0;
+	}
+	UTEST_EQUAL("All smashed", Boosted, 3);
+	UTEST_EQUAL("One decoy", Decoys, 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPCatchTreeTest, "IJPong.Tree.CatcherUpgradesAimPowerSpinDoubleCatch", IJPClassSkillTests::Flags)
+bool FIJPCatchTreeTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPArena* Arena = Test.GetArena();
+	AIJPBall* Ball = Arena->GetBall();
+	AIJPPaddle* Left = Arena->GetPaddle(EIJPSide::Left);
+	UIJPAbilityComponent* Abilities = Left->GetAbilities();
+	Abilities->Equip(EIJPAbilitySlot::ClassSkill, NewObject<UIJPAbility_Catch>(GetTransientPackage()));
+	Abilities->GetAbility(EIJPAbilitySlot::ClassSkill)->SetUpgrades({ { FName(TEXT("AimLimit")), 10.f }, { FName(TEXT("Power")), 1.f }, { FName(TEXT("Spin")), 1.f }, { FName(TEXT("ExtraCatches")), 1.f } });
+	Test.RunFor(1.1f);
+
+	UTEST_TRUE("Arms", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
+	Ball->Serve(EIJPSide::Left, 0.f);
+	UTEST_TRUE("Caught", IJPClassSkillTests::RunUntil(Test, 2.f, [Ball] { return Ball->IsHeld(); }));
+	Left->SetAimAngle(80.f);
+	Abilities->Release(EIJPAbilitySlot::ClassSkill);
+	UTEST_FALSE("Thrown", Ball->IsHeld());
+	UTEST_TRUE("Steeper aim allowed", IJPClassSkillTests::SlopeDeg(Ball) > 75.0);
+	UTEST_TRUE("Power Throw", Ball->IsBoosted());
+	UTEST_TRUE("Spin Throw", Ball->IsCurving());
+	UTEST_TRUE("Double Catch: armed again", Abilities->GetAbility(EIJPAbilitySlot::ClassSkill)->IsArmed());
+
+	const FVector2D Face = Left->GetPlanePosition() + FVector2D(Left->GetSize().X * 0.5f, 0.f);
+	Ball->Launch(Face + FVector2D(60.f, 0.f), FVector2D(-400.f, 0.f));
+	UTEST_TRUE("Caught again", IJPClassSkillTests::RunUntil(Test, 1.f, [Ball] { return Ball->IsHeld(); }));
+	Abilities->Release(EIJPAbilitySlot::ClassSkill);
+	UTEST_FALSE("Now spent", Abilities->GetAbility(EIJPAbilitySlot::ClassSkill)->IsArmed());
 	return true;
 }
 

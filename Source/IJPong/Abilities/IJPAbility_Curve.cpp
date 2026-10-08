@@ -4,7 +4,7 @@
 #include "Gameplay/IJPBall.h"
 #include "Gameplay/IJPPaddle.h"
 
-namespace
+namespace IJPCurveUpgrades
 {
 	const FName RateUpgrade(TEXT("Rate"));
 	const FName DurationUpgrade(TEXT("Duration"));
@@ -16,7 +16,7 @@ namespace
 void UIJPAbility_Curve::Activate()
 {
 	bArmed = true;
-	CurvesLeft = 1 + FMath::Max(FMath::RoundToInt(GetUpgrade(ExtraCurvesUpgrade)), 0);
+	CurvesLeft = 1 + FMath::Max(FMath::RoundToInt(GetUpgrade(IJPCurveUpgrades::ExtraCurvesUpgrade)), 0);
 }
 
 void UIJPAbility_Curve::OnBallHit(AIJPBall& Ball)
@@ -28,9 +28,9 @@ void UIJPAbility_Curve::OnBallHit(AIJPBall& Ball)
 	}
 	bArmed = --CurvesLeft > 0;
 
-	const float Time = Duration + GetUpgrade(DurationUpgrade);
-	CurveReturn(Ball, *Paddle, DegreesPerSecond * (1.f + GetUpgrade(RateUpgrade)), Time,
-		GetUpgrade(HookUpgrade) > 0.f ? Time * 0.5f : -1.f, GetUpgrade(LateBreakUpgrade) > 0.f);
+	const float Time = Duration + GetUpgrade(IJPCurveUpgrades::DurationUpgrade);
+	CurveReturn(Ball, *Paddle, DegreesPerSecond * (1.f + GetUpgrade(IJPCurveUpgrades::RateUpgrade)), Time,
+		GetUpgrade(IJPCurveUpgrades::HookUpgrade) > 0.f ? Time * 0.5f : -1.f, GetUpgrade(IJPCurveUpgrades::LateBreakUpgrade) > 0.f);
 }
 
 void UIJPAbility_Curve::CurveReturn(AIJPBall& Ball, const AIJPPaddle& Paddle, float DegreesPerSecond, float Duration, float FlipAfter, bool bAfterNet)

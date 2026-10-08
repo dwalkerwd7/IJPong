@@ -5,6 +5,14 @@
 #include "Gameplay/IJPBall.h"
 #include "Gameplay/IJPPaddle.h"
 
+namespace IJPSplitUpgrades
+{
+	const FName SpreadUpgrade(TEXT("Spread"));
+	const FName TripleUpgrade(TEXT("Triple"));
+	const FName SmashUpgrade(TEXT("Smash"));
+	const FName DecoyUpgrade(TEXT("Decoy"));
+}
+
 void UIJPAbility_Split::OnBallHit(AIJPBall& Ball)
 {
 	const AIJPPaddle* Paddle = GetPaddle();
@@ -14,7 +22,35 @@ void UIJPAbility_Split::OnBallHit(AIJPBall& Ball)
 		return;
 	}
 	bArmed = false;
-	FanOut(Ball, *Arena, SpreadDeg);
+
+	const FVector2D Straight = Ball.GetPlaneVelocity();
+	TArray<AIJPBall*> Pieces = { &Ball };
+	AIJPBall* Twin = FanOut(Ball, *Arena, SpreadDeg + GetUpgrade(IJPSplitUpgrades::SpreadUpgrade));
+	if (Twin)
+	{
+		Pieces.Add(Twin);
+		if (GetUpgrade(IJPSplitUpgrades::DecoyUpgrade) > 0.f && DecoyType)
+		{
+			Twin->SetType(DecoyType);
+		}
+	}
+	// Triple Split: a third down the middle, where the return was going.
+	if (GetUpgrade(IJPSplitUpgrades::TripleUpgrade) > 0.f)
+	{
+		if (AIJPBall* Third = Arena->AddBall(&Ball.GetType()))
+		{
+			Third->Launch(Ball.GetPlanePosition(), Straight);
+			Third->MarkSplit();
+			Pieces.Add(Third);
+		}
+	}
+	if (GetUpgrade(IJPSplitUpgrades::SmashUpgrade) > 0.f)
+	{
+		for (AIJPBall* Piece : Pieces)
+		{
+			Piece->Boost(SmashBoost);
+		}
+	}
 }
 
 AIJPBall* UIJPAbility_Split::FanOut(AIJPBall& Ball, AIJPArena& Arena, float Spread)

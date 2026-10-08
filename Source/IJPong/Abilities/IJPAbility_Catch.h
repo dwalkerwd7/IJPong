@@ -14,6 +14,9 @@ class AIJPBall;
  * mouse; the aim starts at the angle the return would have had). Letting go of the button fires it
  * at the aim, as fast as the return would have been; after HoldTime it fires on its own. The aim
  * may go steeper than a bounce (AimLimitDeg), for bank shots off the walls.
+ * Skill-tree upgrades: HoldTime (seconds added), AimLimit (degrees added, up to 85), Power (> 0: a
+ * thrown ball leaves boosted), ExtraCatches (more catches per use), Spin (> 0: a thrown ball curves
+ * the way the paddle is moving).
  */
 UCLASS()
 class IJPONG_API UIJPAbility_Catch : public UIJPAbility
@@ -35,7 +38,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Catch", meta = (ClampMin = "0"))
 	float AimLineLength = 60.f;
 
-	virtual void Activate() override { bArmed = true; }
+	/** Power Throw: a thrown ball leaves this many times faster. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Catch|Upgrades", meta = (ClampMin = "1"))
+	float PowerBoost = 1.4f;
+
+	/** Spin Throw: how hard and how long a thrown ball curves. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Catch|Upgrades", meta = (ClampMin = "0", Units = "deg"))
+	float SpinRate = 70.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Catch|Upgrades", meta = (ClampMin = "0", Units = "s"))
+	float SpinTime = 0.9f;
+
+	virtual void Activate() override;
 	virtual bool IsActive() const override { return bArmed || Held.IsValid(); }
 	virtual bool IsArmed() const override { return bArmed; }
 	virtual void OnBallHit(AIJPBall& Ball) override;
@@ -56,4 +70,6 @@ private:
 	float HoldLeft = 0.f;
 	float FireSpeed = 0.f;
 	bool bArmed = false;
+	/** Catches still to make this use (Double Catch). */
+	int32 CatchesLeft = 0;
 };

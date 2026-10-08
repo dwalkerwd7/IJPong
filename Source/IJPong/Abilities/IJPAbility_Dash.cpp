@@ -4,7 +4,7 @@
 #include "Gameplay/IJPBall.h"
 #include "Gameplay/IJPPaddle.h"
 
-namespace
+namespace IJPDashUpgrades
 {
 	const FName DistanceUpgrade(TEXT("Distance"));
 	const FName ExtraDashesUpgrade(TEXT("ExtraDashes"));
@@ -19,9 +19,9 @@ void UIJPAbility_Dash::Activate()
 	{
 		return;
 	}
-	Paddle->Dash(Distance * (1.f + GetUpgrade(DistanceUpgrade)), Duration);
+	Paddle->Dash(Distance * (1.f + GetUpgrade(IJPDashUpgrades::DistanceUpgrade)), Duration);
 	SinceDash = 0.f;
-	if (GetUpgrade(SlipstreamUpgrade) > 0.f)
+	if (GetUpgrade(IJPDashUpgrades::SlipstreamUpgrade) > 0.f)
 	{
 		Paddle->BoostSpeed(SlipstreamSpeed, SlipstreamTime);
 	}
@@ -30,7 +30,7 @@ void UIJPAbility_Dash::Activate()
 bool UIJPAbility_Dash::StartsCooldown()
 {
 	// Double Dash: the first dashes of a cycle are free; the last one starts the cooldown.
-	if (++DashesInCycle <= FMath::RoundToInt(GetUpgrade(ExtraDashesUpgrade)))
+	if (++DashesInCycle <= FMath::RoundToInt(GetUpgrade(IJPDashUpgrades::ExtraDashesUpgrade)))
 	{
 		return false;
 	}
@@ -45,7 +45,7 @@ void UIJPAbility_Dash::TickAbility(float DeltaSeconds)
 
 void UIJPAbility_Dash::OnBallHit(AIJPBall& Ball)
 {
-	if (GetUpgrade(DashStrikeUpgrade) > 0.f && SinceDash <= StrikeWindow)
+	if (GetUpgrade(IJPDashUpgrades::DashStrikeUpgrade) > 0.f && SinceDash <= StrikeWindow)
 	{
 		Ball.Boost(StrikeBoost);
 		SinceDash = TNumericLimits<float>::Max(); // one strike per dash
