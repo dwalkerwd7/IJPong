@@ -24,7 +24,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FIJPHealthChangedSignature, EIJPS
  * GoalDamage) and anything else can through ApplyDamage (spells). The number over each half shows
  * that side's health, rounded up, so a side is never shown at 0 while it still stands.
  * With several balls in play, each goal counts on its own and takes that ball out; the rally
- * goes on until the court is empty, then the next serve follows.
+ * goes on until the court is empty, then the next serve follows. If a goal leaves only add-on
+ * balls, a main ball is refilled into the rally (up to the rules' RefillBallLimit).
  */
 UCLASS(ClassGroup = (IJPong))
 class IJPONG_API UIJPMatchComponent : public UActorComponent
@@ -130,6 +131,10 @@ private:
 	void ScheduleServe(EIJPSide Toward);
 	void ServeBall();
 	void Serve(EIJPSide Toward);
+	/** After a goal mid-rally: queue a main ball if only add-on balls are left and the limit allows. */
+	void MaybeRefill(EIJPSide Toward);
+	void ServeRefill();
+	void CancelRefill();
 	void EndMatch(EIJPSide InWinner);
 	/** bInstant: a new match or a set health, not a hit (health bars skip their damage trail). */
 	void UpdateScoreDisplay(bool bInstant = false) const;
@@ -152,6 +157,11 @@ private:
 	FTimerHandle ServeTimer;
 	EIJPMatchPhase Phase = EIJPMatchPhase::None;
 	EIJPSide NextServeSide = EIJPSide::Left;
+
+	/** A refill blinking at the centre, waiting for RefillTimer. */
+	TWeakObjectPtr<AIJPBall> RefillBall;
+	FTimerHandle RefillTimer;
+	EIJPSide RefillSide = EIJPSide::Left;
 	EIJPSide Winner = EIJPSide::Left;
 	bool bServeHeld = false;
 	float Health[2] = { 0.f, 0.f };

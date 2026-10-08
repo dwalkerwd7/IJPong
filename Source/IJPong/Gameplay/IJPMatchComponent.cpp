@@ -64,6 +64,7 @@ AIJPBall* UIJPMatchComponent::LaunchExtraBall(const UIJPBallType* Type)
 void UIJPMatchComponent::StopMatch()
 {
 	GetWorld()->GetTimerManager().ClearTimer(ServeTimer);
+	CancelRefill();
 	bServeHeld = false;
 	Phase = EIJPMatchPhase::None;
 	if (Arena)
@@ -91,6 +92,7 @@ void UIJPMatchComponent::ServeNow()
 	{
 		bServeHeld = false;
 		GetWorld()->GetTimerManager().ClearTimer(ServeTimer);
+		CancelRefill();
 		Arena->ResetBalls();
 		Serve(RandomSide());
 	}
@@ -106,6 +108,7 @@ void UIJPMatchComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().ClearTimer(ServeTimer);
+		World->GetTimerManager().ClearTimer(RefillTimer);
 	}
 	Super::EndPlay(EndPlayReason);
 }
@@ -199,12 +202,65 @@ void UIJPMatchComponent::HandleGoal(AIJPBall* ScoringBall, EIJPSide DefendingSid
 		// The side that just conceded receives the next serve.
 		ScheduleServe(DefendingSide);
 	}
+	else
+	{
+		MaybeRefill(DefendingSide);
+	}
+}
+
+void UIJPMatchComponent::MaybeRefill(EIJPSide Toward)
+{
+	// Only mid-rally, one refill at a time, and only while there's room under the limit.
+	const int32 Limit = GetRules().RefillBallLimit;
+	if (Phase != EIJPMatchPhase::Rally || Limit <= 0 || RefillBall.IsValid() || Arena->GetNumBallsInPlay() >= Limit)
+	{
+		return;
+	}
+
+	// A ball of the main type still in play (the main ball, a split half) keeps the rally going as it is.
+	const UIJPBallType* MainType = GetServedType(0);
+	for (const AIJPBall* Each : Arena->GetBalls())
+	{
+		if (Each->IsInPlay() && &Each->GetType() == MainType)
+		{
+			return;
+		}
+	}
+
+	// Blinking keeps AddBall from handing it to anything else while it waits.
+	AIJPBall* Refill = Arena->AddBall(MainType);
+	if (!Refill)
+	{
+		return;
+	}
+	Refill->BlinkAtCentre();
+	RefillBall = Refill;
+	RefillSide = Toward;
+	GetWorld()->GetTimerManager().SetTimer(RefillTimer, this, &UIJPMatchComponent::ServeRefill, FMath::Max(GetRules().ServeDelay, UE_KINDA_SMALL_NUMBER));
+}
+
+void UIJPMatchComponent::ServeRefill()
+{
+	AIJPBall* Refill = RefillBall.Get();
+	RefillBall.Reset();
+	// Still waiting (nothing reset it, e.g. a full serve) and the match goes on.
+	if (Refill && Refill->IsBlinking() && Phase == EIJPMatchPhase::Rally)
+	{
+		Refill->Serve(RefillSide, RandomServeAngle());
+	}
+}
+
+void UIJPMatchComponent::CancelRefill()
+{
+	GetWorld()->GetTimerManager().ClearTimer(RefillTimer);
+	RefillBall.Reset();
 }
 
 void UIJPMatchComponent::ScheduleServe(EIJPSide Toward)
 {
 	Phase = EIJPMatchPhase::Serve;
 	NextServeSide = Toward;
+	CancelRefill();
 	Arena->ResetBalls();
 	// The main ball blinks as what's about to be served first.
 	GetBall()->SetType(GetServedType(0));
@@ -271,6 +327,7 @@ void UIJPMatchComponent::EndMatch(EIJPSide InWinner)
 	Phase = EIJPMatchPhase::MatchOver;
 	Winner = InWinner;
 	GetWorld()->GetTimerManager().ClearTimer(ServeTimer);
+	CancelRefill();
 	Arena->ResetBalls();
 	Arena->ShowWinner(Winner);
 
