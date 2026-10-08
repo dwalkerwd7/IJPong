@@ -30,7 +30,7 @@ void UIJPAbility_Bumpers::Activate()
 		}
 		if (AIJPBonusTarget* Bumper = Paddle->GetWorld()->SpawnActor<AIJPBonusTarget>(AIJPBonusTarget::StaticClass(), Arena->GetActorTransform(), Params))
 		{
-			Bumper->InitBumper(Arena, Spot, Size, Boost, Colour);
+			Bumper->InitBumper(Arena, Spot, FVector2D(Size), Boost, Colour);
 			Bumpers.Add(Bumper);
 			Placed.Add(Spot);
 		}

@@ -32,20 +32,29 @@ AIJPBonusTarget::AIJPBonusTarget()
 	IJP::ConfigureAsVisualOnly(Visual);
 }
 
-void AIJPBonusTarget::Init(AIJPArena* InArena, const FVector2D& Centre, float Size)
+void AIJPBonusTarget::InitBox(AIJPArena* InArena, const FVector2D& Centre, const FVector2D& Size)
 {
 	Arena = InArena;
-	PlanePosition = Centre;
+	BoxSize = Size;
 	// Arena local axes: X = plane X, Z = plane Y, Y = depth toward the camera.
-	SetActorTransform(FTransform(InArena->GetActorQuat(), InArena->PlaneToWorld(Centre)));
-	Box->SetBoxExtent(FVector(Size * 0.5f, TargetBlockerDepth * 0.5f, Size * 0.5f));
-	Visual->SetRelativeScale3D(FVector(Size / TargetCubeSize, TargetVisualDepth / TargetCubeSize, Size / TargetCubeSize));
+	SetPlanePosition(Centre);
+	Box->SetBoxExtent(FVector(Size.X * 0.5f, TargetBlockerDepth * 0.5f, Size.Y * 0.5f));
+	Visual->SetRelativeScale3D(FVector(Size.X / TargetCubeSize, TargetVisualDepth / TargetCubeSize, Size.Y / TargetCubeSize));
 	Visual->SetMaterial(0, InArena->GetPaletteMaterial(EIJPPaletteRole::Score));
 }
 
-void AIJPBonusTarget::InitBumper(AIJPArena* InArena, const FVector2D& Centre, float Size, float Boost, EIJPPaletteRole Colour)
+void AIJPBonusTarget::SetPlanePosition(const FVector2D& Centre)
 {
-	Init(InArena, Centre, Size);
+	PlanePosition = Centre;
+	if (const AIJPArena* ArenaPtr = Arena.Get())
+	{
+		SetActorTransform(FTransform(ArenaPtr->GetActorQuat(), ArenaPtr->PlaneToWorld(Centre)));
+	}
+}
+
+void AIJPBonusTarget::InitBumper(AIJPArena* InArena, const FVector2D& Centre, const FVector2D& Size, float Boost, EIJPPaletteRole Colour)
+{
+	InitBox(InArena, Centre, Size);
 	bBumper = true;
 	BumperBoost = Boost;
 	Visual->SetMaterial(0, InArena->GetPaletteMaterial(Colour));
@@ -55,14 +64,14 @@ void AIJPBonusTarget::Break(AIJPBall* Ball)
 {
 	if (bBumper)
 	{
-		// Pinball: the ball bounces off (the ball does that) with a kick.
-		if (Ball)
+		// The ball bounces off (the ball does that); a pinball bumper kicks it too.
+		if (Ball && BumperBoost > 1.f)
 		{
 			Ball->Boost(BumperBoost);
-		}
-		if (AIJPArena* ArenaPtr = Arena.Get())
-		{
-			ArenaPtr->GetTones()->PlayTone(ArenaPtr->GetToneSet().Pop);
+			if (AIJPArena* ArenaPtr = Arena.Get())
+			{
+				ArenaPtr->GetTones()->PlayTone(ArenaPtr->GetToneSet().Pop);
+			}
 		}
 		return;
 	}

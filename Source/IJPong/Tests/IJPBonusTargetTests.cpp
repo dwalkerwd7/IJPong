@@ -13,6 +13,7 @@
 #include "Gameplay/IJPBall.h"
 #include "Gameplay/IJPBonusTarget.h"
 #include "Gameplay/IJPBonusTargetComponent.h"
+#include "Gameplay/IJPDriftingBlockComponent.h"
 #include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPMatchRules.h"
 #include "Gameplay/IJPPaddle.h"
@@ -65,7 +66,7 @@ bool FIJPBumperTest::RunTest(const FString& Parameters)
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	AIJPBonusTarget* Bumper = Test.GetWorld()->SpawnActor<AIJPBonusTarget>(AIJPBonusTarget::StaticClass(), Arena->GetActorTransform(), Params);
-	Bumper->InitBumper(Arena, FVector2D(100.f, 0.f), 24.f, 1.5f, EIJPPaletteRole::RightPaddle);
+	Bumper->InitBumper(Arena, FVector2D(100.f, 0.f), FVector2D(24.f), 1.5f, EIJPPaletteRole::RightPaddle);
 	Ball->Launch(FVector2D(0.f, 0.f), FVector2D(300.f, 0.f));
 	bool bBounced = false;
 	for (int32 i = 0; i < 60 && !bBounced; ++i)
@@ -76,6 +77,52 @@ bool FIJPBumperTest::RunTest(const FString& Parameters)
 	UTEST_TRUE("Bounced off", bBounced);
 	UTEST_TRUE("Kicked", Ball->GetPlaneVelocity().Size() > 400.f);
 	UTEST_TRUE("Still there", IsValid(Bumper) && !Bumper->IsHidden());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPDriftingBlocksTest, "IJPong.Era.DriftingBlocksMoveStayInsideAndDeflect", IJPBonusTargetTests::Flags)
+bool FIJPDriftingBlocksTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPArena* Arena = Test.GetArena();
+	AIJPBall* Ball = Arena->GetBall();
+	UIJPDriftingBlockComponent* Drift = Arena->GetDriftingBlocks();
+	UTEST_EQUAL("None in an era without them", Drift->GetNumBlocks(), 0);
+
+	UIJPEra* Era = NewObject<UIJPEra>(GetTransientPackage());
+	Era->DriftingBlocks.bEnabled = true;
+	Era->DriftingBlocks.Count = 2;
+	Era->DriftingBlocks.Speed = 200.f;
+	UIJPEraSubsystem::Get(Arena)->SetEra(Era);
+	Test.Step();
+	UTEST_EQUAL("Two blocks", Drift->GetNumBlocks(), 2);
+	AIJPBonusTarget* Block = Drift->GetBlocks()[0];
+	const double StartY = Block->GetPlanePosition().Y;
+	Test.RunFor(0.2f);
+	UTEST_TRUE("Drifting", FMath::Abs(Block->GetPlanePosition().Y - StartY) > 10.0);
+
+	// Long enough to reach a wall and turn back: always inside.
+	const float Limit = Arena->GetHalfExtents().Y - Era->DriftingBlocks.Size.Y * 0.5f + 0.01f;
+	bool bInside = true;
+	Test.RunFor(5.f, [&] { bInside &= FMath::Abs(Block->GetPlanePosition().Y) <= Limit; });
+	UTEST_TRUE("Never through the walls", bInside);
+
+	// A ball sent straight at it bounces back.
+	Era->DriftingBlocks.Speed = 0.f;
+	const FVector2D At = Block->GetPlanePosition();
+	const float Dir = At.X < 0.f ? -1.f : 1.f;
+	Ball->Launch(FVector2D(At.X - Dir * 120.f, At.Y), FVector2D(Dir * 300.f, 0.f));
+	bool bBounced = false;
+	for (int32 i = 0; i < 60 && !bBounced; ++i)
+	{
+		Test.Step();
+		bBounced = Ball->GetPlaneVelocity().X * Dir < 0.f;
+	}
+	UTEST_TRUE("Deflected", bBounced);
+	UTEST_FALSE("Not kicked", Ball->IsBoosted());
+
+	UIJPEraSubsystem::Get(Arena)->SetEra(NewObject<UIJPEra>(GetTransientPackage()));
+	UTEST_EQUAL("Gone with the era", Drift->GetNumBlocks(), 0);
 	return true;
 }
 

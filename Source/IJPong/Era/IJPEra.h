@@ -138,6 +138,30 @@ struct FIJPBonusTargets
 	int32 Coins = 5;
 };
 
+/** The 16-bit era's twist: blocks that drift up and down through mid-court, turning back at the walls. Balls bounce off them. */
+USTRUCT(BlueprintType)
+struct FIJPDriftingBlocks
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Drifting Blocks")
+	bool bEnabled = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Drifting Blocks", meta = (ClampMin = "1", ClampMax = "6"))
+	int32 Count = 2;
+
+	/** Width and height, in arena units. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Drifting Blocks")
+	FVector2D Size = FVector2D(16.f, 70.f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Drifting Blocks", meta = (ClampMin = "0", Units = "cm/s"))
+	float Speed = 50.f;
+
+	/** How far out from the net they sit, as a fraction of the half-court (spread evenly across it). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Drifting Blocks", meta = (ClampMin = "0", ClampMax = "1"))
+	float CourtFraction = 0.4f;
+};
+
 /**
  * One era of the game's history: how the whole game looks and sounds while it's current.
  * Eras are ordered in UIJPEraSubsystem's config; the subsystem says which one is current, and
@@ -185,6 +209,10 @@ public:
 	/** Targets popping up mid-court (the Arcade twist). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Twist")
 	FIJPBonusTargets BonusTargets;
+
+	/** Blocks drifting through mid-court (the 16-bit twist). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Twist")
+	FIJPDriftingBlocks DriftingBlocks;
 
 	/** Shown when a run climbs into this era (e.g. "1978 - ARCADE"). Empty = DisplayName. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Run")

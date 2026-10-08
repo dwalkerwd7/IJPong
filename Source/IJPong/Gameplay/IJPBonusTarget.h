@@ -26,10 +26,21 @@ public:
 	AIJPBonusTarget();
 
 	/** Place it at plane position Centre, Size across. Call right after spawning. */
-	void Init(AIJPArena* InArena, const FVector2D& Centre, float Size);
+	void Init(AIJPArena* InArena, const FVector2D& Centre, float Size) { InitBox(InArena, Centre, FVector2D(Size)); }
 
-	/** A bumper instead: unbreakable, kicks the ball Boost times faster, in the Colour role's colour. */
-	void InitBumper(AIJPArena* InArena, const FVector2D& Centre, float Size, float Boost, EIJPPaletteRole Colour);
+	/** As Init, any width and height. */
+	void InitBox(AIJPArena* InArena, const FVector2D& Centre, const FVector2D& Size);
+
+	/**
+	 * A bumper instead: unbreakable, in the Colour role's colour; a ball bounces off it Boost times
+	 * faster (1 = a plain obstacle, like a drifting block).
+	 */
+	void InitBumper(AIJPArena* InArena, const FVector2D& Centre, const FVector2D& Size, float Boost, EIJPPaletteRole Colour);
+
+	/** Move it (drifting blocks). */
+	void SetPlanePosition(const FVector2D& Centre);
+
+	FVector2D GetSize() const { return BoxSize; }
 
 	/** Hit by Ball: a target is gone (and the arena's targets hear about it); a bumper kicks it. */
 	void Break(AIJPBall* Ball);
@@ -47,6 +58,7 @@ private:
 
 	TWeakObjectPtr<AIJPArena> Arena;
 	FVector2D PlanePosition = FVector2D::ZeroVector;
+	FVector2D BoxSize = FVector2D::ZeroVector;
 	bool bBroken = false;
 	bool bBumper = false;
 	float BumperBoost = 1.f;

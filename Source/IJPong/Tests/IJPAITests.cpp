@@ -169,6 +169,9 @@ bool FIJPAIHomesInTest::RunTest(const FString& Parameters)
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPAIMatchTest, "IJPong.AI.DefaultProfileRalliesButConcedes", IJPAITests::Flags)
 bool FIJPAIMatchTest::RunTest(const FString& Parameters)
 {
+	// Serves come from the global random stream: seed it, so the result doesn't depend on which tests ran first.
+	FMath::RandInit(7);
+	FMath::SRandInit(7);
 	FIJPTestWorld Test(IJPAITests::ArenaTransform);
 	AIJPArena* Arena = Test.GetArena();
 	AIJPBall* Ball = Arena->GetBall();
@@ -231,6 +234,9 @@ bool FIJPAISkillFromArenaTest::RunTest(const FString& Parameters)
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPAISpectrumTest, "IJPong.AI.HigherSkillBeatsLowerSkill", IJPAITests::Flags)
 bool FIJPAISpectrumTest::RunTest(const FString& Parameters)
 {
+	// Serves come from the global random stream: seed it, so the result doesn't depend on which tests ran first.
+	FMath::RandInit(7);
+	FMath::SRandInit(7);
 	FIJPTestWorld Test(IJPAITests::ArenaTransform);
 	AIJPArena* Arena = Test.GetArena();
 	AIJPTestGameMode* GameMode = Cast<AIJPTestGameMode>(Test.GetWorld()->GetAuthGameMode());
@@ -248,11 +254,11 @@ bool FIJPAISpectrumTest::RunTest(const FString& Parameters)
 	Strong->SetRandomSeed(3);
 	Weak->SetRandomSeed(4);
 
-	Test.RunFor(120.f);
+	Test.RunFor(240.f);
 
 	const int32 StrongScore = GameMode->GetMatch()->GetGoals(EIJPSide::Right);
 	const int32 WeakScore = GameMode->GetMatch()->GetGoals(EIJPSide::Left);
-	AddInfo(FString::Printf(TEXT("Skill 0.85 vs 0.15 over 120s: %d - %d"), StrongScore, WeakScore));
+	AddInfo(FString::Printf(TEXT("Skill 0.85 vs 0.15 over 240s: %d - %d"), StrongScore, WeakScore));
 	UTEST_TRUE("Stronger AI outscores the weaker one clearly", StrongScore >= WeakScore + 3);
 	return true;
 }

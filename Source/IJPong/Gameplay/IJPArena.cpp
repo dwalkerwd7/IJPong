@@ -6,6 +6,7 @@
 #include "Presentation/IJPBackdropComponent.h"
 #include "Gameplay/IJPBonusTargetComponent.h"
 #include "Presentation/IJPScreenShakeComponent.h"
+#include "Gameplay/IJPDriftingBlockComponent.h"
 #include "Abilities/IJPAbility_Split.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Audio/IJPToneSet.h"
@@ -99,6 +100,7 @@ AIJPArena::AIJPArena()
 
 	BonusTargets = CreateDefaultSubobject<UIJPBonusTargetComponent>(TEXT("BonusTargets"));
 	ScreenShake = CreateDefaultSubobject<UIJPScreenShakeComponent>(TEXT("ScreenShake"));
+	DriftingBlocks = CreateDefaultSubobject<UIJPDriftingBlockComponent>(TEXT("DriftingBlocks"));
 	LeftHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("LeftHealthBar"));
 	LeftHealthBar->SetupAttachment(Root);
 	RightHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("RightHealthBar"));
@@ -493,6 +495,7 @@ void AIJPArena::SetHealthDisplay(EIJPSide Side, float Health, float MaxHealth, b
 void AIJPArena::HandleEraChanged(const UIJPEra* NewEra)
 {
 	BonusTargets->Clear();
+	DriftingBlocks->Reset();
 	ApplyPalette(NewEra ? NewEra->Palette : FIJPPalette());
 }
 
@@ -632,6 +635,7 @@ void AIJPArena::ShowWinner(EIJPSide Winner)
 void AIJPArena::ClearWinner()
 {
 	BonusTargets->Clear(); // a new match starts with a clear court, at normal speed
+	DriftingBlocks->Reset();
 	BallSpeedScale = 1.f;
 	for (const EIJPSide Side : { EIJPSide::Left, EIJPSide::Right })
 	{

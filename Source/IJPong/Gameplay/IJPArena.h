@@ -28,6 +28,7 @@ class UIJPPortraitComponent;
 class UIJPBackdropComponent;
 class UIJPBonusTargetComponent;
 class UIJPScreenShakeComponent;
+class UIJPDriftingBlockComponent;
 class UIJPBackdrop;
 struct FIJPPortraits;
 class AIJPSpellStrike;
@@ -124,6 +125,9 @@ public:
 
 	/** Bonus targets mid-court (the era's twist). */
 	UIJPBonusTargetComponent* GetBonusTargets() const { return BonusTargets; }
+
+	/** Blocks drifting through mid-court (the era's twist). */
+	UIJPDriftingBlockComponent* GetDriftingBlocks() const { return DriftingBlocks; }
 
 	/** Shakes the arena's camera (a boss's TILT). */
 	UIJPScreenShakeComponent* GetScreenShake() const { return ScreenShake; }
@@ -406,6 +410,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<UIJPScreenShakeComponent> ScreenShake;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<UIJPDriftingBlockComponent> DriftingBlocks;
 
 	float BallSpeedScale = 1.f;
 
