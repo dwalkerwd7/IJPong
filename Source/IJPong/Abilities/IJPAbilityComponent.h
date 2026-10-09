@@ -39,7 +39,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
 	void Release(EIJPAbilitySlot Slot);
 
-	/** Press the slot's button. True if the ability activated. */
+	/**
+	 * Press the slot's button. True if the ability activated. Pressing an armed skill's button again
+	 * cancels it instead (UIJPAbility::CanCancel): its cooldown is refunded, and this returns false.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
 	bool TryActivate(EIJPAbilitySlot Slot);
 
@@ -98,8 +101,8 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
-	/** The rising two-note chirp that confirms a skill is armed. */
-	void PlayArmChirp();
+	/** The rising two-note chirp that confirms a skill is armed (falling when it's cancelled). */
+	void PlayArmChirp(bool bFalling = false);
 	void PlayWarning();
 	/** Run the slot's ability now (after any wind-up). */
 	void Fire(int32 Index);

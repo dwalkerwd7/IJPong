@@ -81,6 +81,15 @@ void UIJPAbilityComponent::Equip(EIJPAbilitySlot Slot, const UIJPAbility* Defini
 
 bool UIJPAbilityComponent::TryActivate(EIJPAbilitySlot Slot)
 {
+	// A second press on an armed skill takes it back, cooldown and all.
+	if (UIJPAbility* Armed = GetAbility(Slot); Armed && Armed->CanCancel() && !IsWindingUp(Slot))
+	{
+		Armed->Deactivate();
+		Cooldowns[static_cast<int32>(Slot)] = 0.f;
+		PlayArmChirp(true);
+		return false;
+	}
+
 	if (!IsReady(Slot))
 	{
 		return false;
@@ -199,7 +208,7 @@ bool UIJPAbilityComponent::IsArmed() const
 	return false;
 }
 
-void UIJPAbilityComponent::PlayArmChirp()
+void UIJPAbilityComponent::PlayArmChirp(bool bFalling)
 {
 	const AIJPPaddle* Paddle = GetPaddle();
 	AIJPArena* Arena = Paddle ? Paddle->GetArena() : nullptr;
@@ -209,9 +218,10 @@ void UIJPAbilityComponent::PlayArmChirp()
 	}
 
 	const UIJPToneSet& ToneSet = Arena->GetToneSet();
+	FIJPTone First = ToneSet.Arm;
 	FIJPTone Second = ToneSet.Arm;
-	Second.Frequency *= ToneSet.ArmRise;
-	Arena->GetTones()->PlayTone(ToneSet.Arm);
+	(bFalling ? First : Second).Frequency *= ToneSet.ArmRise;
+	Arena->GetTones()->PlayTone(First);
 	TWeakObjectPtr<AIJPArena> WeakArena = Arena;
 	GetWorld()->GetTimerManager().SetTimer(ChirpTimer, [WeakArena, Second]
 	{

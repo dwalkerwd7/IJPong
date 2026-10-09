@@ -83,6 +83,12 @@ public:
 	virtual bool IsArmed() const { return false; }
 
 	/**
+	 * Pressing the button again now takes it back (Deactivate, and the slot's cooldown is refunded).
+	 * Armed skills are toggles: arm, change your mind, disarm.
+	 */
+	virtual bool CanCancel() const { return IsArmed(); }
+
+	/**
 	 * An AI holding this ability would use it now (asked every frame while the slot is ready).
 	 * Abilities written for rivals answer it; the rest never get used by the AI.
 	 */

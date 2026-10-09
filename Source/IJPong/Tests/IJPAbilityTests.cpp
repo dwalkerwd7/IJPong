@@ -66,12 +66,12 @@ bool FIJPSmashTest::RunTest(const FString& Parameters)
 
 	UTEST_TRUE("Activates", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
 	UTEST_TRUE("Armed", Abilities->GetAbility(EIJPAbilitySlot::ClassSkill)->IsActive());
-	UTEST_FALSE("Can't use again while cooling down", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
 
 	UTEST_TRUE("Left returns it", IJPAbilityTests::RunUntil(Test, 3.f, [Ball] { return Ball->GetRallyHits() >= 1; }));
 	const float PerHit = Ball->GetType().SpeedPerHit;
 	UTEST_EQUAL_TOLERANCE("Smashed: double the normal return", Ball->GetPlaneVelocity().Size(), (Served + PerHit) * 2.0, 0.5);
 	UTEST_FALSE("Used up", Abilities->GetAbility(EIJPAbilitySlot::ClassSkill)->IsActive());
+	UTEST_FALSE("Can't use again while cooling down", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
 
 	UTEST_TRUE("Right returns it", IJPAbilityTests::RunUntil(Test, 3.f, [Ball] { return Ball->GetRallyHits() >= 2; }));
 	UTEST_EQUAL_TOLERANCE("Back on the rally's normal speed", Ball->GetPlaneVelocity().Size(), Served + 2.0 * PerHit, 0.5);
@@ -192,6 +192,44 @@ bool FIJPReadyCueTest::RunTest(const FString& Parameters)
 	UTEST_TRUE("AI used it", RightAbilities->TryActivate(EIJPAbilitySlot::RunAbility));
 	Test.RunFor(1.f);
 	UTEST_EQUAL("No signal for the AI", RightAbilities->GetReadySignals(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPToggleTest, "IJPong.Ability.ArmedSkillTogglesOffWithRefund", IJPAbilityTests::Flags)
+bool FIJPToggleTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPArena* Arena = Test.GetArena();
+	AIJPBall* Ball = Arena->GetBall();
+	AIJPPaddle* Left = Arena->GetPaddle(EIJPSide::Left);
+	UIJPAbilityComponent* Abilities = Left->GetAbilities();
+	UIJPToneSynthComponent* Tones = Arena->GetTones();
+	const UIJPToneSet& ToneSet = Arena->GetToneSet();
+	UIJPAbility_Smash* Smash = NewObject<UIJPAbility_Smash>(GetTransientPackage());
+	Smash->Cooldown = 5.f;
+	Abilities->Equip(EIJPAbilitySlot::ClassSkill, Smash);
+	Arena->GetPaddle(EIJPSide::Right)->GetController()->UnPossess();
+	Test.RunFor(1.1f);
+
+	// Arm, then press again: disarmed, cooldown back, a falling chirp.
+	UTEST_TRUE("Armed", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
+	UTEST_TRUE("Cooling", Abilities->GetCooldownRemaining(EIJPAbilitySlot::ClassSkill) > 0.f);
+	UTEST_FALSE("A second press isn't a use", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
+	UTEST_FALSE("Disarmed", Abilities->IsArmed());
+	UTEST_EQUAL("Cooldown refunded", Abilities->GetCooldownRemaining(EIJPAbilitySlot::ClassSkill), 0.f);
+	UTEST_TRUE("High note first", Tones->GetLastTone().Frequency > ToneSet.Arm.Frequency);
+	Test.RunFor(ToneSet.Arm.Duration + 0.05f);
+	UTEST_TRUE("Then the low one", Tones->GetLastTone() == ToneSet.Arm);
+
+	// The next return is a plain one.
+	Ball->Serve(EIJPSide::Left, 0.f);
+	const float ServeSpeed = Ball->GetPlaneVelocity().Size();
+	UTEST_TRUE("Returned", IJPAbilityTests::RunUntil(Test, 2.f, [Ball] { return Ball->GetRallyHits() >= 1; }));
+	UTEST_TRUE("Not smashed", Ball->GetPlaneVelocity().Size() < ServeSpeed * 1.3f);
+
+	// And it can be armed again straight away.
+	UTEST_TRUE("Ready again", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
+	UTEST_TRUE("Armed again", Abilities->IsArmed());
 	return true;
 }
 
