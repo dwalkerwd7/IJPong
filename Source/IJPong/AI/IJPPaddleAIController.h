@@ -86,6 +86,9 @@ private:
 	float DecisionTimer = 0.f;
 	float TargetY = 0.f;
 	float ShotError = 0.f;
+	/** The current guess (-1..1, scaled by the distance left) and when it's due for a new one. */
+	float GuessRoll = 0.f;
+	float NextGuessTime = 0.f;
 	float ShotAim = 0.f;
 	bool bBallIncoming = false;
 	bool bHasReadTarget = false;

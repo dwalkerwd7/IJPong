@@ -160,6 +160,7 @@ void AIJPPaddleAIController::Decide(const AIJPPaddle& Paddle, const AIJPBall* In
 		const float SpeedFraction = Ball.GetMaxSpeed() > 0.f ? BallVelocity.Size() / Ball.GetMaxSpeed() : 1.f;
 		ShotError = Random.FRandRange(-1.f, 1.f) * P.ErrorSpread.At(Skill) * SpeedFraction;
 		ShotAim = Random.FRandRange(-1.f, 1.f) * P.AimSpread.At(Skill);
+		NextGuessTime = 0.f; // a fresh guess for a fresh shot
 	}
 
 	const FVector2D HalfExtents = Paddle.GetArena()->GetHalfExtents();
@@ -172,10 +173,16 @@ void AIJPPaddleAIController::Decide(const AIJPPaddle& Paddle, const AIJPBall* In
 	float InterceptY = 0.f;
 	if (FIJPPongMath::PredictInterceptY(Ball.GetPlanePosition(), BallVelocity, FaceX, -BallLimitY, BallLimitY, InterceptY))
 	{
-		// Each look is a new guess, as far off as the ball is from the face (a whole court away = the
-		// full GuessSpread), so the paddle homes in over the approach instead of gliding to one spot.
+		// A few guesses per approach, each as far off as the ball is from the face (a whole court away =
+		// the full GuessSpread), so the paddle homes in over the approach instead of gliding to one spot.
+		const float Now = GetWorld()->GetTimeSeconds();
+		if (Now >= NextGuessTime)
+		{
+			GuessRoll = Random.FRandRange(-1.f, 1.f);
+			NextGuessTime = Now + P.GuessInterval;
+		}
 		const float Remaining = FMath::Clamp((FaceX - Ball.GetPlanePosition().X) * GoalDir / (2.f * HalfExtents.X), 0.f, 1.f);
-		const float Guess = Random.FRandRange(-1.f, 1.f) * P.GuessSpread.At(Skill) * Remaining;
+		const float Guess = GuessRoll * P.GuessSpread.At(Skill) * Remaining;
 
 		// Aim > 0 puts the paddle below the ball, so the ball meets its upper half and goes back upward.
 		const float PaddleLimitY = HalfExtents.Y - PaddleHalfHeight;
