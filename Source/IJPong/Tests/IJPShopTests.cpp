@@ -120,4 +120,38 @@ bool FIJPShopScreenTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPShopDimTest, "IJPong.Run.ShopDimsWhatYouCantAfford", IJPShopTests::Flags)
+bool FIJPShopDimTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test(FTransform::Identity, nullptr, AIJPRunGameMode::StaticClass());
+	AIJPRunGameMode* Mode = Cast<AIJPRunGameMode>(Test.GetWorld()->GetAuthGameMode());
+	UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(Test.GetWorld());
+	Mode->PostMatchDelay = 0.1f;
+	Mode->StartNewRun(IJPShopTests::MakeShopAct(5, 15), 1, 5);
+
+	// Win the first match for 10 coins, then go in.
+	Mode->HandleUIConfirm();
+	Mode->GetMatch()->ApplyDamage(EIJPSide::Right, 1.f);
+	for (int32 i = 0; i < 60 && Mode->GetPhase() != EIJPRunPhase::Map; ++i)
+	{
+		Test.Step();
+	}
+	UTEST_EQUAL("With coins", Run->GetCoins(), 10);
+	UTEST_TRUE("Enter", Mode->HandleUIConfirm());
+	AIJPRunMapView* View = Mode->GetMapView();
+	// The stock comes in random order: check each card against its price.
+	const int32 Cheap = Run->GetShopStock()[0]->Price == 5 ? 0 : 1;
+	UTEST_FALSE("5 coins: in reach", View->IsCardDimmed(Cheap));
+	UTEST_TRUE("15 coins: dimmed", View->IsCardDimmed(1 - Cheap));
+	UTEST_FALSE("LEAVE never is", View->IsCardDimmed(2));
+
+	// Buying the cheap one leaves 5: still short for the other.
+	Mode->HandleUIStep(Cheap);
+	UTEST_EQUAL("On the cheap one", View->GetSelectedCard(), Cheap);
+	Mode->HandleUIConfirm();
+	UTEST_EQUAL("Bought", Run->GetCoins(), 5);
+	UTEST_TRUE("Still dimmed", View->IsCardDimmed(0));
+	return true;
+}
+
 #endif

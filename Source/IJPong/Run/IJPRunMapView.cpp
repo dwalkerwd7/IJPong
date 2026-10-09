@@ -257,10 +257,11 @@ void AIJPRunMapView::ShowCards(const FString& Heading, const TArray<FCard>& Card
 	bShowingCards = true;
 	ShownTree = nullptr;
 	NumCards = Cards.Num();
+	DimmedCards.Init(false, NumCards);
 	SelectedCard = FMath::Clamp(InSelectedCard, 0, FMath::Max(NumCards - 1, 0));
 
 	const FColor Ink = Arena->GetPalette().Score.ToFColor(true);
-	while (CardTexts.Num() < NumCards * 2)
+	while (CardTexts.Num() < NumCards * 3)
 	{
 		CardTexts.Add(MakeText(CardTextSize));
 	}
@@ -268,20 +269,34 @@ void AIJPRunMapView::ShowCards(const FString& Heading, const TArray<FCard>& Card
 	for (int32 i = 0; i < NumCards; ++i)
 	{
 		const FVector2D Centre = CardCentre(i);
-		AddFrame(MidPieces, Centre, Size.X, Size.Y);
+		const bool bDimmed = Cards[i].bDimmed;
+		DimmedCards[i] = bDimmed;
+		AddFrame(bDimmed ? DimPieces : MidPieces, Centre, Size.X, Size.Y);
 
-		// Title near the top of the card, the text in the middle.
-		UTextRenderComponent* Title = CardTexts[i * 2];
-		UTextRenderComponent* Text = CardTexts[i * 2 + 1];
+		// Title near the top of the card, the text in the middle, the price at the bottom.
+		UTextRenderComponent* Title = CardTexts[i * 3];
+		UTextRenderComponent* Text = CardTexts[i * 3 + 1];
+		UTextRenderComponent* Price = CardTexts[i * 3 + 2];
 		Title->SetText(FText::FromString(Cards[i].Title));
 		Title->SetWorldSize(CardTextSize * 1.25f);
 		Title->SetRelativeLocation(FVector(Centre.X, TextDepth, Centre.Y + Size.Y * 0.5f - 22.f));
 		Text->SetText(FText::FromString(Cards[i].Text));
 		Text->SetRelativeLocation(FVector(Centre.X, TextDepth, Centre.Y - 12.f));
-		for (UTextRenderComponent* Piece : { Title, Text })
+		const FVector PriceAt(Centre.X, TextDepth, Centre.Y - Size.Y * 0.5f + 20.f);
+		Price->SetText(FText::FromString(Cards[i].Price));
+		Price->SetRelativeLocation(PriceAt);
+		const FColor CardInk = bDimmed ? Scaled(Arena->GetPalette().Score, MidScale).ToFColor(true) : Ink;
+		for (UTextRenderComponent* Piece : { Title, Text, Price })
 		{
-			Piece->SetTextRenderColor(Ink);
+			Piece->SetTextRenderColor(CardInk);
 			Piece->SetVisibility(true);
+		}
+		if (bDimmed && !Cards[i].Price.IsEmpty())
+		{
+			// Struck through: a bar across the price, a little wider than the text.
+			const float Measured = Price->GetTextLocalSize().Y;
+			const float Width = (Measured > 1.f ? Measured : Cards[i].Price.Len() * CardTextSize * 0.6f) + 8.f;
+			MidPieces->AddInstance(FTransform(FQuat::Identity, FVector(PriceAt.X, 0.f, PriceAt.Z), FVector(Width / CubeSize, 1.f / CubeSize, LineThickness / CubeSize)));
 		}
 	}
 	Header->SetText(FText::FromString(Heading));

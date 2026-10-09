@@ -591,8 +591,8 @@ void AIJPRunGameMode::ShowShop(int32 SelectedCard)
 	for (const UIJPReward* Reward : Run->GetShopStock())
 	{
 		const bool bAfford = Run->GetCoins() >= Reward->Price;
-		Cards.Add({ Reward->DisplayName.ToString().ToUpper(),
-			FString::Printf(TEXT("%s\n%d COINS%s"), *Reward->Description.ToString(), Reward->Price, bAfford ? TEXT("") : TEXT(" (SHORT)")) });
+		Cards.Add({ Reward->DisplayName.ToString().ToUpper(), Reward->Description.ToString(),
+			FString::Printf(TEXT("%d COINS"), Reward->Price), !bAfford });
 	}
 	Cards.Add({ TEXT("LEAVE"), TEXT("BACK TO\nTHE MAP") });
 

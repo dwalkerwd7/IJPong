@@ -73,11 +73,14 @@ public:
 	/** Redraw from the run's current state (and leave card mode). */
 	void Refresh();
 
-	/** One card in a pick: a title and a few lines under it. */
+	/** One card in a pick: a title, a few lines under it, and an optional price at the bottom. */
 	struct FCard
 	{
 		FString Title;
 		FString Text;
+		FString Price;
+		/** Out of reach (too costly): drawn dim, its price struck through. */
+		bool bDimmed = false;
 	};
 
 	/**
@@ -94,6 +97,9 @@ public:
 
 	/** The picked card, 0 = leftmost. */
 	int32 GetSelectedCard() const { return SelectedCard; }
+
+	/** The card is shown dim with its price struck through. */
+	bool IsCardDimmed(int32 Card) const { return DimmedCards.IsValidIndex(Card) && DimmedCards[Card]; }
 
 	/**
 	 * Show a class's skill tree (ownership and prices from UIJPMetaSubsystem) instead of the map:
@@ -280,6 +286,7 @@ private:
 	/** Title and text components for the cards, two per card. */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UTextRenderComponent>> CardTexts;
+	TArray<bool> DimmedCards;
 
 	TArray<int32> Reachable;
 	int32 Selected = 0;
