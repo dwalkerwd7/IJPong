@@ -46,9 +46,9 @@ public:
 	TArray<TObjectPtr<UIJPBallType>> ServedBalls;
 
 	/**
-	 * When a goal leaves only add-on balls in play (none of the main served type), a fresh main ball
-	 * blinks at the centre and is served after ServeDelay, as long as fewer than this many balls are
-	 * in play. 0 = never: the rally runs until the court is empty.
+	 * When a goal leaves only balls whose type has bRefillWhenAlone (a Heavy), a fresh main ball
+	 * comes in at the centre after ServeDelay, as long as fewer than this many balls are in play.
+	 * 0 = never: the rally runs until the court is empty.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Match|Serve", meta = (ClampMin = "0"))
 	int32 RefillBallLimit = 4;

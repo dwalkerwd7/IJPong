@@ -218,11 +218,12 @@ void UIJPMatchComponent::MaybeRefill(EIJPSide Toward)
 		return;
 	}
 
-	// A ball of the main type still in play (the main ball, a split half) keeps the rally going as it is.
+	// Only when every ball left is one that calls for company (a Heavy); anything else keeps the
+	// rally going as it is.
 	const UIJPBallType* MainType = GetServedType(0);
 	for (const AIJPBall* Each : Arena->GetBalls())
 	{
-		if (Each->IsInPlay() && &Each->GetType() == MainType)
+		if (Each->IsInPlay() && (&Each->GetType() == MainType || !Each->GetType().bRefillWhenAlone))
 		{
 			return;
 		}

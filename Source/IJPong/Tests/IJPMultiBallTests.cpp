@@ -228,7 +228,7 @@ bool FIJPGoalKeepsPaddleMovingTest::RunTest(const FString& Parameters)
 namespace IJPMultiBallTests
 {
 	/** Restart on Rules, wait out the first serve, then score the main ball on the left while AddOns slow balls cross the middle. */
-	bool ScoreMainLeavingAddOns(FIJPTestWorld& Test, UIJPMatchRules* Rules, int32 AddOns)
+	bool ScoreMainLeavingAddOns(FIJPTestWorld& Test, UIJPMatchRules* Rules, int32 AddOns, bool bRefillWhenAlone = true)
 	{
 		AIJPTestGameMode* Mode = GetMode(Test);
 		AIJPArena* Arena = Mode->GetArena();
@@ -239,6 +239,7 @@ namespace IJPMultiBallTests
 		AIJPBall* Main = Arena->GetBall();
 		Main->Serve(EIJPSide::Left, 0.f);
 		UIJPBallType* Heavy = MakeType(16.f, 250.f, 2);
+		Heavy->bRefillWhenAlone = bRefillWhenAlone;
 		for (int32 i = 0; i < AddOns; ++i)
 		{
 			AIJPBall* AddOn = Arena->AddBall(Heavy);
@@ -281,6 +282,21 @@ bool FIJPRefillTest::RunTest(const FString& Parameters)
 	Test.RunFor(0.6f);
 	UTEST_TRUE("Served after the serve delay", Refill->IsInPlay());
 	UTEST_EQUAL("Joins the add-on", Arena->GetNumBallsInPlay(), 2);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPNoRefillTest, "IJPong.MultiBall.OtherAddOnsLeftKeepTheRallyAsItIs", IJPMultiBallTests::Flags)
+bool FIJPNoRefillTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPArena* Arena = IJPMultiBallTests::GetMode(Test)->GetArena();
+	UIJPMatchRules* Rules = NewObject<UIJPMatchRules>(GetTransientPackage());
+	Rules->ServeDelay = 0.5f;
+	Rules->RefillBallLimit = 3;
+
+	UTEST_TRUE("Main ball scored", IJPMultiBallTests::ScoreMainLeavingAddOns(Test, Rules, 1, false));
+	UTEST_EQUAL("The add-on plays on", Arena->GetNumBallsInPlay(), 1);
+	UTEST_NULL("No refill for a ball that doesn't call for one", IJPMultiBallTests::FindBlinking(Arena));
 	return true;
 }
 

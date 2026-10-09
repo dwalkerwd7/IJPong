@@ -40,6 +40,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Scoring", meta = (ClampMin = "1"))
 	int32 Points = 1;
 
+	/**
+	 * When the only balls left in play are of types like this (slow, heavy ones), a fresh main ball is
+	 * brought in to keep the rally going (the rules' RefillBallLimit). Off = the rally runs on as it is.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Serve")
+	bool bRefillWhenAlone = false;
+
 	/** This type's colour cue, shown only in eras whose palette turns on bBallTypeColours. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ball|Look")
 	FLinearColor Colour = FLinearColor::White;
