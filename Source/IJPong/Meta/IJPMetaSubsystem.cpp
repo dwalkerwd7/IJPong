@@ -10,13 +10,64 @@
 void UIJPMetaSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
+	Load();
+}
 
+void UIJPMetaSubsystem::Load()
+{
 	const FString Slot = GetSlot();
 	SaveData = UGameplayStatics::DoesSaveGameExist(Slot, 0) ? Cast<UIJPMetaSave>(UGameplayStatics::LoadGameFromSlot(Slot, 0)) : nullptr;
 	if (!SaveData)
 	{
 		SaveData = Cast<UIJPMetaSave>(UGameplayStatics::CreateSaveGameObject(UIJPMetaSave::StaticClass()));
 	}
+}
+
+void UIJPMetaSubsystem::SetSandbox(bool bOn)
+{
+	if (bSandbox == bOn)
+	{
+		return;
+	}
+	// Each side lives in its own slot and is saved on every change, so switching is just loading the other.
+	bSandbox = bOn;
+	Load();
+	if (bSandbox)
+	{
+		SaveData->bSpellSlotUnlocked = true; // the test map has its own spell anyway
+	}
+	OnMetaChanged.Broadcast();
+}
+
+bool UIJPMetaSubsystem::Toggle(const UIJPSkillTree* Tree, int32 Node)
+{
+	if (!bSandbox || !Tree || !Tree->Nodes.IsValidIndex(Node))
+	{
+		return false;
+	}
+	if (!IsOwned(Tree, Node))
+	{
+		return Buy(Tree, Node);
+	}
+	// Drop it and, so the tree stays whole, every owned node below it.
+	TArray<FName> Dropping = { Tree->Nodes[Node].Id };
+	for (int32 i = 0; i < Dropping.Num(); ++i)
+	{
+		if (const int32 Index = Tree->FindNode(Dropping[i]); Index != INDEX_NONE)
+		{
+			SaveData->OwnedNodes.Remove(NodeKey(*Tree, Index));
+		}
+		for (const FIJPSkillNode& Child : Tree->Nodes)
+		{
+			if (Child.Parent == Dropping[i])
+			{
+				Dropping.Add(Child.Id);
+			}
+		}
+	}
+	Save();
+	OnMetaChanged.Broadcast();
+	return true;
 }
 
 UIJPMetaSubsystem* UIJPMetaSubsystem::Get(const UObject* WorldContext)
@@ -67,7 +118,8 @@ bool UIJPMetaSubsystem::CanBuy(const UIJPSkillTree* Tree, int32 Node) const
 	const FIJPSkillNode& Data = Tree->Nodes[Node];
 	const int32 Parent = Tree->FindNode(Data.Parent);
 	const bool bParentOwned = Data.Parent.IsNone() || IsOwned(Tree, Parent);
-	return bParentOwned && IsTreeLevelOpen(Data.Level) && SaveData->SkillPoints >= Data.SkillPoints && SaveData->BossTokens >= Data.BossTokens;
+	const bool bAffordable = bSandbox || (SaveData->SkillPoints >= Data.SkillPoints && SaveData->BossTokens >= Data.BossTokens);
+	return bParentOwned && IsTreeLevelOpen(Data.Level) && bAffordable;
 }
 
 bool UIJPMetaSubsystem::Buy(const UIJPSkillTree* Tree, int32 Node)
@@ -77,8 +129,11 @@ bool UIJPMetaSubsystem::Buy(const UIJPSkillTree* Tree, int32 Node)
 		return false;
 	}
 	const FIJPSkillNode& Data = Tree->Nodes[Node];
-	SaveData->SkillPoints -= Data.SkillPoints;
-	SaveData->BossTokens -= Data.BossTokens;
+	if (!bSandbox)
+	{
+		SaveData->SkillPoints -= Data.SkillPoints;
+		SaveData->BossTokens -= Data.BossTokens;
+	}
 	SaveData->OwnedNodes.Add(NodeKey(*Tree, Node));
 	Save();
 	OnMetaChanged.Broadcast();
@@ -174,6 +229,10 @@ void UIJPMetaSubsystem::ResetProgress()
 
 FString UIJPMetaSubsystem::GetSlot() const
 {
+	if (bSandbox)
+	{
+		return GIsAutomationTesting ? TestSandboxSaveSlot : SandboxSaveSlot;
+	}
 	return GIsAutomationTesting ? TestSaveSlot : SaveSlot;
 }
 

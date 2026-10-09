@@ -51,6 +51,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Meta")
 	bool Buy(const UIJPSkillTree* Tree, int32 Node);
 
+	/**
+	 * The test map's sandbox: a separate progress (its own save slot) where every tree level is open,
+	 * nodes cost nothing and Toggle can take them back. The player's real progress is set aside, untouched,
+	 * until the sandbox is switched off.
+	 */
+	void SetSandbox(bool bOn);
+
+	bool IsSandbox() const { return bSandbox; }
+
+	/** Sandbox only: own the node (if its parent is owned), or drop it and everything hanging from it. True if anything changed. */
+	bool Toggle(const UIJPSkillTree* Tree, int32 Node);
+
 	/** What the owned nodes of Tree add up to. */
 	FIJPTreeBonuses GetBonuses(const UIJPSkillTree* Tree) const;
 
@@ -64,7 +76,7 @@ public:
 
 	/** A skill tree level is open once its era has been reached (level 0 = the first era, always open). */
 	UFUNCTION(BlueprintPure, Category = "Meta")
-	bool IsTreeLevelOpen(int32 Level) const { return Level < GetErasUnlocked(); }
+	bool IsTreeLevelOpen(int32 Level) const { return bSandbox || Level < GetErasUnlocked(); }
 
 	/** Unlock eras up to Count (never locks any). True if that unlocked a new one. */
 	UFUNCTION(BlueprintCallable, Category = "Meta")
@@ -103,11 +115,21 @@ protected:
 	UPROPERTY(Config)
 	FString TestSaveSlot = TEXT("IJPongMeta_Tests");
 
+	/** Save slot for the test map's sandbox (and its automation-test twin). */
+	UPROPERTY(Config)
+	FString SandboxSaveSlot = TEXT("IJPongMeta_Sandbox");
+
+	UPROPERTY(Config)
+	FString TestSandboxSaveSlot = TEXT("IJPongMeta_SandboxTests");
+
 private:
 	FString GetSlot() const;
 	static FString NodeKey(const UIJPSkillTree& Tree, int32 Node);
 	void Save() const;
+	void Load();
 
 	UPROPERTY(Transient)
 	TObjectPtr<UIJPMetaSave> SaveData;
+
+	bool bSandbox = false;
 };

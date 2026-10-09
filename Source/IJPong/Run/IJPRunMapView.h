@@ -73,6 +73,9 @@ public:
 	/** Redraw from the run's current state (and leave card mode). */
 	void Refresh();
 
+	/** Clear whatever is drawn (cards, tree, map) and leave card and tree modes. */
+	void Hide();
+
 	/** One card in a pick: a title, a few lines under it, and an optional price at the bottom. */
 	struct FCard
 	{
@@ -157,6 +160,9 @@ public:
 
 	/** The line along the bottom (controls, or how the run ended). */
 	void SetFooter(const FString& Text);
+
+	/** The tree screen's bottom box (START RUN between runs; the test map's sandbox says BACK). */
+	void SetTreeStartLabel(const FString& Label) { TreeStartLabel = Label; }
 
 	/** Replace the line along the top (until the next Refresh). */
 	void SetHeader(const FString& Text);
@@ -287,6 +293,7 @@ private:
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UTextRenderComponent>> CardTexts;
 	TArray<bool> DimmedCards;
+	FString TreeStartLabel = TEXT("START RUN");
 
 	TArray<int32> Reachable;
 	int32 Selected = 0;

@@ -57,6 +57,15 @@ void AIJPTestPlayerController::SetupInputComponent()
 	Bind(Settings->DebugAddBallAction, &AIJPTestPlayerController::HandleAddBall);
 	Bind(Settings->DebugCyclePlayerClassAction, &AIJPTestPlayerController::HandleCyclePlayerClass);
 	Bind(Settings->DebugCycleRivalAction, &AIJPTestPlayerController::HandleCycleRival);
+	Bind(Settings->DebugSkillTreeAction, &AIJPTestPlayerController::HandleSkillTree);
+}
+
+void AIJPTestPlayerController::HandleSkillTree()
+{
+	if (AIJPTestGameMode* GameMode = GetTestGameMode())
+	{
+		GameMode->ToggleSkillTree();
+	}
 }
 
 AIJPTestGameMode* AIJPTestPlayerController::GetTestGameMode() const

@@ -218,6 +218,8 @@ bool FIJPLastStandTest::RunTest(const FString& Parameters)
 
 	// A new match: ready again.
 	Mode->RestartMatch();
+	// The test map re-applies its sandbox tree on a new match, so give the upgrade back.
+	Left->GetAbilities()->GetAbility(EIJPAbilitySlot::ClassSkill)->SetUpgrades({ { FName(TEXT("LastStand")), 1.f } });
 	Test.RunFor(1.1f, HoldUp);
 	Ball->Serve(EIJPSide::Left, 0.f);
 	UTEST_TRUE("Saved again", IJPClassSkillTests::RunUntil(Test, 1.5f, [Ball] { return Ball->GetPlaneVelocity().X > 0.f || !Ball->IsInPlay(); }, HoldUp));

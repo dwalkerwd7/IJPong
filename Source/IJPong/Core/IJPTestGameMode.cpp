@@ -17,6 +17,9 @@
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPPaddleClass.h"
 #include "Gameplay/IJPRival.h"
+#include "Meta/IJPMetaSubsystem.h"
+#include "Meta/IJPSkillTree.h"
+#include "Run/IJPRunMapView.h"
 
 AIJPTestGameMode::AIJPTestGameMode()
 {
@@ -26,6 +29,19 @@ AIJPTestGameMode::AIJPTestGameMode()
 
 void AIJPTestGameMode::OnArenaReady()
 {
+	// The test map's tree is the sandbox, never the player's real progress.
+	if (UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(this))
+	{
+		Meta->SetSandbox(true);
+	}
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	AIJPArena* ArenaPtr = GetArena();
+	MapView = GetWorld()->SpawnActor<AIJPRunMapView>(AIJPRunMapView::StaticClass(), ArenaPtr->GetActorLocation() + ArenaPtr->GetActorUpVector() * 5000.f, ArenaPtr->GetActorRotation(), Params);
+	MapView->Init(ArenaPtr);
+	MapView->SetTreeStartLabel(TEXT("BACK"));
+
 	if (AIJPPaddle* PlayerPaddle = GetArena()->GetPaddle(PlayerSide))
 	{
 		PlayerPaddle->GetAbilities()->Equip(EIJPAbilitySlot::RunAbility, PlayerRunAbility.LoadSynchronous());
@@ -46,6 +62,122 @@ void AIJPTestGameMode::RestartMatch(const UIJPMatchRules* Rules)
 		PlayerPaddle->GetAbilities()->Equip(EIJPAbilitySlot::Item, PlayerItem.LoadSynchronous());
 	}
 	BeginMatch(Rules ? Rules : MatchRules.LoadSynchronous());
+	ApplySkillTree();
+}
+
+void AIJPTestGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(this))
+	{
+		Meta->SetSandbox(false);
+	}
+	Super::EndPlay(EndPlayReason);
+}
+
+bool AIJPTestGameMode::IsSkillTreeOpen() const
+{
+	return MapView && MapView->IsShowingTree();
+}
+
+void AIJPTestGameMode::ToggleSkillTree()
+{
+	if (!MapView)
+	{
+		return;
+	}
+	if (IsSkillTreeOpen())
+	{
+		MapView->Hide();
+		SetViewTarget(GetArena());
+		RestartMatch();
+		return;
+	}
+	const UIJPSkillTree* Tree = GetPlayerTree();
+	if (!Tree)
+	{
+		ShowMessage(4, TEXT("This class has no skill tree"));
+		return;
+	}
+	GetMatch()->StopMatch();
+	MapView->ShowTree(Tree, true);
+	MapView->SetFooter(TEXT("ARROWS  CHOOSE    SPACE  ON / OFF    TAB  BACK"));
+	SetViewTarget(MapView);
+}
+
+bool AIJPTestGameMode::HandleUIStep(int32 Direction)
+{
+	if (!IsSkillTreeOpen())
+	{
+		return false;
+	}
+	MapView->Step(Direction);
+	return true;
+}
+
+bool AIJPTestGameMode::HandleUIStepVertical(int32 Direction)
+{
+	if (!IsSkillTreeOpen())
+	{
+		return false;
+	}
+	MapView->StepVertical(Direction);
+	return true;
+}
+
+bool AIJPTestGameMode::HandleUIConfirm()
+{
+	if (!IsSkillTreeOpen())
+	{
+		return false;
+	}
+	const int32 Node = MapView->GetSelectedTreeNode();
+	if (Node == INDEX_NONE)
+	{
+		ToggleSkillTree(); // BACK
+	}
+	else if (UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(this); Meta && Node >= 0 && Meta->Toggle(GetPlayerTree(), Node))
+	{
+		MapView->ShowTree(GetPlayerTree(), false);
+		ApplySkillTree();
+	}
+	return true;
+}
+
+void AIJPTestGameMode::ApplySkillTree()
+{
+	AIJPPaddle* Paddle = GetArena() ? GetArena()->GetPaddle(PlayerSide) : nullptr;
+	const UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(this);
+	if (!Paddle || !Meta)
+	{
+		return;
+	}
+	const FIJPTreeBonuses Tree = Meta->GetBonuses(GetPlayerTree());
+	Paddle->SetRunScales(1.f + Tree.PaddleLength, 1.f + Tree.PaddleSpeed);
+	Paddle->SetReturnAngleBonus(Tree.ReturnAngle);
+	UIJPAbilityComponent* Abilities = Paddle->GetAbilities();
+	Abilities->SetCooldownScale(EIJPAbilitySlot::ClassSkill, FMath::Max(1.f - Tree.SkillCooldownCut, 0.1f));
+	if (UIJPAbility* ClassSkill = Abilities->GetAbility(EIJPAbilitySlot::ClassSkill))
+	{
+		ClassSkill->SetUpgrades(Tree.SkillUpgrades);
+	}
+}
+
+const UIJPSkillTree* AIJPTestGameMode::GetPlayerTree() const
+{
+	const AIJPPaddle* Paddle = GetArena() ? GetArena()->GetPaddle(PlayerSide) : nullptr;
+	const UIJPPaddleClass* PaddleClass = Paddle ? Paddle->GetPaddleClass() : nullptr;
+	return PaddleClass ? PaddleClass->SkillTree.Get() : nullptr;
+}
+
+void AIJPTestGameMode::SetViewTarget(AActor* Target) const
+{
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		if (APlayerController* PlayerController = It->Get())
+		{
+			PlayerController->SetViewTarget(Target);
+		}
+	}
 }
 
 void AIJPTestGameMode::ServeNow()
@@ -147,6 +279,7 @@ void AIJPTestGameMode::CyclePlayerClass(int32 Direction)
 	const int32 Current = FMath::Max(PlayerClasses.IndexOfByKey(Paddle->GetPaddleClass()), 0);
 	const UIJPPaddleClass* Next = PlayerClasses[((Current + Direction) % Num + Num) % Num].LoadSynchronous();
 	Paddle->SetPaddleClass(Next);
+	ApplySkillTree(); // the new class's own tree
 	ShowMessage(2, FString::Printf(TEXT("Your class: %s"), Next ? *Next->DisplayName.ToString() : TEXT("none")));
 }
 
@@ -251,5 +384,5 @@ void AIJPTestGameMode::GetDebugLines(TArray<FString>& OutLines) const
 
 	OutLines.Add(TEXT("ARROWS move   W/S aim   SPACE skill   Z run ability   X spell   C item"));
 	OutLines.Add(TEXT("R new match   F serve now   T AI vs AI   B add ball"));
-	OutLines.Add(TEXT("- / = opponent skill   [ / ] era   N class   V rival   . (period) hide this"));
+	OutLines.Add(TEXT("- / = opponent skill   [ / ] era   N class   V rival   TAB skill tree   . (period) hide this"));
 }

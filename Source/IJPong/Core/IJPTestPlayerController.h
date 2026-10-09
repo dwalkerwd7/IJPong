@@ -31,4 +31,5 @@ private:
 	void HandleAddBall();
 	void HandleCyclePlayerClass();
 	void HandleCycleRival();
+	void HandleSkillTree();
 };

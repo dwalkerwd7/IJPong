@@ -99,6 +99,10 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Debug")
 	TSoftObjectPtr<UInputAction> DebugCycleRivalAction;
 
+	/** Open or close the class's skill tree (the sandbox: free nodes, toggled on and off). */
+	UPROPERTY(Config, EditAnywhere, Category = "Debug")
+	TSoftObjectPtr<UInputAction> DebugSkillTreeAction;
+
 	/** Only added in the run game mode, and never in shipping builds. */
 	UPROPERTY(Config, EditAnywhere, Category = "Cheats")
 	TSoftObjectPtr<UInputMappingContext> CheatMappingContext;

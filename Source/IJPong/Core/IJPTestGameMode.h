@@ -11,6 +11,8 @@ class UIJPBallType;
 class UIJPMatchRules;
 class UIJPPaddleClass;
 class UIJPRival;
+class UIJPSkillTree;
+class AIJPRunMapView;
 
 /**
  * Match after match for trying out a level, with the rules from config (MatchRules).
@@ -67,8 +69,24 @@ public:
 	/** The debug overlay's text: the test tools' current state and the key legend. */
 	void GetDebugLines(TArray<FString>& OutLines) const;
 
+	/**
+	 * Open or close the player's class's skill tree. The test map uses the meta sandbox (its own
+	 * progress: every level open, nodes free and toggled on and off), so nothing real is spent.
+	 * Opening pauses the match; closing starts a fresh one with the tree applied.
+	 */
+	void ToggleSkillTree();
+
+	bool IsSkillTreeOpen() const;
+
+	AIJPRunMapView* GetMapView() const { return MapView; }
+
+	virtual bool HandleUIStep(int32 Direction) override;
+	virtual bool HandleUIStepVertical(int32 Direction) override;
+	virtual bool HandleUIConfirm() override;
+
 protected:
 	virtual void OnArenaReady() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	/** The matches played here. Set in DefaultGame.ini; empty uses UIJPMatchRules' defaults. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Test|Match")
@@ -104,6 +122,15 @@ protected:
 
 private:
 	void ShowMessage(int32 Key, const FString& Message) const;
+
+	/** Put the sandbox tree's bonuses on the player's paddle (its stats and its class skill's upgrades). */
+	void ApplySkillTree();
+	const UIJPSkillTree* GetPlayerTree() const;
+	void SetViewTarget(AActor* Target) const;
+
+	/** The tree screen, on its own camera away from the arena. */
+	UPROPERTY(Transient)
+	TObjectPtr<AIJPRunMapView> MapView;
 
 	UPROPERTY(Transient)
 	TObjectPtr<AIJPPaddleAIController> PlayerSideAI;

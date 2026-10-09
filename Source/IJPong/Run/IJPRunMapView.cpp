@@ -187,6 +187,13 @@ void AIJPRunMapView::Init(AIJPArena* InArena)
 	Refresh();
 }
 
+void AIJPRunMapView::Hide()
+{
+	ClearDrawing();
+	bShowingCards = false;
+	ShownTree = nullptr;
+}
+
 void AIJPRunMapView::Refresh()
 {
 	const UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(this);
@@ -780,7 +787,7 @@ void AIJPRunMapView::ShowTree(const UIJPSkillTree* Tree, bool bResetPick)
 	// START RUN, bottom centre.
 	const FVector2D Start = TreeStartPosition();
 	AddFrame(BrightPieces, Start, 170.f, 36.f);
-	StartText->SetText(FText::FromString(TEXT("START RUN")));
+	StartText->SetText(FText::FromString(TreeStartLabel));
 	StartText->SetTextRenderColor(Palette.Score.ToFColor(true));
 	StartText->SetRelativeLocation(FVector(Start.X, TextDepth, Start.Y));
 	StartText->SetVisibility(true);

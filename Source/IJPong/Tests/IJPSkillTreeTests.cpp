@@ -7,6 +7,7 @@
 #include "Abilities/IJPAbility_Smash.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Core/IJPRunGameMode.h"
+#include "Core/IJPTestGameMode.h"
 #include "Core/IJPTypes.h"
 #include "Engine/World.h"
 #include "Gameplay/IJPArena.h"
@@ -73,6 +74,7 @@ bool FIJPTreeBuyTest::RunTest(const FString& Parameters)
 	{
 		FIJPTestWorld Test;
 		UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(Test.GetWorld());
+		Meta->SetSandbox(false); // real progress, not the test map's sandbox
 		Meta->ResetProgress();
 
 		UTEST_FALSE("Can't afford it yet", Meta->CanBuy(Tree, 0));
@@ -90,6 +92,7 @@ bool FIJPTreeBuyTest::RunTest(const FString& Parameters)
 	// Owned nodes are saved with the currencies.
 	FIJPTestWorld Later;
 	UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(Later.GetWorld());
+	Meta->SetSandbox(false);
 	UTEST_TRUE("Still owned after a restart", Meta->IsOwned(Tree, 0) && Meta->IsOwned(Tree, 1) && Meta->IsOwned(Tree, 2));
 	const FIJPTreeBonuses Bonuses = Meta->GetBonuses(Tree);
 	UTEST_EQUAL("Length bonus", Bonuses.PaddleLength, 0.2f);
@@ -104,6 +107,7 @@ bool FIJPTreeLevelTest::RunTest(const FString& Parameters)
 {
 	FIJPTestWorld Test;
 	UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(Test.GetWorld());
+	Meta->SetSandbox(false); // real progress, not the test map's sandbox
 	Meta->ResetProgress();
 	UIJPSkillTree* Tree = IJPSkillTreeTests::MakeTree();
 	FIJPSkillNode& Later = Tree->Nodes.Add_GetRef(IJPSkillTreeTests::MakeNode(TEXT("Later"), NAME_None, 1, 0, EIJPTreeEffect::PaddleSpeed, 0.1f));
@@ -246,6 +250,71 @@ bool FIJPReturnAngleTest::RunTest(const FString& Parameters)
 	}
 	UTEST_TRUE("Normal edge return stays within 60 degrees", Angles[0] <= 60.01);
 	UTEST_TRUE("With +15, well past 60", Angles[1] > 63.0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPTreeSandboxTest, "IJPong.Meta.TestMapTreeIsAFreeSandbox", IJPSkillTreeTests::Flags)
+bool FIJPTreeSandboxTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = Cast<AIJPTestGameMode>(Test.GetWorld()->GetAuthGameMode());
+	UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(Test.GetWorld());
+	UTEST_TRUE("The test map uses the sandbox", Meta && Meta->IsSandbox());
+
+	// Clean slates on both sides.
+	Meta->SetSandbox(false);
+	Meta->ResetProgress();
+	Meta->SetSandbox(true);
+	Meta->ResetProgress();
+
+	// A tree whose nodes all belong to an era nobody has reached.
+	UIJPSkillTree* Tree = IJPSkillTreeTests::MakeTree();
+	for (FIJPSkillNode& Node : Tree->Nodes)
+	{
+		Node.Level = 3;
+	}
+	UIJPPaddleClass* PaddleClass = NewObject<UIJPPaddleClass>(GetTransientPackage());
+	PaddleClass->SkillTree = Tree;
+	AIJPPaddle* Left = Mode->GetArena()->GetPaddle(EIJPSide::Left);
+	Left->SetPaddleClass(PaddleClass);
+	const float BaseLength = Left->GetSize().Y;
+
+	// Open it: the match stops and the tree shows.
+	Mode->ToggleSkillTree();
+	UTEST_TRUE("Open", Mode->IsSkillTreeOpen());
+	Test.RunFor(1.5f);
+	UTEST_FALSE("Match paused", Mode->GetArena()->GetBall()->IsInPlay());
+
+	// Space owns the picked node, free, at a level that isn't open for real.
+	const int32 Picked = Mode->GetMapView()->GetSelectedTreeNode();
+	UTEST_TRUE("A node is picked", Picked >= 0);
+	UTEST_TRUE("Space", Mode->HandleUIConfirm());
+	UTEST_TRUE("Owned", Meta->IsOwned(Tree, Picked));
+	UTEST_EQUAL("Free", Meta->GetSkillPoints() + Meta->GetBossTokens(), 0);
+
+	// Length then Angle below it; the paddle grows at once.
+	const int32 Length = Tree->FindNode(TEXT("Length"));
+	const int32 Angle = Tree->FindNode(TEXT("Angle"));
+	if (!Meta->IsOwned(Tree, Length))
+	{
+		Meta->Toggle(Tree, Length);
+	}
+	Meta->Toggle(Tree, Angle);
+	UTEST_TRUE("Both owned", Meta->IsOwned(Tree, Length) && Meta->IsOwned(Tree, Angle));
+	Mode->ToggleSkillTree(); // close: a fresh match with the tree applied
+	UTEST_FALSE("Closed", Mode->IsSkillTreeOpen());
+	UTEST_TRUE("Longer paddle", Left->GetSize().Y > BaseLength * 1.15f);
+
+	// Dropping Length drops what hangs from it.
+	UTEST_TRUE("Toggled off", Meta->Toggle(Tree, Length));
+	UTEST_FALSE("Length gone", Meta->IsOwned(Tree, Length));
+	UTEST_FALSE("Angle went with it", Meta->IsOwned(Tree, Angle));
+
+	// The real progress never saw any of it.
+	Meta->SetSandbox(false);
+	UTEST_FALSE("Real save untouched", Meta->IsOwned(Tree, Picked));
+	UTEST_FALSE("Real levels still shut", Meta->IsTreeLevelOpen(3));
+	Meta->SetSandbox(true);
 	return true;
 }
 
