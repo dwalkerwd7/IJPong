@@ -166,6 +166,12 @@ public:
 	/** The cue before a ball comes into play (a ring filling at centre court). */
 	class UIJPServeCueComponent* GetServeCue() const { return ServeCue; }
 
+	/** The player's cooldown rings (class skill, run ability), under that side's health. */
+	class UIJPCooldownRingsComponent* GetCooldownRings() const { return CooldownRings; }
+
+	/** Show Paddle's cooldowns under its health (the player's; null hides them). */
+	void SetCooldownPaddle(AIJPPaddle* Paddle);
+
 	/** Big text cards before a match (the versus intro). */
 	class UIJPFightIntroComponent* GetFightIntro() const { return FightIntro; }
 
@@ -473,6 +479,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<class UIJPServeCueComponent> ServeCue;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<class UIJPCooldownRingsComponent> CooldownRings;
 
 	/** Walls, barriers, goals, net and scores for the current HalfExtents. */
 	void LayoutCourt();

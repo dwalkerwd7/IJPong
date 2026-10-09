@@ -9,6 +9,7 @@
 class AIJPBall;
 class AIJPPaddle;
 class UIJPAbilityComponent;
+class UTexture2D;
 
 /** A paddle's two ability buttons. */
 UENUM(BlueprintType)
@@ -41,6 +42,10 @@ class IJPONG_API UIJPAbility : public UDataAsset
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
 	FText DisplayName;
+
+	/** Its icon (items: shown under the player's cooldown rings in sprite eras; without one, the initial). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
+	TSoftObjectPtr<UTexture2D> Icon;
 
 	/** Seconds before the slot can be used again, counted from activation. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability", meta = (ClampMin = "0", Units = "s"))

@@ -53,6 +53,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Abilities")
 	float GetCooldownRemaining(EIJPAbilitySlot Slot) const;
 
+	/** How much of the slot's current cooldown is still to run: 1 just used, 0 ready (or never used). */
+	UFUNCTION(BlueprintPure, Category = "Abilities")
+	float GetCooldownFraction(EIJPAbilitySlot Slot) const;
+
 	/** Equipped, off cooldown, and able to activate. */
 	UFUNCTION(BlueprintPure, Category = "Abilities")
 	bool IsReady(EIJPAbilitySlot Slot) const;
@@ -117,6 +121,8 @@ private:
 	TArray<TObjectPtr<UIJPAbility>> Abilities;
 
 	TArray<float> Cooldowns;
+	/** Each slot's cooldown length when it last started. */
+	TArray<float> CooldownTotals;
 	/** Time left in each slot's wind-up (0 = none). */
 	TArray<float> WindUps;
 

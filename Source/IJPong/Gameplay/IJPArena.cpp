@@ -30,6 +30,7 @@
 #include "Gameplay/IJPPaddleClass.h"
 #include "Gameplay/IJPSevenSegmentComponent.h"
 #include "Gameplay/IJPChargePipsComponent.h"
+#include "Presentation/IJPCooldownRingsComponent.h"
 #include "Presentation/IJPCRTComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
@@ -133,6 +134,8 @@ AIJPArena::AIJPArena()
 	LeftPips->SetupAttachment(Root);
 	RightPips = CreateDefaultSubobject<UIJPChargePipsComponent>(TEXT("RightPips"));
 	RightPips->SetupAttachment(Root);
+	CooldownRings = CreateDefaultSubobject<UIJPCooldownRingsComponent>(TEXT("CooldownRings"));
+	CooldownRings->SetupAttachment(Root);
 
 	CRT = CreateDefaultSubobject<UIJPCRTComponent>(TEXT("CRT"));
 
@@ -491,7 +494,20 @@ void AIJPArena::LayoutHealth()
 		{
 			Pips->SetRelativeLocation(FVector(Sign * ScoreOffset.X, 0.f, ScoreZ - LeftScore->DigitSize.Y * 0.5f - 20.f));
 		}
+
+		// The player's cooldown rings, under the pips.
+		const AIJPPaddle* RingsPaddle = CooldownRings->GetPaddle();
+		if (RingsPaddle && RingsPaddle->GetSide() == Side)
+		{
+			CooldownRings->SetRelativeLocation(Pips->GetRelativeLocation() - FVector(0.f, 0.f, CooldownRings->Radius + 18.f));
+		}
 	}
+}
+
+void AIJPArena::SetCooldownPaddle(AIJPPaddle* Paddle)
+{
+	CooldownRings->SetPaddle(Paddle);
+	LayoutHealth();
 }
 
 void AIJPArena::SetPortraits(EIJPSide Side, const FIJPPortraits& Portraits)

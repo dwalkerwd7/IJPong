@@ -15,6 +15,7 @@
 #include "Gameplay/IJPBallType.h"
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPPaddleClass.h"
+#include "Presentation/IJPCooldownRingsComponent.h"
 #include "Tests/IJPTestWorld.h"
 
 namespace IJPAbilityTests
@@ -230,6 +231,43 @@ bool FIJPToggleTest::RunTest(const FString& Parameters)
 	// And it can be armed again straight away.
 	UTEST_TRUE("Ready again", Abilities->TryActivate(EIJPAbilitySlot::ClassSkill));
 	UTEST_TRUE("Armed again", Abilities->IsArmed());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPCooldownRingsTest, "IJPong.Ability.CooldownRingsUnderThePlayersHealth", IJPAbilityTests::Flags)
+bool FIJPCooldownRingsTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPArena* Arena = Test.GetArena();
+	AIJPPaddle* Left = Arena->GetPaddle(EIJPSide::Left);
+	UIJPAbilityComponent* Abilities = Left->GetAbilities();
+	UIJPCooldownRingsComponent* Rings = Arena->GetCooldownRings();
+	UTEST_TRUE("The player's paddle", Rings->GetPaddle() == Left);
+
+	Abilities->Equip(EIJPAbilitySlot::ClassSkill, nullptr);
+	Abilities->Equip(EIJPAbilitySlot::RunAbility, IJPAbilityTests::MakeGrow(0.2f, 1.f));
+	Test.Step();
+	UTEST_EQUAL("No class skill, no ring", Rings->GetFill(EIJPAbilitySlot::ClassSkill), -1.f);
+	UTEST_EQUAL("Run ability ready: full", Rings->GetFill(EIJPAbilitySlot::RunAbility), 1.f);
+
+	// Used: empty, then filling up, then full and blinking.
+	UTEST_TRUE("Used", Abilities->TryActivate(EIJPAbilitySlot::RunAbility));
+	Test.Step();
+	UTEST_TRUE("Nearly empty", Rings->GetFill(EIJPAbilitySlot::RunAbility) < 0.1f);
+	Test.RunFor(0.5f);
+	const float Half = Rings->GetFill(EIJPAbilitySlot::RunAbility);
+	UTEST_TRUE("About half", Half > 0.4f && Half < 0.6f);
+	Test.RunFor(0.55f);
+	UTEST_EQUAL("Full", Rings->GetFill(EIJPAbilitySlot::RunAbility), 1.f);
+	UTEST_TRUE("Blinking", Rings->IsBlinking(EIJPAbilitySlot::RunAbility));
+	Test.RunFor(1.f);
+	UTEST_FALSE("Just a moment", Rings->IsBlinking(EIJPAbilitySlot::RunAbility));
+
+	// The item box: up while one is held, gone once used.
+	UTEST_TRUE("The test map's item", Abilities->HasItem() && Rings->IsItemShown());
+	UTEST_TRUE("Use it", Abilities->TryActivate(EIJPAbilitySlot::Item));
+	Test.Step();
+	UTEST_FALSE("Item gone", Rings->IsItemShown());
 	return true;
 }
 

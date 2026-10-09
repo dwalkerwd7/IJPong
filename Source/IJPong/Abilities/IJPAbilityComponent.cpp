@@ -19,6 +19,7 @@ UIJPAbilityComponent::UIJPAbilityComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 	Abilities.SetNum(NumSlots);
 	Cooldowns.SetNumZeroed(NumSlots);
+	CooldownTotals.SetNumZeroed(NumSlots);
 	WindUps.SetNumZeroed(NumSlots);
 	Locks.SetNumZeroed(NumSlots);
 	Charges.SetNumZeroed(NumSlots);
@@ -99,6 +100,7 @@ bool UIJPAbilityComponent::TryActivate(EIJPAbilitySlot Slot)
 	const int32 Index = static_cast<int32>(Slot);
 	UIJPAbility* Ability = Abilities[Index];
 	Cooldowns[Index] = Ability->StartsCooldown() ? Ability->Cooldown * CooldownScales[Index] : 0.f;
+	CooldownTotals[Index] = Cooldowns[Index];
 	if (Ability->Telegraph > 0.f)
 	{
 		WindUps[Index] = Ability->Telegraph;
@@ -186,6 +188,12 @@ UIJPAbility* UIJPAbilityComponent::GetAbility(EIJPAbilitySlot Slot) const
 float UIJPAbilityComponent::GetCooldownRemaining(EIJPAbilitySlot Slot) const
 {
 	return Cooldowns[static_cast<int32>(Slot)];
+}
+
+float UIJPAbilityComponent::GetCooldownFraction(EIJPAbilitySlot Slot) const
+{
+	const int32 Index = static_cast<int32>(Slot);
+	return CooldownTotals[Index] > 0.f ? FMath::Clamp(Cooldowns[Index] / CooldownTotals[Index], 0.f, 1.f) : 0.f;
 }
 
 bool UIJPAbilityComponent::IsReady(EIJPAbilitySlot Slot) const

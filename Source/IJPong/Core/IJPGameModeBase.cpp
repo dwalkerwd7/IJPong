@@ -77,6 +77,7 @@ void AIJPGameModeBase::StartPlay()
 		Opponent->GetSpeechBubble()->SetVoicePitch(DefaultOpponentVoice);
 	}
 
+	Arena->SetCooldownPaddle(Arena->GetPaddle(PlayerSide));
 	OnArenaReady();
 }
 
