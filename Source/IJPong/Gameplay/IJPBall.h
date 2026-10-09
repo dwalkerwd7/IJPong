@@ -61,8 +61,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Ball")
 	void BlinkAtCentre();
 
+	/** Wait at the centre, shown and still (the serve cue's ring filling around it), until Serve() launches it. */
+	void WaitAtCentre();
+
+	/** Waiting at the centre to be served: blinking, or shown while the serve cue fills. */
 	UFUNCTION(BlueprintPure, Category = "Ball")
-	bool IsBlinking() const { return ServeBlinker.IsRunning(); }
+	bool IsBlinking() const { return ServeBlinker.IsRunning() || bWaitingAtCentre; }
 
 	/**
 	 * Speed the ball up by Multiplier for this one shot: the next paddle hit carries on from the
@@ -294,6 +298,7 @@ private:
 	float CurveFlipLeft = -1.f;
 	EIJPSide LastReturner = EIJPSide::Left;
 	float DamageScale = 1.f;
+	bool bWaitingAtCentre = false;
 	bool bReturned = false;
 	bool bCurveWaitsForNet = false;
 	int32 RallyHits = 0;

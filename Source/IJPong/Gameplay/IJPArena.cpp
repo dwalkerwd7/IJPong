@@ -12,6 +12,7 @@
 #include "Gameplay/IJPCourtShiftComponent.h"
 #include "Gameplay/IJPComboComponent.h"
 #include "Presentation/IJPFightIntroComponent.h"
+#include "Presentation/IJPServeCueComponent.h"
 #include "Abilities/IJPAbility_Split.h"
 #include "Abilities/IJPAbilityComponent.h"
 #include "Audio/IJPToneSet.h"
@@ -112,6 +113,8 @@ AIJPArena::AIJPArena()
 	Combo = CreateDefaultSubobject<UIJPComboComponent>(TEXT("Combo"));
 	FightIntro = CreateDefaultSubobject<UIJPFightIntroComponent>(TEXT("FightIntro"));
 	FightIntro->SetupAttachment(Root);
+	ServeCue = CreateDefaultSubobject<UIJPServeCueComponent>(TEXT("ServeCue"));
+	ServeCue->SetupAttachment(Root);
 	LeftHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("LeftHealthBar"));
 	LeftHealthBar->SetupAttachment(Root);
 	RightHealthBar = CreateDefaultSubobject<UIJPHealthBarComponent>(TEXT("RightHealthBar"));

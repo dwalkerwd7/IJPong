@@ -139,6 +139,13 @@ void AIJPBall::ApplySize()
 	Visual->SetRelativeScale3D(FVector(Size / CubeSize, VisualDepth / CubeSize, Size / CubeSize));
 }
 
+void AIJPBall::WaitAtCentre()
+{
+	ResetBall();
+	bWaitingAtCentre = true;
+	SetActorHiddenInGame(false);
+}
+
 void AIJPBall::BlinkAtCentre()
 {
 	ResetBall();
@@ -148,6 +155,7 @@ void AIJPBall::BlinkAtCentre()
 void AIJPBall::Serve(EIJPSide Toward, float AngleDeg)
 {
 	ServeBlinker.Cancel();
+	bWaitingAtCentre = false;
 
 	const float AngleRad = FMath::DegreesToRadians(FMath::Clamp(AngleDeg, -MaxBounceAngleDeg, MaxBounceAngleDeg));
 
@@ -262,6 +270,7 @@ void AIJPBall::Freeze(float Seconds)
 void AIJPBall::Launch(const FVector2D& InPosition, const FVector2D& InVelocity)
 {
 	ServeBlinker.Cancel();
+	bWaitingAtCentre = false;
 	Position = PreviousPosition = InPosition;
 	Velocity = InVelocity;
 	Speed = InVelocity.Size();
@@ -292,6 +301,7 @@ void AIJPBall::SetPlaneVelocity(const FVector2D& InVelocity)
 void AIJPBall::ResetBall()
 {
 	ServeBlinker.Cancel();
+	bWaitingAtCentre = false;
 	FreezeLeft = 0.f;
 	TimeScale = 1.f;
 

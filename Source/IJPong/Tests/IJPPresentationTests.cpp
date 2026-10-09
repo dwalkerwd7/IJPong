@@ -12,6 +12,7 @@
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPSevenSegmentComponent.h"
 #include "Presentation/IJPCRTComponent.h"
+#include "Presentation/IJPServeCueComponent.h"
 #include "Tests/IJPTestWorld.h"
 
 namespace IJPPresentationTests
@@ -40,31 +41,34 @@ namespace IJPPresentationTests
 	}
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPServeBlinkTest, "IJPong.Presentation.BallBlinksBeforeServe", IJPPresentationTests::Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPServeBlinkTest, "IJPong.Presentation.ServeCueRingFillsThenBallBlinks", IJPPresentationTests::Flags)
 bool FIJPServeBlinkTest::RunTest(const FString& Parameters)
 {
 	FIJPTestWorld Test;
-	AIJPBall* Ball = Test.GetArena()->GetBall();
+	AIJPArena* Arena = Test.GetArena();
+	AIJPBall* Ball = Arena->GetBall();
+	const UIJPServeCueComponent* Cue = Arena->GetServeCue();
 
-	// The test mode schedules the first serve at start: the ball waits at the centre, blinking.
-	UTEST_TRUE("Blinking while waiting to be served", Ball->IsBlinking());
-	UTEST_TRUE("Starts hidden", Ball->IsHidden());
+	// The test mode schedules the first serve at start: the ball waits at the centre, shown, the ring filling.
+	UTEST_TRUE("Waiting to be served", Ball->IsBlinking());
+	UTEST_FALSE("Shown", Ball->IsHidden());
 	UTEST_TRUE("At the centre", Ball->GetPlanePosition().IsNearlyZero());
+	UTEST_TRUE("The ring is up", Cue->IsShowing());
+	Test.RunFor(0.3f);
+	UTEST_TRUE("Filling", Cue->GetProgress() > 0.2f && Cue->GetProgress() < 0.8f);
 
-	bool bSeenShown = false;
 	bool bSeenHidden = false;
 	IJPPresentationTests::RunUntil(Test, 2.f, [&]
 	{
-		if (!Ball->IsInPlay())
-		{
-			(Ball->IsHidden() ? bSeenHidden : bSeenShown) = true;
-		}
+		bSeenHidden |= !Ball->IsInPlay() && Ball->IsHidden();
 		return Ball->IsInPlay();
 	});
-	UTEST_TRUE("Blinked on and off during the serve delay", bSeenShown && bSeenHidden);
+	UTEST_TRUE("Blinked once the ring was full", bSeenHidden);
 	UTEST_TRUE("Served", Ball->IsInPlay());
-	UTEST_FALSE("Stopped blinking once served", Ball->IsBlinking());
+	UTEST_FALSE("Not waiting once served", Ball->IsBlinking());
 	UTEST_FALSE("Visible in play", Ball->IsHidden());
+	Test.Step();
+	UTEST_FALSE("The ring's gone", Cue->IsShowing());
 	return true;
 }
 

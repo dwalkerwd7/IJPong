@@ -151,6 +151,7 @@ bool FIJPBabbleTest::RunTest(const FString& Parameters)
 	AIJPArena* Arena = Test.GetArena();
 	UIJPToneSynthComponent* Tones = Arena->GetTones();
 	UIJPSpeechBubbleComponent* Bubble = Arena->GetPaddle(EIJPSide::Left)->GetSpeechBubble();
+	Cast<AIJPTestGameMode>(Test.GetWorld()->GetAuthGameMode())->GetMatch()->StopMatch(); // no serve or ball sounds: only the babble
 
 	auto PitchOf = [&](const TCHAR* Text, float Voice)
 	{

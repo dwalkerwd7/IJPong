@@ -139,7 +139,7 @@ bool FIJPBallGoalTest::RunTest(const FString& Parameters)
 	UTEST_EQUAL("No rally hits", Ball->GetRallyHits(), 0);
 	UTEST_EQUAL("Right scored", GameMode->GetMatch()->GetGoals(EIJPSide::Right), 1);
 	UTEST_EQUAL("Left didn't", GameMode->GetMatch()->GetGoals(EIJPSide::Left), 0);
-	UTEST_TRUE("Ball hidden between points", Ball->IsHidden());
+	UTEST_TRUE("Ball waits at the centre between points", Ball->IsBlinking() && Ball->GetPlanePosition().IsNearlyZero());
 
 	// After the serve delay, the side that conceded receives the next serve.
 	UTEST_TRUE("Re-served", IJPBallTests::RunUntil(Test, 2.f, [Ball] { return Ball->IsInPlay(); }));

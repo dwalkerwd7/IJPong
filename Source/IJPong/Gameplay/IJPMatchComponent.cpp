@@ -6,6 +6,7 @@
 #include "Gameplay/IJPBall.h"
 #include "Gameplay/IJPBallType.h"
 #include "Gameplay/IJPMatchRules.h"
+#include "Presentation/IJPServeCueComponent.h"
 #include "TimerManager.h"
 
 namespace
@@ -229,13 +230,13 @@ void UIJPMatchComponent::MaybeRefill(EIJPSide Toward)
 		}
 	}
 
-	// Blinking keeps AddBall from handing it to anything else while it waits.
+	// Waiting at the centre keeps AddBall from handing it to anything else; the cue shows it coming.
 	AIJPBall* Refill = Arena->AddBall(MainType);
 	if (!Refill)
 	{
 		return;
 	}
-	Refill->BlinkAtCentre();
+	Arena->GetServeCue()->Start(Refill, GetRules().ServeDelay);
 	RefillBall = Refill;
 	RefillSide = Toward;
 	GetWorld()->GetTimerManager().SetTimer(RefillTimer, this, &UIJPMatchComponent::ServeRefill, FMath::Max(GetRules().ServeDelay, UE_KINDA_SMALL_NUMBER));
@@ -264,15 +265,17 @@ void UIJPMatchComponent::ScheduleServe(EIJPSide Toward)
 	NextServeSide = Toward;
 	CancelRefill();
 	Arena->ResetBalls();
-	// The main ball blinks as what's about to be served first.
+	// The main ball waits at the centre as what's about to be served first.
 	GetBall()->SetType(GetServedType(0));
-	GetBall()->BlinkAtCentre();
 	if (bServeHeld)
 	{
-		// ReleaseServe() starts the countdown. Cancel any from before (e.g. a match restarted mid-countdown).
+		// Blinking until ReleaseServe() starts the countdown. Cancel any from before (e.g. a match restarted mid-countdown).
+		GetBall()->BlinkAtCentre();
 		GetWorld()->GetTimerManager().ClearTimer(ServeTimer);
 		return;
 	}
+	// The ring fills around it, then it blinks and beeps, then the serve.
+	Arena->GetServeCue()->Start(GetBall(), GetRules().ServeDelay);
 	GetWorld()->GetTimerManager().SetTimer(ServeTimer, this, &UIJPMatchComponent::ServeBall, FMath::Max(GetRules().ServeDelay, UE_KINDA_SMALL_NUMBER));
 }
 

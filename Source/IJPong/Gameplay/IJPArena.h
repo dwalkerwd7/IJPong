@@ -163,6 +163,9 @@ public:
 	/** What the balls' clock runs at now: the speed scale, slowed by any bullet time. */
 	float GetBallTimeFactor() const;
 
+	/** The cue before a ball comes into play (a ring filling at centre court). */
+	class UIJPServeCueComponent* GetServeCue() const { return ServeCue; }
+
 	/** Big text cards before a match (the versus intro). */
 	class UIJPFightIntroComponent* GetFightIntro() const { return FightIntro; }
 
@@ -467,6 +470,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
 	TObjectPtr<class UIJPFightIntroComponent> FightIntro;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Arena|Components")
+	TObjectPtr<class UIJPServeCueComponent> ServeCue;
 
 	/** Walls, barriers, goals, net and scores for the current HalfExtents. */
 	void LayoutCourt();
