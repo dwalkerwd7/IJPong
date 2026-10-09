@@ -11,6 +11,7 @@
 #include "Era/IJPEraSubsystem.h"
 #include "Gameplay/IJPMatchComponent.h"
 #include "Gameplay/IJPMatchRules.h"
+#include "Gameplay/IJPRival.h"
 #include "Meta/IJPMetaSubsystem.h"
 #include "Run/IJPActConfig.h"
 #include "Run/IJPRunSubsystem.h"
@@ -157,6 +158,70 @@ bool FIJPBuildClimbTest::RunTest(const FString& Parameters)
 	UTEST_TRUE("Ends in the newest", Climb.Last().Era == Arcade);
 
 	Meta->ResetProgress();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPBossPoolTest, "IJPong.Run.EachActsBossComesFromTheErasPoolWithoutRepeats", IJPClimbTests::Flags)
+bool FIJPBossPoolTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	UIJPRunSubsystem* Run = UIJPRunSubsystem::Get(Test.GetWorld());
+	UIJPMetaSubsystem* Meta = UIJPMetaSubsystem::Get(Test.GetWorld());
+	Meta->ResetProgress();
+	UIJPEra* Era = IJPClimbTests::MakeEra(TEXT("PoolEra"));
+	UIJPRival* BossA = NewObject<UIJPRival>(Era, TEXT("BossA"));
+	UIJPRival* BossB = NewObject<UIJPRival>(Era, TEXT("BossB"));
+	Era->Bosses = { BossA, BossB };
+
+	// Three acts, two bosses: the first two acts meet both, the third one of them again.
+	Run->StartRun({ { IJPClimbTests::MakeStraightAct(), Era }, { IJPClimbTests::MakeStraightAct(), Era },
+		{ IJPClimbTests::MakeStraightAct(), Era } }, 7, 5);
+	TArray<const UIJPRival*> Met;
+	for (int32 Stage = 0; Stage < 3; ++Stage)
+	{
+		Run->EnterNode(Run->GetReachableNodes()[0]);
+		Run->CompleteNode(true);
+		Run->EnterNode(Run->GetReachableNodes()[0]);
+		Run->EnterNode(Run->GetReachableNodes()[0]);
+		UTEST_TRUE("A boss from the pool", Run->GetBoss() == BossA || Run->GetBoss() == BossB);
+		Met.Add(Run->GetBoss());
+		Run->CompleteNode(true);
+	}
+	UTEST_TRUE("No repeat while one is left", Met[0] != Met[1]);
+	UTEST_EQUAL("The run is won", Run->GetState(), EIJPRunState::Won);
+
+	// An act that names its own boss keeps it.
+	UIJPActConfig* Own = IJPClimbTests::MakeStraightAct();
+	UIJPRival* Special = NewObject<UIJPRival>(Own, TEXT("Special"));
+	Own->Boss.Rivals = { Special };
+	Run->StartRun({ { Own, Era } }, 7, 5);
+	IJPClimbTests::ClearAct(Run);
+	UTEST_TRUE("The act's own boss", Run->GetBoss() == Special);
+
+	Meta->ResetProgress();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPBossContentTest, "IJPong.Run.BulkheadIsOnlyCabinetsBoss", IJPClimbTests::Flags)
+bool FIJPBossContentTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	const UIJPEraSubsystem* Eras = UIJPEraSubsystem::Get(Test.GetWorld());
+	for (int32 Index = 0; Index < Eras->GetNumEras(); ++Index)
+	{
+		const UIJPEra* Era = Eras->GetEraAt(Index);
+		TestFalse(FString::Printf(TEXT("%s has bosses"), *Era->GetName()), Era->Bosses.IsEmpty());
+		for (const UIJPActConfig* Act : Era->Acts)
+		{
+			TestTrue(FString::Printf(TEXT("%s takes its era's bosses"), *Act->GetName()), Act->Boss.Rivals.IsEmpty());
+		}
+		bool bHasBulkhead = false;
+		for (const UIJPRival* Boss : Era->Bosses)
+		{
+			bHasBulkhead |= Boss && Boss->GetName().Contains(TEXT("Bulkhead"));
+		}
+		TestEqual(FString::Printf(TEXT("Bulkhead in %s"), *Era->GetName()), bHasBulkhead, Index == 0);
+	}
 	return true;
 }
 

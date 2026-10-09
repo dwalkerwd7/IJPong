@@ -365,6 +365,18 @@ void AIJPRunGameMode::EnterSelectedNode()
 		ShowMap();
 		return;
 	}
+	if (Type == EIJPNodeType::Boss)
+	{
+		// The boss the run picked from the era's pool; the act keeps the fight's rules, skill and pay.
+		FIJPEncounter BossFight = *Encounter;
+		BossFight.Rivals.Reset();
+		if (const UIJPRival* PickedBoss = Run->GetBoss())
+		{
+			BossFight.Rivals.Add(const_cast<UIJPRival*>(PickedBoss));
+		}
+		BeginFight(BossFight);
+		return;
+	}
 	BeginFight(*Encounter);
 }
 

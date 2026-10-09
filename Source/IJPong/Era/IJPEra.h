@@ -10,6 +10,7 @@ class UIJPActConfig;
 class UMaterialInterface;
 class UIJPToneSet;
 class UIJPBackdrop;
+class UIJPRival;
 class UTexture2D;
 
 /** The parts of the screen a palette colours. */
@@ -398,6 +399,14 @@ public:
 	/** Once this era is beaten, how many of its acts (its first ones) a run passes through. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Run", meta = (ClampMin = "1"))
 	int32 ActsWhenBeaten = 1;
+
+	/**
+	 * The era's bosses: each act's boss node is one of these (unless the act names its own), and a run
+	 * doesn't meet the same one twice while others are left. The act still sets the boss fight's rules,
+	 * skill and pay.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Run")
+	TArray<TObjectPtr<UIJPRival>> Bosses;
 
 	/** Chat-bubble corner radius, in arena units. 0 = square corners (hardware that can't draw curves). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Era|Look", meta = (ClampMin = "0"))

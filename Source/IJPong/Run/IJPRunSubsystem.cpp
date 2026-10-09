@@ -3,6 +3,8 @@
 #include "Run/IJPRunSubsystem.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
+#include "Era/IJPEra.h"
+#include "Gameplay/IJPRival.h"
 #include "Meta/IJPMetaSubsystem.h"
 #include "Run/IJPActConfig.h"
 #include "Run/IJPEvent.h"
@@ -42,6 +44,8 @@ void UIJPRunSubsystem::StartRun(const TArray<FIJPRunStage>& InStages, int32 Seed
 	MatchEvent = nullptr;
 	MatchOption = INDEX_NONE;
 	SeenEvents.Reset();
+	CurrentBoss = nullptr;
+	MetBosses.Reset();
 	EventResult.Reset();
 	Loadout = FIJPRunLoadout();
 	Visited.Init(false, Map.Nodes.Num());
@@ -107,10 +111,40 @@ bool UIJPRunSubsystem::EnterNode(int32 Node)
 	}
 	else
 	{
+		if (Map.Nodes[Node].Type == EIJPNodeType::Boss)
+		{
+			PickBoss();
+		}
 		bInNode = true;
 	}
 	OnRunChanged.Broadcast();
 	return true;
+}
+
+void UIJPRunSubsystem::PickBoss()
+{
+	// The act's own bosses if it names any, else its era's; one not met yet this run, while there are any.
+	const UIJPEra* Era = GetStageEra();
+	const TArray<TObjectPtr<UIJPRival>>& Pool = !Act->Boss.Rivals.IsEmpty() || !Era ? Act->Boss.Rivals : Era->Bosses;
+	TArray<const UIJPRival*> Fresh;
+	TArray<const UIJPRival*> All;
+	for (const UIJPRival* Rival : Pool)
+	{
+		if (Rival)
+		{
+			All.Add(Rival);
+			if (!MetBosses.Contains(Rival))
+			{
+				Fresh.Add(Rival);
+			}
+		}
+	}
+	const TArray<const UIJPRival*>& From = Fresh.IsEmpty() ? All : Fresh;
+	CurrentBoss = From.IsEmpty() ? nullptr : From[Random.RandHelper(From.Num())];
+	if (CurrentBoss)
+	{
+		MetBosses.Add(CurrentBoss);
+	}
 }
 
 void UIJPRunSubsystem::CompleteNode(bool bWon)

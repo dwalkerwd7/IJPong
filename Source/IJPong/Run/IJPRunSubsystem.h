@@ -15,6 +15,7 @@ class UIJPEvent;
 struct FIJPEventOption;
 struct FIJPEventOutcome;
 class UIJPReward;
+class UIJPRival;
 
 UENUM(BlueprintType)
 enum class EIJPRunState : uint8
@@ -132,6 +133,12 @@ public:
 	/** Being played right now (a fight in progress). */
 	UFUNCTION(BlueprintPure, Category = "Run")
 	bool IsInNode() const { return bInNode; }
+
+	/**
+	 * The boss met at the current boss node: from the act's own Boss rivals if it names any, else the
+	 * stage era's Bosses, not repeating within the run while others are left. Null elsewhere or if none.
+	 */
+	const UIJPRival* GetBoss() const { return CurrentBoss; }
 
 	/** Nodes the player may enter next, left to right. Empty while in a node, while a reward is on offer, or once the run is over. */
 	UFUNCTION(BlueprintPure, Category = "Run")
@@ -252,6 +259,8 @@ private:
 	void Heal(float Amount);
 	/** A boss fell and more acts follow: on to the next one's map. */
 	void AdvanceStage();
+	/** Choose the boss for the boss node just entered. */
+	void PickBoss();
 	/** Up to Count different rewards from Pool, at random, leaving out any not worth offering now. */
 	TArray<TObjectPtr<const UIJPReward>> Roll(const TArray<TObjectPtr<UIJPReward>>& Pool, int32 Count);
 	void RollOffer(const TArray<TObjectPtr<UIJPReward>>& Pool);
@@ -280,6 +289,14 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<const UIJPEvent> CurrentEvent;
+
+	/** The boss of the boss node being played (picked on entering it). */
+	UPROPERTY(Transient)
+	TObjectPtr<const UIJPRival> CurrentBoss;
+
+	/** Bosses met this run, so an era's pool doesn't repeat until it runs out. */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<const UIJPRival>> MetBosses;
 
 	/** Events met this run, so an act's pool doesn't repeat until it runs out. */
 	UPROPERTY(Transient)
