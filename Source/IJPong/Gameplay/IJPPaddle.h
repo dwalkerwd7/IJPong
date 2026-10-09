@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 #include "Core/IJPTypes.h"
+#include "Gameplay/IJPBrickLook.h"
 #include "Presentation/IJPBlinker.h"
 #include "IJPPaddle.generated.h"
 
@@ -61,6 +62,17 @@ public:
 	 * Caps are the 9-slice end fractions, as UIJPPaddleClass::SpriteCap. For bosses.
 	 */
 	void SetSpriteOverride(UTexture2D* Sprite, float Cap, UTexture2D* HalfSprite, float HalfCap);
+
+	/** In eras without sprites, draw the paddle (and its halves) as a brick wall when Look is enabled. For bosses. */
+	void SetBrickLook(const FIJPBrickLook& Look);
+
+	/** This fraction of the brick wall's edge bricks are knocked out (a boss cracking). */
+	void SetMissingBricks(float Fraction);
+
+	float GetMissingBricks() const { return MissingBricks; }
+
+	/** Drawn as bricks right now. */
+	bool IsBrickLookShown() const { return bUsingBricks; }
 
 	/** The texture drawn now (the top half's while split), or null when it's a plain rectangle. */
 	const UTexture2D* GetShownSprite() const { return bUsingSprite ? ShownSprite.Get() : nullptr; }
@@ -294,6 +306,24 @@ protected:
 
 	float SpriteOverrideCap = 0.1f;
 	float HalfSpriteOverrideCap = 0.1f;
+
+	/** The brick wall look (on the sprite quads, with its own material instances). */
+	FIJPBrickLook BrickLook;
+	float MissingBricks = 0.f;
+	/** Fixed per paddle, so the same bricks stay missing. */
+	float BrickSeed = 0.f;
+	bool bUsingBricks = false;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> BrickMaterial;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> BrickMaterialBottom;
+
+	/** Draw the brick wall on the quads; false (nothing changed) when it doesn't apply now. */
+	bool RefreshBricks();
+	/** Show the quads (sprite or bricks) instead of the boxes, or the boxes again. */
+	void ShowQuads(bool bQuads);
 
 	/** Drawn with the sprite rather than the box (kept apart from visibility, which flickers). */
 	bool bUsingSprite = false;

@@ -50,6 +50,7 @@ void UIJPBossComponent::Restart()
 		return;
 	}
 	Paddle->SetSplitGap(0.f);
+	Paddle->SetMissingBricks(0.f);
 	if (Arena.IsValid())
 	{
 		Arena->SetBallSpeedScale(1.f);
@@ -58,9 +59,11 @@ void UIJPBossComponent::Restart()
 	{
 		Paddle->SetRunScales(1.f, 1.f);
 		Paddle->SetSpriteOverride(nullptr, 0.f, nullptr, 0.f);
+		Paddle->SetBrickLook(FIJPBrickLook());
 		return;
 	}
 	Paddle->SetSpriteOverride(Rival->BossSprite, Rival->BossSpriteCap, Rival->BossHalfSprite, Rival->BossHalfSpriteCap);
+	Paddle->SetBrickLook(Rival->BossBricks);
 
 	// Its own skill (or its class's) and spell again, and full size.
 	UIJPAbilityComponent* Abilities = Paddle->GetAbilities();
@@ -137,6 +140,10 @@ void UIJPBossComponent::EnterPhase(int32 Index)
 	if (Phase.Sprite)
 	{
 		Paddle->SetSpriteOverride(Phase.Sprite, Rival->BossSpriteCap, Rival->BossHalfSprite, Rival->BossHalfSpriteCap);
+	}
+	if (Phase.MissingBricks > 0.f)
+	{
+		Paddle->SetMissingBricks(Phase.MissingBricks);
 	}
 	if (Phase.SplitGap > 0.f)
 	{

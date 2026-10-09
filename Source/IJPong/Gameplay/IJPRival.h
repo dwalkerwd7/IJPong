@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "Gameplay/IJPBrickLook.h"
 #include "Narrative/IJPPortrait.h"
 #include "IJPRival.generated.h"
 
@@ -97,6 +98,10 @@ struct FIJPBossPhase
 	/** In sprite eras, its paddle looks like this from now on (e.g. cracked; empty = no change). Cap as BossSpriteCap. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss")
 	TObjectPtr<UTexture2D> Sprite;
+
+	/** Drawn as bricks (BossBricks): this fraction of its edge bricks fall out from now on (0 = no change). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss", meta = (ClampMin = "0", ClampMax = "1"))
+	float MissingBricks = 0.f;
 };
 
 /**
@@ -192,6 +197,10 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Boss", meta = (ClampMin = "0", ClampMax = "0.5"))
 	float BossHalfSpriteCap = 0.25f;
+
+	/** In eras without sprites, its paddle is a brick wall instead of a plain box (when enabled). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rival|Boss")
+	FIJPBrickLook BossBricks;
 
 	bool IsBoss() const { return BossLength > 1.f || !Phases.IsEmpty(); }
 

@@ -219,7 +219,7 @@ void AIJPPaddle::UpdateStunLook()
 		Visual->SetMaterial(0, StunMaterial);
 		VisualBottom->SetMaterial(0, StunMaterial);
 	}
-	for (UMaterialInstanceDynamic* Sprite : { SpriteMaterial.Get(), SpriteMaterialBottom.Get() })
+	for (UMaterialInstanceDynamic* Sprite : { SpriteMaterial.Get(), SpriteMaterialBottom.Get(), BrickMaterial.Get(), BrickMaterialBottom.Get() })
 	{
 		if (Sprite)
 		{
@@ -324,10 +324,11 @@ void AIJPPaddle::Flicker()
 	// Hidden now, shown again after one toggle. Only the visual: the collision never flickers.
 	FlickerBlinker.Start(this, GetProfile()->FlickerTime, 1, false, [this](bool bShow)
 	{
-		Visual->SetVisibility(bShow && !bUsingSprite);
-		VisualBottom->SetVisibility(bShow && SplitGap > 0.f && !bUsingSprite);
-		SpriteQuad->SetVisibility(bShow && bUsingSprite);
-		SpriteQuadBottom->SetVisibility(bShow && bUsingSprite && SplitGap > 0.f);
+		const bool bQuads = bUsingSprite || bUsingBricks;
+		Visual->SetVisibility(bShow && !bQuads);
+		VisualBottom->SetVisibility(bShow && SplitGap > 0.f && !bQuads);
+		SpriteQuad->SetVisibility(bShow && bQuads);
+		SpriteQuadBottom->SetVisibility(bShow && bQuads && SplitGap > 0.f);
 	});
 }
 
@@ -353,9 +354,89 @@ void AIJPPaddle::SetSpriteOverride(UTexture2D* Sprite, float Cap, UTexture2D* Ha
 	}
 }
 
+void AIJPPaddle::SetBrickLook(const FIJPBrickLook& Look)
+{
+	BrickLook = Look;
+	if (Arena.IsValid())
+	{
+		RefreshSprite();
+	}
+}
+
+void AIJPPaddle::SetMissingBricks(float Fraction)
+{
+	MissingBricks = FMath::Clamp(Fraction, 0.f, 1.f);
+	if (Arena.IsValid())
+	{
+		RefreshSprite();
+	}
+}
+
+void AIJPPaddle::ShowQuads(bool bQuads)
+{
+	const bool bSplit = SplitGap > 0.f;
+	SpriteQuad->SetVisibility(bQuads);
+	SpriteQuadBottom->SetVisibility(bQuads && bSplit);
+	Visual->SetVisibility(!bQuads);
+	VisualBottom->SetVisibility(!bQuads && bSplit);
+}
+
+bool AIJPPaddle::RefreshBricks()
+{
+	const AIJPArena* ArenaPtr = Arena.Get();
+	UMaterialInterface* Base = ArenaPtr ? ArenaPtr->GetBrickMaterial() : nullptr;
+	bUsingBricks = BrickLook.bEnabled && Base && !ArenaPtr->ShowsSprites();
+	if (!bUsingBricks)
+	{
+		return false;
+	}
+	if (!BrickMaterial)
+	{
+		BrickMaterial = UMaterialInstanceDynamic::Create(Base, this);
+		BrickMaterialBottom = UMaterialInstanceDynamic::Create(Base, this);
+		BrickSeed = FMath::FRandRange(0.f, 100.f);
+	}
+	bUsingSprite = false;
+	ShownSprite = nullptr;
+
+	// The shader lays the bricks out in units, so the quad only needs the size it covers.
+	static const FName ColorParam(TEXT("Color"));
+	static const FName SizeParam(TEXT("Size"));
+	static const FName BricksParam(TEXT("Bricks"));
+	static const FName BreakParam(TEXT("Break"));
+	const bool bSplit = SplitGap > 0.f;
+	const FVector2D Size = GetSize();
+	const float Length = bSplit ? FMath::Max((Size.Y - SplitGap) * 0.5f, 1.f) : Size.Y;
+	const FLinearColor Colour = ArenaPtr->GetPalette().Get(Side == EIJPSide::Left ? EIJPPaletteRole::LeftPaddle : EIJPPaletteRole::RightPaddle);
+	const float PlaneSize = 100.f;
+	const float Facing = Side == EIJPSide::Right ? -1.f : 1.f;
+	const float Depth = VisualDepth * 0.5f + 1.f;
+	const float Offset = GetSplitHalfOffset();
+	for (const bool bTop : { true, false })
+	{
+		UMaterialInstanceDynamic* Material = bTop ? BrickMaterial.Get() : BrickMaterialBottom.Get();
+		UStaticMeshComponent* Quad = bTop ? SpriteQuad.Get() : SpriteQuadBottom.Get();
+		Quad->SetMaterial(0, Material);
+		Material->SetVectorParameterValue(ColorParam, Colour);
+		Material->SetVectorParameterValue(SizeParam, FLinearColor(Size.X, Length, 0.f));
+		Material->SetVectorParameterValue(BricksParam, FLinearColor(BrickLook.BrickLength, BrickLook.Mortar, BrickLook.bBolts ? 1.f : 0.f));
+		// Each half its own missing bricks; a half's broken end is ragged instead of bolted.
+		Material->SetVectorParameterValue(BreakParam, FLinearColor(MissingBricks, BrickSeed + (bTop ? 0.f : 37.f), bSplit ? 1.f : 0.f));
+		// As the sprite halves: the lower half is the upper one turned over, both broken ends at the gap.
+		Quad->SetRelativeLocation(FVector(0.f, Depth, bSplit ? (bTop ? Offset : -Offset) : 0.f));
+		Quad->SetRelativeScale3D(FVector(Facing * Size.X / PlaneSize, (bTop ? 1.f : -1.f) * Length / PlaneSize, 1.f));
+	}
+	ShowQuads(true);
+	return true;
+}
+
 void AIJPPaddle::RefreshSprite()
 {
 	const AIJPArena* ArenaPtr = Arena.Get();
+	if (RefreshBricks())
+	{
+		return;
+	}
 	const bool bSplit = SplitGap > 0.f;
 	// Whole: the override or the class's. Split: only a half sprite will do, else plain halves.
 	UTexture2D* Sprite = bSplit ? HalfSpriteOverride.Get() : SpriteOverride ? SpriteOverride.Get() : PaddleClass ? PaddleClass->Sprite.Get() : nullptr;
@@ -375,10 +456,7 @@ void AIJPPaddle::RefreshSprite()
 	ShownSprite = bUsingSprite ? Sprite : nullptr;
 	if (!bUsingSprite)
 	{
-		SpriteQuad->SetVisibility(false);
-		SpriteQuadBottom->SetVisibility(false);
-		Visual->SetVisibility(true);
-		VisualBottom->SetVisibility(bSplit);
+		ShowQuads(false);
 		return;
 	}
 
@@ -401,6 +479,7 @@ void AIJPPaddle::RefreshSprite()
 	{
 		UMaterialInstanceDynamic* Material = bTop ? SpriteMaterial.Get() : SpriteMaterialBottom.Get();
 		UStaticMeshComponent* Quad = bTop ? SpriteQuad.Get() : SpriteQuadBottom.Get();
+		Quad->SetMaterial(0, Material); // the quads may have shown bricks
 		Material->SetTextureParameterValue(SpriteParam, Sprite);
 		Material->SetVectorParameterValue(ColorParam, Colour);
 		Material->SetScalarParameterValue(StretchParam, Length / FMath::Max(NaturalLength, 1.f));
@@ -409,10 +488,7 @@ void AIJPPaddle::RefreshSprite()
 		Quad->SetRelativeLocation(FVector(0.f, Depth, bTop ? Offset : -Offset));
 		Quad->SetRelativeScale3D(FVector(Facing * Size.X / PlaneSize, (bTop ? 1.f : -1.f) * Length / PlaneSize, 1.f));
 	}
-	SpriteQuad->SetVisibility(true);
-	SpriteQuadBottom->SetVisibility(bSplit);
-	Visual->SetVisibility(false);
-	VisualBottom->SetVisibility(false);
+	ShowQuads(true);
 }
 
 void AIJPPaddle::SetAimDirection(const FVector2D& Direction)

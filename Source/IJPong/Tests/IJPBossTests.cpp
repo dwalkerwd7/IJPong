@@ -248,4 +248,52 @@ bool FIJPBossSpritesTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPBossBricksTest, "IJPong.Boss.BricksInPlainErasLoseBricksThenBreakInTwo", IJPBossTests::Flags)
+bool FIJPBossBricksTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPTestGameMode* Mode = Cast<AIJPTestGameMode>(Test.GetWorld()->GetAuthGameMode());
+	AIJPArena* Arena = Mode->GetArena();
+	UIJPMatchComponent* Match = Mode->GetMatch();
+	AIJPPaddle* BossPaddle = Arena->GetPaddle(EIJPSide::Right);
+	UIJPEra* Plain = NewObject<UIJPEra>(GetTransientPackage());
+	UIJPEraSubsystem::Get(Arena)->SetEra(Plain);
+
+	UIJPRival* Boss = NewObject<UIJPRival>(GetTransientPackage());
+	Boss->BossLength = 2.f;
+	Boss->BossSprite = UTexture2D::CreateTransient(8, 64);
+	Boss->BossBricks.bEnabled = true;
+	FIJPBossPhase& Second = Boss->Phases.AddDefaulted_GetRef();
+	Second.AtHealth = 0.66f;
+	Second.Pause = 0.f;
+	Second.MissingBricks = 0.3f;
+	FIJPBossPhase& Third = Boss->Phases.AddDefaulted_GetRef();
+	Third.AtHealth = 0.33f;
+	Third.Pause = 0.f;
+	Third.SplitGap = 40.f;
+	Mode->SetRival(Boss);
+	Mode->RestartMatch();
+
+	UTEST_TRUE("A brick wall, not a box", BossPaddle->IsBrickLookShown());
+	UTEST_FALSE("No sprite in a plain era", BossPaddle->IsSpriteShown());
+	UTEST_TRUE("Drawn, not hidden", BossPaddle->IsVisualShown());
+	Match->ApplyDamage(EIJPSide::Right, 2.f);
+	UTEST_EQUAL_TOLERANCE("Bricks fall out in phase two", BossPaddle->GetMissingBricks(), 0.3f, 0.001f);
+	Match->ApplyDamage(EIJPSide::Right, 2.f);
+	UTEST_TRUE("Broken in two, still bricks", BossPaddle->GetSplitGap() > 0.f && BossPaddle->IsBrickLookShown());
+
+	// A new match: whole and solid again; in a sprite era the sprite wins.
+	Mode->RestartMatch();
+	UTEST_EQUAL_TOLERANCE("Solid again", BossPaddle->GetMissingBricks(), 0.f, 0.001f);
+	UIJPEra* Sprites = NewObject<UIJPEra>(GetTransientPackage());
+	Sprites->bShowSprites = true;
+	UIJPEraSubsystem::Get(Arena)->SetEra(Sprites);
+	UTEST_FALSE("No bricks where there are sprites", BossPaddle->IsBrickLookShown());
+	UTEST_TRUE("Its sprite instead", BossPaddle->IsSpriteShown());
+	UIJPEraSubsystem::Get(Arena)->SetEra(Plain);
+	Mode->SetRival(nullptr);
+	UTEST_FALSE("An ordinary rival is a plain box", BossPaddle->IsBrickLookShown());
+	return true;
+}
+
 #endif

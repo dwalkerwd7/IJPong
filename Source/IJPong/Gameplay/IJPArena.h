@@ -241,6 +241,9 @@ public:
 	/** Material for sprites (M_PongSprite): a texture times a colour, cut out by its alpha, with 9-slice stretching. */
 	UMaterialInterface* GetSpriteMaterial() const { return SpriteMaterial.LoadSynchronous(); }
 
+	/** Material for brick-wall paddles (M_PongBricks): chunky bricks drawn by a shader, cut out between them. */
+	UMaterialInterface* GetBrickMaterial() const { return BrickMaterial.LoadSynchronous(); }
+
 	/** The current era shows sprites (paddles, balls). */
 	bool ShowsSprites() const;
 
@@ -384,6 +387,10 @@ protected:
 	/** Sprite material (M_PongSprite via DefaultGame.ini). */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Arena|Look")
 	TSoftObjectPtr<UMaterialInterface> SpriteMaterial;
+
+	/** Brick-wall paddle material (M_PongBricks via DefaultGame.ini). */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Arena|Look")
+	TSoftObjectPtr<UMaterialInterface> BrickMaterial;
 
 	/** Chat-bubble panel material (M_PongBubble via DefaultGame.ini). */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Arena|Look")
