@@ -82,6 +82,9 @@ public:
 	/** Show the armed cue for something besides an ability (a full combo meter). */
 	void SetExtraArmedCue(bool bShow) { bExtraArmedCue = bShow; }
 
+	/** Light the halo at full brightness for ReadyFlashTime: one of the slots is ready again. */
+	void FlashReady() { ReadyFlashLeft = ReadyFlashTime; }
+
 	/** The halo's current brightness, as a fraction of the paddle's colour (0 when hidden). */
 	UFUNCTION(BlueprintPure, Category = "Paddle")
 	float GetArmedCueStrength() const { return ArmedCueStrength; }
@@ -235,6 +238,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Presentation", meta = (ClampMin = "0", ClampMax = "1"))
 	FVector2D ArmedPulseRange = FVector2D(0.15f, 0.5f);
 
+	/** How long the halo flashes when a slot is ready again. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Presentation", meta = (ClampMin = "0", Units = "s"))
+	float ReadyFlashTime = 0.2f;
+
 	/** Thickness of the ball-blocking box toward the camera; matches the arena's blockers. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paddle|Layout")
 	float BlockerDepth = 200.f;
@@ -342,6 +349,7 @@ private:
 	float SplitGap = 0.f;
 	float ArmedTime = 0.f;
 	bool bExtraArmedCue = false;
+	float ReadyFlashLeft = 0.f;
 	float ArmedCueStrength = 0.f;
 
 	UPROPERTY(Transient)

@@ -456,7 +456,9 @@ bool AIJPPaddle::IsArmedCueShown() const
 
 void AIJPPaddle::UpdateArmedCue(float DeltaSeconds)
 {
-	const bool bArmed = Abilities->ShouldShowCue() || bExtraArmedCue;
+	ReadyFlashLeft = FMath::Max(ReadyFlashLeft - DeltaSeconds, 0.f);
+	const bool bFlashing = ReadyFlashLeft > 0.f;
+	const bool bArmed = Abilities->ShouldShowCue() || bExtraArmedCue || bFlashing;
 	if (bArmed != ArmedHalo->IsVisible())
 	{
 		ArmedHalo->SetVisibility(bArmed);
@@ -471,7 +473,8 @@ void AIJPPaddle::UpdateArmedCue(float DeltaSeconds)
 	// Breathe between the dim and bright ends, starting bright so arming shows at once.
 	ArmedTime += DeltaSeconds;
 	const float Wave = 0.5f + 0.5f * FMath::Cos(2.f * PI * ArmedPulseRate * ArmedTime);
-	ArmedCueStrength = FMath::Lerp(ArmedPulseRange.X, ArmedPulseRange.Y, Wave);
+	// A ready flash is a steady full glow, over any pulse.
+	ArmedCueStrength = bFlashing ? ArmedPulseRange.Y : FMath::Lerp(ArmedPulseRange.X, ArmedPulseRange.Y, Wave);
 	if (ArmedHaloMaterial)
 	{
 		static const FName ColorParam(TEXT("Color"));

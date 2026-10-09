@@ -88,6 +88,9 @@ public:
 
 	AIJPPaddle* GetPaddle() const;
 
+	/** How many times a slot has come back ready (the paddle flashed and blipped); for tests. */
+	int32 GetReadySignals() const { return ReadySignals; }
+
 	UPROPERTY(BlueprintAssignable, Category = "Abilities")
 	FIJPAbilityActivatedSignature OnActivated;
 
@@ -100,6 +103,11 @@ private:
 	void PlayWarning();
 	/** Run the slot's ability now (after any wind-up). */
 	void Fire(int32 Index);
+	/** The slot has its full charge (or doesn't use charge). */
+	bool IsCharged(int32 Index) const;
+	/** The slot just came back: flash the player's paddle and play its Ready blip. */
+	void SignalReady(int32 Index);
+	int32 ReadySignals = 0;
 
 	/** One entry per EIJPAbilitySlot. */
 	UPROPERTY(Transient)

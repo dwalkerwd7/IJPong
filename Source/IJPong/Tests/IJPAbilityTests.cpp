@@ -158,4 +158,41 @@ bool FIJPArmedCueTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPReadyCueTest, "IJPong.Ability.PlayerSlotReadyFlashesAndBlips", IJPAbilityTests::Flags)
+bool FIJPReadyCueTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPArena* Arena = Test.GetArena();
+	AIJPPaddle* Left = Arena->GetPaddle(EIJPSide::Left);
+	UIJPAbilityComponent* Abilities = Left->GetAbilities();
+	UIJPToneSynthComponent* Tones = Arena->GetTones();
+	const UIJPToneSet& ToneSet = Arena->GetToneSet();
+	Abilities->Equip(EIJPAbilitySlot::ClassSkill, nullptr);
+	Abilities->Equip(EIJPAbilitySlot::RunAbility, IJPAbilityTests::MakeGrow(0.2f, 1.f));
+	Test.Step();
+	UTEST_FALSE("No flash before anything cools", Left->IsArmedCueShown());
+
+	// The run ability comes back: one flash and the run slot's blip.
+	UTEST_TRUE("Used", Abilities->TryActivate(EIJPAbilitySlot::RunAbility));
+	const int32 Before = Abilities->GetReadySignals();
+	UTEST_TRUE("Back", IJPAbilityTests::RunUntil(Test, 1.5f, [Abilities, Before] { return Abilities->GetReadySignals() > Before; }));
+	UTEST_EQUAL("Once", Abilities->GetReadySignals(), Before + 1);
+	const float RunPitch = ToneSet.Ready.Frequency * ToneSet.ReadySlotPitch[static_cast<int32>(EIJPAbilitySlot::RunAbility)];
+	UTEST_TRUE("The run slot's blip", FMath::IsNearlyEqual(Tones->GetLastTone().Frequency, RunPitch, 0.1f));
+	Test.Step();
+	UTEST_TRUE("Flashing", Left->IsArmedCueShown());
+	Test.RunFor(0.5f); // well past ReadyFlashTime
+	UTEST_FALSE("Just a flash", Left->IsArmedCueShown());
+
+	// The AI's slots come back silently.
+	AIJPPaddle* Right = Arena->GetPaddle(EIJPSide::Right);
+	UIJPAbilityComponent* RightAbilities = Right->GetAbilities();
+	RightAbilities->Equip(EIJPAbilitySlot::ClassSkill, nullptr);
+	RightAbilities->Equip(EIJPAbilitySlot::RunAbility, IJPAbilityTests::MakeGrow(0.2f, 0.5f));
+	UTEST_TRUE("AI used it", RightAbilities->TryActivate(EIJPAbilitySlot::RunAbility));
+	Test.RunFor(1.f);
+	UTEST_EQUAL("No signal for the AI", RightAbilities->GetReadySignals(), 0);
+	return true;
+}
+
 #endif

@@ -1,6 +1,7 @@
 // It's Just Pong
 
 #include "Abilities/IJPAbilityComponent.h"
+#include "AIController.h"
 #include "Audio/IJPToneSet.h"
 #include "Audio/IJPToneSynthComponent.h"
 #include "Engine/World.h"
@@ -30,7 +31,12 @@ void UIJPAbilityComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 
 	for (int32 i = 0; i < NumSlots; ++i)
 	{
+		const bool bWasCooling = Cooldowns[i] > 0.f;
 		Cooldowns[i] = FMath::Max(Cooldowns[i] - DeltaTime, 0.f);
+		if (bWasCooling && Cooldowns[i] <= 0.f && IsCharged(i))
+		{
+			SignalReady(i);
+		}
 		Locks[i] = FMath::Max(Locks[i] - DeltaTime, 0.f);
 		if (WindUps[i] > 0.f)
 		{
@@ -222,7 +228,12 @@ void UIJPAbilityComponent::AddCharge(int32 Amount)
 	{
 		if (Abilities[i] && Abilities[i]->ChargeCost > 0)
 		{
+			const bool bWasCharged = IsCharged(i);
 			Charges[i] = FMath::Min(Charges[i] + Amount, Abilities[i]->ChargeCost);
+			if (!bWasCharged && IsCharged(i) && Cooldowns[i] <= 0.f)
+			{
+				SignalReady(i);
+			}
 		}
 	}
 	ShowCharge();
@@ -252,6 +263,32 @@ void UIJPAbilityComponent::HandleBallHit(AIJPBall& Ball)
 			Ability->OnBallHit(Ball);
 		}
 	}
+}
+
+bool UIJPAbilityComponent::IsCharged(int32 Index) const
+{
+	const UIJPAbility* Ability = Abilities[Index];
+	return !Ability || Ability->ChargeCost <= 0 || Charges[Index] >= Ability->ChargeCost;
+}
+
+void UIJPAbilityComponent::SignalReady(int32 Index)
+{
+	// Only the player needs telling; an AI paddle flashing would just be noise.
+	AIJPPaddle* Paddle = GetPaddle();
+	AIJPArena* Arena = Paddle ? Paddle->GetArena() : nullptr;
+	if (!Abilities[Index] || !Arena || Paddle->GetController<AAIController>())
+	{
+		return;
+	}
+	++ReadySignals;
+	Paddle->FlashReady();
+	const UIJPToneSet& ToneSet = Arena->GetToneSet();
+	FIJPTone Tone = ToneSet.Ready;
+	if (ToneSet.ReadySlotPitch.IsValidIndex(Index))
+	{
+		Tone.Frequency *= ToneSet.ReadySlotPitch[Index];
+	}
+	Arena->GetTones()->PlayTone(Tone);
 }
 
 AIJPPaddle* UIJPAbilityComponent::GetPaddle() const

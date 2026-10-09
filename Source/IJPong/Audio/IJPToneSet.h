@@ -51,6 +51,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones", meta = (ClampMin = "0.1"))
 	float ArmRise = 1.5f;
 
+	/** One of the player's slots is ready again (off cooldown, or a spell fully charged). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones")
+	FIJPTone Ready = { 660.f, 0.05f, 0.12f };
+
+	/** Ready's pitch per slot, in EIJPAbilitySlot order (class skill, run ability, item, spell), so each sounds different. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones")
+	TArray<float> ReadySlotPitch = { 1.f, 1.26f, 1.5f, 2.f };
+
 	/** A rival ability winding up: a low buzz that says "something's coming". */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones")
 	FIJPTone Warn = { 150.f, 0.3f, 0.2f };
