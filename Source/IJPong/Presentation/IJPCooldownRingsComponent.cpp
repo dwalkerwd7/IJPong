@@ -84,9 +84,7 @@ void UIJPCooldownRingsComponent::EnsurePieces()
 		Label->SetRelativeLocation(FVector((i - 0.5f) * RingSpacing, RingLabelDepth, 0.f));
 		Labels.Add(Label);
 	}
-	const float ItemZ = -(Radius + ItemGap + ItemSize * 0.5f);
 	ItemLetter = MakeText(TEXT("ItemLetter"), ItemSize * 0.7f);
-	ItemLetter->SetRelativeLocation(FVector(0.f, RingLabelDepth, ItemZ));
 
 	ItemIcon = NewObject<UStaticMeshComponent>(Owner, TEXT("ItemIcon"));
 	ItemIcon->SetupAttachment(this);
@@ -94,7 +92,6 @@ void UIJPCooldownRingsComponent::EnsurePieces()
 	ItemIcon->CastShadow = false;
 	IJP::ConfigureAsVisualOnly(ItemIcon);
 	ItemIcon->SetRelativeRotation(IJP::SpriteQuadRotation);
-	ItemIcon->SetRelativeLocation(FVector(0.f, RingLabelDepth, ItemZ));
 	const float IconSize = ItemSize - 6.f;
 	ItemIcon->SetRelativeScale3D(FVector(IconSize / RingPlaneSize, IconSize / RingPlaneSize, 1.f));
 	if (UMaterialInterface* SpriteMaterial = Arena ? Arena->GetSpriteMaterial() : nullptr)
@@ -104,6 +101,18 @@ void UIJPCooldownRingsComponent::EnsurePieces()
 	}
 	ItemIcon->SetVisibility(false);
 	ItemIcon->RegisterComponent();
+	SetItemCentre(ItemCentre);
+}
+
+void UIJPCooldownRingsComponent::SetItemCentre(const FVector2D& Centre)
+{
+	ItemCentre = Centre;
+	if (ItemLetter)
+	{
+		ItemLetter->SetRelativeLocation(FVector(Centre.X, RingLabelDepth, Centre.Y));
+		ItemIcon->SetRelativeLocation(FVector(Centre.X, RingLabelDepth, Centre.Y));
+	}
+	DrawnKey.Reset(); // the frame moves with it
 }
 
 void UIJPCooldownRingsComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -190,12 +199,13 @@ void UIJPCooldownRingsComponent::Redraw()
 	// The item's frame.
 	if (IsItemShown())
 	{
-		const float Z = -(Radius + ItemGap + ItemSize * 0.5f);
+		const float X = ItemCentre.X;
+		const float Z = ItemCentre.Y;
 		const float Half = ItemSize * 0.5f;
-		Bar(0.f, Z + Half, ItemSize + RingThickness * 0.5f, RingThickness * 0.5f);
-		Bar(0.f, Z - Half, ItemSize + RingThickness * 0.5f, RingThickness * 0.5f);
-		Bar(-Half, Z, RingThickness * 0.5f, ItemSize);
-		Bar(Half, Z, RingThickness * 0.5f, ItemSize);
+		Bar(X, Z + Half, ItemSize + RingThickness * 0.5f, RingThickness * 0.5f);
+		Bar(X, Z - Half, ItemSize + RingThickness * 0.5f, RingThickness * 0.5f);
+		Bar(X - Half, Z, RingThickness * 0.5f, ItemSize);
+		Bar(X + Half, Z, RingThickness * 0.5f, ItemSize);
 	}
 }
 

@@ -16,6 +16,7 @@
 #include "Gameplay/IJPPaddle.h"
 #include "Gameplay/IJPPaddleClass.h"
 #include "Presentation/IJPCooldownRingsComponent.h"
+#include "Gameplay/IJPHealthBarComponent.h"
 #include "Tests/IJPTestWorld.h"
 
 namespace IJPAbilityTests
@@ -262,6 +263,10 @@ bool FIJPCooldownRingsTest::RunTest(const FString& Parameters)
 	UTEST_TRUE("Blinking", Rings->IsBlinking(EIJPAbilitySlot::RunAbility));
 	Test.RunFor(1.f);
 	UTEST_FALSE("Just a moment", Rings->IsBlinking(EIJPAbilitySlot::RunAbility));
+
+	// Cabinet has no health bar: the item sits beside the number (up level with it, toward the outer wall), not under the rings.
+	UTEST_FALSE("Cabinet: no bar", Arena->GetHealthBar(EIJPSide::Left)->IsShown());
+	UTEST_TRUE("Beside the number, outer side", Rings->GetItemCentre().Y > 0.f && Rings->GetItemCentre().X < -Rings->RingSpacing);
 
 	// The item box: up while one is held, gone once used.
 	UTEST_TRUE("The test map's item", Abilities->HasItem() && Rings->IsItemShown());

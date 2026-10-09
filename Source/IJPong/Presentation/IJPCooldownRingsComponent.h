@@ -43,6 +43,14 @@ public:
 	/** The item box is up (an unused item is held). */
 	bool IsItemShown() const;
 
+	/** Where the item box sits, relative to the rings (the arena puts it beside the health in Cabinet). */
+	void SetItemCentre(const FVector2D& Centre);
+
+	/** The default item spot: centred under the rings. */
+	FVector2D GetItemCentreUnderRings() const { return FVector2D(0.f, -(Radius + ItemGap + ItemSize * 0.5f)); }
+
+	FVector2D GetItemCentre() const { return ItemCentre; }
+
 	UPROPERTY(EditAnywhere, Category = "Cooldown Rings", meta = (ClampMin = "4"))
 	int32 Segments = 16;
 
@@ -99,4 +107,5 @@ private:
 	FString DrawnKey;
 	TWeakObjectPtr<const UIJPAbility> ShownItem;
 	bool bItemIconShown = false;
+	FVector2D ItemCentre = FVector2D(0.f, -40.f);
 };

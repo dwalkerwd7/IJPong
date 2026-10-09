@@ -499,7 +499,22 @@ void AIJPArena::LayoutHealth()
 		const AIJPPaddle* RingsPaddle = CooldownRings->GetPaddle();
 		if (RingsPaddle && RingsPaddle->GetSide() == Side)
 		{
-			CooldownRings->SetRelativeLocation(Pips->GetRelativeLocation() - FVector(0.f, 0.f, CooldownRings->Radius + 18.f));
+			const FVector RingsAt = Pips->GetRelativeLocation() - FVector(0.f, 0.f, CooldownRings->Radius + 18.f);
+			CooldownRings->SetRelativeLocation(RingsAt);
+			if (Bar->IsShown())
+			{
+				CooldownRings->SetItemCentre(CooldownRings->GetItemCentreUnderRings());
+			}
+			else
+			{
+				// No bar (Cabinet): the item sits beside the health number, on its outer side, so the
+				// column under the number stays clear. Measured from a two-digit number so it never jumps.
+				const UIJPSevenSegmentComponent* Number = Side == EIJPSide::Left ? LeftScore : RightScore;
+				const float TwoDigits = Number->DigitSize.X * 2.f + Number->DigitSpacing;
+				const FVector NumberAt = Number->GetRelativeLocation();
+				const float ItemX = NumberAt.X + Sign * (TwoDigits * 0.5f + 20.f + CooldownRings->ItemSize * 0.5f);
+				CooldownRings->SetItemCentre(FVector2D(ItemX - RingsAt.X, NumberAt.Z - RingsAt.Z));
+			}
 		}
 	}
 }
