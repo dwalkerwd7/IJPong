@@ -140,6 +140,7 @@ bool FIJPRunOverTest::RunTest(const FString& Parameters)
 	Mode->HandleUIConfirm();
 	UTEST_TRUE("Conceded", IJPRunModeTests::Concede(Test, Mode->GetArena()));
 	UTEST_EQUAL("Out of health", Run->GetState(), EIJPRunState::Lost);
+	Test.RunFor(Mode->DefeatDelay + 0.1f);
 	UTEST_EQUAL("Run over", Mode->GetPhase(), EIJPRunPhase::Ended);
 	Test.RunFor(1.f);
 	UTEST_FALSE("The match stopped: no serve", Mode->GetArena()->GetBall()->IsInPlay());

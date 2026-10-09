@@ -1,6 +1,8 @@
 // It's Just Pong
 
 #include "Core/IJPRunGameMode.h"
+#include "Audio/IJPToneSet.h"
+#include "Audio/IJPToneSynthComponent.h"
 #include "Core/IJPRunPlayerController.h"
 #include "Abilities/IJPAbility.h"
 #include "Abilities/IJPAbilityComponent.h"
@@ -407,7 +409,13 @@ void AIJPRunGameMode::HandleHealthChanged(EIJPSide Side, float Health, float Dam
 	Run->LoseHealth(Damage);
 	if (Run->GetState() == EIJPRunState::Lost)
 	{
-		EndRun();
+		// Let it sink in: the rival's win blinks and the Defeat tune plays, then the end screen.
+		Phase = EIJPRunPhase::AfterMatch;
+		if (AIJPArena* RunArena = GetArena())
+		{
+			RunArena->GetTones()->PlaySequence(RunArena->GetToneSet().Defeat);
+		}
+		GetWorld()->GetTimerManager().SetTimer(AfterMatchTimer, this, &AIJPRunGameMode::EndRun, FMath::Max(DefeatDelay, UE_KINDA_SMALL_NUMBER));
 	}
 }
 

@@ -84,6 +84,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones")
 	FIJPTone Deadpan = { 110.f, 0.07f, 0.15f };
 
+	/** The run is lost: a sad descending "wah-wah", note by note, before the end screen. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones")
+	TArray<FIJPTone> Defeat = {
+		{ 392.f, 0.28f, 0.2f }, { 370.f, 0.28f, 0.2f }, { 349.f, 0.28f, 0.2f }, { 330.f, 0.8f, 0.2f } };
+
 	/** A paddle stunned (a Bomb goal): a low electric buzz. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tones")
 	FIJPTone Stun = { 70.f, 0.35f, 0.25f };

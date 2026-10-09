@@ -25,6 +25,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Tone")
 	void PlayTone(const FIJPTone& Tone);
 
+	/** Play Tones one after another (each for its Duration, then a short gap); replaces any tune already playing. */
+	void PlaySequence(const TArray<FIJPTone>& Tones);
+
+	bool IsPlayingSequence() const { return SequenceNote < Sequence.Num(); }
+
 	/** Game-thread record of requests, for tests and debugging (audio itself can't be observed headless). */
 	int32 GetToneCount() const { return ToneCount; }
 	const FIJPTone& GetLastTone() const { return LastTone; }
@@ -35,6 +40,10 @@ protected:
 
 private:
 	// Game thread.
+	void PlayNextInSequence();
+	TArray<FIJPTone> Sequence;
+	int32 SequenceNote = 0;
+	FTimerHandle SequenceTimer;
 	int32 ToneCount = 0;
 	FIJPTone LastTone;
 

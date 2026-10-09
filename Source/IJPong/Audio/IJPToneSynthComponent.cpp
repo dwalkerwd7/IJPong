@@ -1,6 +1,8 @@
 // It's Just Pong
 
 #include "Audio/IJPToneSynthComponent.h"
+#include "Engine/World.h"
+#include "TimerManager.h"
 
 namespace
 {
@@ -37,6 +39,27 @@ void UIJPToneSynthComponent::PlayTone(const FIJPTone& Tone)
 		VoiceSamplesTotal = FMath::Max(1, FMath::RoundToInt(Tone.Duration * VoiceSampleRate));
 		VoiceSamplesLeft = VoiceSamplesTotal;
 	});
+}
+
+void UIJPToneSynthComponent::PlaySequence(const TArray<FIJPTone>& Tones)
+{
+	Sequence = Tones;
+	SequenceNote = 0;
+	PlayNextInSequence();
+}
+
+void UIJPToneSynthComponent::PlayNextInSequence()
+{
+	if (!Sequence.IsValidIndex(SequenceNote))
+	{
+		return;
+	}
+	const FIJPTone& Note = Sequence[SequenceNote++];
+	PlayTone(Note);
+	if (UWorld* World = GetWorld(); World && Sequence.IsValidIndex(SequenceNote))
+	{
+		World->GetTimerManager().SetTimer(SequenceTimer, this, &UIJPToneSynthComponent::PlayNextInSequence, Note.Duration + 0.03f);
+	}
 }
 
 int32 UIJPToneSynthComponent::OnGenerateAudio(float* OutAudio, int32 NumSamples)

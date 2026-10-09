@@ -57,10 +57,17 @@ bool FIJPRunLostScreenTest::RunTest(const FString& Parameters)
 	Mode->StartNewRun(IJPRunEndTests::MakeStraightAct(5.f), 1, 1);
 	Mode->HandleUIConfirm();
 	Mode->GetMatch()->ApplyDamage(EIJPSide::Left, 1.f);
-	UTEST_EQUAL("Run over", Mode->GetPhase(), EIJPRunPhase::Ended);
 
+	// A beat first: the Defeat tune, no end screen yet.
 	AIJPRunMapView* View = Mode->GetMapView();
 	UIJPToneSynthComponent* Tones = Mode->GetArena()->GetTones();
+	const TArray<FIJPTone>& Defeat = Mode->GetArena()->GetToneSet().Defeat;
+	UTEST_TRUE("Not yet", Mode->GetPhase() != EIJPRunPhase::Ended && !View->IsShowingRunEnd());
+	UTEST_TRUE("Wah", Defeat.Num() > 1 && Tones->GetLastTone() == Defeat[0]);
+	Test.RunFor(Defeat[0].Duration + 0.1f);
+	UTEST_TRUE("Wah-wah, lower", Tones->GetLastTone() == Defeat[1] && Defeat[1].Frequency < Defeat[0].Frequency);
+	UTEST_TRUE("Run over", IJPRunEndTests::WaitFor(Test, Mode, EIJPRunPhase::Ended));
+
 	UTEST_TRUE("The end screen", View->IsShowingRunEnd() && !View->IsWinScreen());
 	const int32 TonesBefore = Tones->GetToneCount();
 	Test.Step();

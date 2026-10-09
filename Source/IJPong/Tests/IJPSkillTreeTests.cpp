@@ -181,7 +181,7 @@ bool FIJPTreeScreenTest::RunTest(const FString& Parameters)
 	Mode->HandleUIConfirm();
 	Test.RunFor(0.5f, [Left] { Left->AddMoveInput(1.f); });
 	Mode->GetArena()->GetBall()->Serve(EIJPSide::Left, 0.f);
-	UTEST_TRUE("Run over", IJPSkillTreeTests::RunUntil(Test, 3.f, [Mode] { return Mode->GetPhase() == EIJPRunPhase::Ended; }));
+	UTEST_TRUE("Run over", IJPSkillTreeTests::RunUntil(Test, 3.f + Mode->DefeatDelay, [Mode] { return Mode->GetPhase() == EIJPRunPhase::Ended; }));
 	UTEST_EQUAL("Earned 2 points", Meta->GetSkillPoints(), 2);
 
 	UTEST_TRUE("Confirm opens the tree", Mode->HandleUIConfirm());

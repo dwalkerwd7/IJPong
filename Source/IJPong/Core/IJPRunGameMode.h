@@ -96,6 +96,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Run")
 	float PostMatchDelay = 3.f;
 
+	/** Seconds between running out of health and the end screen (the match's last blink, the Defeat tune). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Run")
+	float DefeatDelay = 2.5f;
+
 protected:
 	virtual void OnArenaReady() override;
 
