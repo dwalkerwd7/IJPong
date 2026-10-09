@@ -11,7 +11,9 @@ class AIJPArena;
 class AIJPBall;
 class AIJPPaddleAIController;
 class UIJPAIProfile;
+class UIJPBackdrop;
 class UIJPBanterComponent;
+class UIJPEra;
 class UIJPBossComponent;
 class UIJPConversation;
 class UIJPConversationPlayer;
@@ -131,6 +133,13 @@ private:
 
 	UFUNCTION()
 	void HandleConversationFinished(const UIJPConversation* Conversation);
+
+	/** A new era: its scenery right away, not only from the next match. */
+	UFUNCTION()
+	void HandleEraChanged(const UIJPEra* NewEra);
+
+	/** The scenery for a fight: the rival's own (a boss's arena), else one of the era's at random. */
+	const UIJPBackdrop* PickScenery() const;
 
 	/** The versus intro (eras with bVersusIntro): the card, then the pre-match lines, then ROUND 1 / FIGHT!. */
 	enum class EIntroStage : uint8 { None, Versus, Conversation, Fight };

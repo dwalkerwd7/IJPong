@@ -66,6 +66,10 @@ void AIJPGameModeBase::StartPlay()
 
 	Match->OnMatchEnded.AddDynamic(this, &AIJPGameModeBase::HandleMatchEnded);
 	Conversations->OnFinished.AddDynamic(this, &AIJPGameModeBase::HandleConversationFinished);
+	if (UIJPEraSubsystem* Eras = UIJPEraSubsystem::Get(this))
+	{
+		Eras->OnEraChanged.AddDynamic(this, &AIJPGameModeBase::HandleEraChanged);
+	}
 	Banter->Bind(Arena, Match);
 	Boss->Bind(Arena, Match);
 	if (AIJPPaddle* Opponent = Arena->GetPaddle(IJP::Opposite(PlayerSide)))
@@ -109,14 +113,7 @@ void AIJPGameModeBase::BeginMatch(const UIJPMatchRules* Rules)
 	Match->StartMatch(Arena, Rules, PreMatch != nullptr || bVersus);
 	Boss->Restart(); // a fresh fight: back to its first form
 
-	// The scenery: the rival's own (a boss's arena), else one of the era's at random.
-	const UIJPBackdrop* Scenery = Rival ? Rival->Backdrop.Get() : nullptr;
-	if (!Scenery)
-	{
-		const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
-		Scenery = Era && !Era->Backdrops.IsEmpty() ? Era->Backdrops[FMath::RandHelper(Era->Backdrops.Num())].Get() : nullptr;
-	}
-	Arena->SetBackdrop(Scenery);
+	Arena->SetBackdrop(PickScenery());
 	if (bVersus)
 	{
 		// YOU VS <RIVAL>, then its lines (if any), then ROUND 1, FIGHT!, then the serve.
@@ -139,6 +136,24 @@ void AIJPGameModeBase::BeginMatch(const UIJPMatchRules* Rules)
 	{
 		// HandleConversationFinished releases the serve.
 		PlayConversation(PreMatch);
+	}
+}
+
+const UIJPBackdrop* AIJPGameModeBase::PickScenery() const
+{
+	if (const UIJPBackdrop* Own = Rival ? Rival->Backdrop.Get() : nullptr)
+	{
+		return Own;
+	}
+	const UIJPEra* Era = UIJPEraSubsystem::GetCurrentEra(this);
+	return Era && !Era->Backdrops.IsEmpty() ? Era->Backdrops[FMath::RandHelper(Era->Backdrops.Num())].Get() : nullptr;
+}
+
+void AIJPGameModeBase::HandleEraChanged(const UIJPEra* NewEra)
+{
+	if (Arena)
+	{
+		Arena->SetBackdrop(PickScenery());
 	}
 }
 

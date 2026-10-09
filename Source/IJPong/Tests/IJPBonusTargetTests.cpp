@@ -19,6 +19,8 @@
 #include "Gameplay/IJPCourtShiftComponent.h"
 #include "Gameplay/IJPComboComponent.h"
 #include "Presentation/IJPFightIntroComponent.h"
+#include "Presentation/IJPBackdrop.h"
+#include "Presentation/IJPBackdropComponent.h"
 #include "GameFramework/Controller.h"
 #include "Core/IJPTestGameMode.h"
 #include "Camera/CameraComponent.h"
@@ -370,6 +372,23 @@ bool FIJPOverdriveTest::RunTest(const FString& Parameters)
 	UIJPEraSubsystem::Get(Arena)->SetEra(NewObject<UIJPEra>(GetTransientPackage()));
 	UTEST_EQUAL("No mix outside Overdrive", Arena->GetTwistMix().Num(), 0);
 	UTEST_EQUAL_TOLERANCE("Normal speed", Arena->GetBallTimeFactor(), 1.f, 0.001f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FIJPEraBackdropTest, "IJPong.Era.ChangingEraShowsItsBackdropAtOnce", IJPBonusTargetTests::Flags)
+bool FIJPEraBackdropTest::RunTest(const FString& Parameters)
+{
+	FIJPTestWorld Test;
+	AIJPArena* Arena = Test.GetArena();
+	UIJPBackdrop* Scenery = NewObject<UIJPBackdrop>(GetTransientPackage());
+	UIJPEra* Era = NewObject<UIJPEra>(GetTransientPackage());
+	Era->bShowSprites = true;
+	Era->Backdrops = { Scenery };
+	UIJPEraSubsystem::Get(Arena)->SetEra(Era);
+	UTEST_TRUE("Mid-match, the new era's scenery", Arena->GetBackdrop()->GetBackdrop() == Scenery);
+
+	UIJPEraSubsystem::Get(Arena)->SetEra(NewObject<UIJPEra>(GetTransientPackage()));
+	UTEST_NULL("An era without any: none", Arena->GetBackdrop()->GetBackdrop());
 	return true;
 }
 
